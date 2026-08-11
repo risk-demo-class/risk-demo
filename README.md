@@ -190,3 +190,6 @@ A: 正例比例不足 → `gen_train_dataset.py --per-user` 加大，或 `gen_ri
 
 **Q: 数据库重置？**
 A: `python scripts/init_db.py --reset --yes`（会删库重建，含规则与基础数据）。
+
+**Q: 造数脚本报 "A value is required for bind parameter '14'"？**
+A: SQL 里 JSON 字段 `"qty":14` 冒号后无空格会被 SQLAlchemy `text()` 误判为命名绑定参数，统一写成 `"qty": 14`（冒号后带空格）即可。
