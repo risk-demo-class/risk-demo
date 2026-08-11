@@ -28,31 +28,31 @@ logger = logging.getLogger(__name__)
 # / compute_address_features / tests/test_xgboost.py::test_feature_columns_align
 # 对不齐会让 XGBoost 训练/推理退化成 0 填充, 业务上相当于模型没工作
 FEATURE_COLUMNS: list[str] = [
-    "user_total_orders",
-    "user_orders_30d",
-    "user_orders_7d",
-    "user_total_amount",
-    "user_avg_order_amount",
-    "user_max_order_amount",
-    "user_refund_count",
-    "user_postsale_count",
-    "user_refund_rate",
-    "user_postsale_rate",
-    "user_refund_amount",
-    "user_cancel_count",
-    "user_complaint_count",
-    "user_address_count",
-    "order_total_amount",
-    "order_item_count",
-    "order_sku_count",
-    "order_discount_amount",
-    "order_discount_rate",
-    "order_pay_interval_sec",
+    "user_total_visits",
+    "user_visits_30d",
+    "user_visits_7d",
+    "user_total_claim_amount",
+    "user_avg_claim_amount",
+    "user_max_claim_amount",
+    "user_claim_count",
+    "user_claims_1h_hospitals",
+    "user_cancel_appt_count",
+    "user_cancel_appt_rate",
+    "user_rx_count",
+    "user_non_self_drug_count",
+    "user_insured_rate",
+    "user_night_claim_count",
+    "user_cross_hospital_count",
+    "user_out_region_count",
+    "user_drug_order_count",
+    "order_claim_amount",
+    "order_insured_rate",
+    "order_rx_item_count",
+    "order_drug_count",
+    "order_dx_count",
+    "order_doctor_daily_rx_count",
+    "order_doctor_cross_hospital_count",
     "order_is_night",
-    "order_category_count",
-    "addr_total_count",
-    "addr_province_count",
-    "addr_is_new",
 ]
 
 assert len(FEATURE_COLUMNS) == 25, f"特征数量必须是 25, 当前 {len(FEATURE_COLUMNS)}"
@@ -420,16 +420,16 @@ if __name__ == "__main__":
     print("\n[2] 25 维特征 → numpy 数组 (_features_to_array):")
     print(f"  FEATURE_COLUMNS 长度 = {len(FEATURE_COLUMNS)}  (必须是 25, 跟 feature.py 对齐)")
     sample = {
-        "user_total_orders": 3, "user_orders_30d": 1, "user_orders_7d": 0,
-        "user_total_amount": 5000, "user_avg_order_amount": 1666.67,
-        "user_max_order_amount": 3000,
-        "user_refund_count": 0, "user_refund_rate": 0.0, "user_refund_amount": 0,
-        "user_postsale_count": 0, "user_postsale_rate": 0.0,
-        "user_cancel_count": 0, "user_complaint_count": 0, "user_address_count": 1,
-        "order_total_amount": 1500, "order_item_count": 1, "order_sku_count": 1,
-        "order_discount_amount": 0, "order_discount_rate": 0.0,
-        "order_pay_interval": 30, "order_is_night": 0, "order_category_count": 1,
-        "addr_total_count": 1, "addr_province_count": 1, "addr_is_new": 0,
+        "user_total_visits": 3, "user_visits_30d": 1, "user_visits_7d": 0,
+        "user_total_claim_amount": 5000, "user_avg_claim_amount": 1666.67,
+        "user_max_claim_amount": 3000,
+        "user_claim_count": 0, "user_cancel_appt_rate": 0.0, "user_night_claim_count": 0,
+        "user_cancel_appt_count": 0, "user_insured_rate": 0.0,
+        "user_cross_hospital_count": 0, "user_out_region_count": 0, "user_drug_order_count": 1,
+        "order_claim_amount": 1500, "order_insured_rate": 1, "order_rx_item_count": 1,
+        "order_drug_count": 0, "order_dx_count": 0.0,
+        "order_doctor_daily_rx_count": 30, "order_doctor_cross_hospital_count": 0, "order_category_count": 1,
+        "user_claims_1h_hospitals": 1, "user_rx_count": 1, "order_doctor_cross_hospital_count": 0,
     }
     arr = _features_to_array(sample)
     print(f"  shape           = {arr.shape}  (期望 (1, 25))")
@@ -458,7 +458,7 @@ if __name__ == "__main__":
     # 造 300 条, 200 负 100 正 (不均衡, 触发 scale_pos_weight)
     X_demo = np.random.uniform(0, 1, size=(300, 25)).astype(np.float32)
     y_demo = (np.random.rand(300) > 0.66).astype(np.int32)  # 约 100 正
-    # 让 user_total_orders (FEATURE_COLUMNS[0]) 强相关 y, 方便看特征重要性
+    # 让 user_total_visits (FEATURE_COLUMNS[0]) 强相关 y, 方便看特征重要性
     X_demo[:, 0] = y_demo.astype(np.float32) * 8 + np.random.randn(300) * 0.5
     print(f"  合成数据: n={len(y_demo)}, pos={int(y_demo.sum())} ({100*y_demo.mean():.1f}%)")
     # 用 tmp path 避免覆盖真实模型文件

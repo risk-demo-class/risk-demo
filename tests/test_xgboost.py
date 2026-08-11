@@ -1,4 +1,4 @@
-﻿"""
+"""
 XGBoost module unit tests (5 groups).
 Coverage:
   1. Feature column order stability (25 dim)
@@ -27,21 +27,18 @@ class TestFeatureColumns:
         assert len(ml_model.FEATURE_COLUMNS) == 25
 
     def test_feature_prefixes(self):
-        """14 user_* + 8 order_* + 3 addr_* (align with feature.py naming)"""
+        """17 user_* + 8 order_* (align with feature.py naming)"""
         user = [c for c in ml_model.FEATURE_COLUMNS if c.startswith("user_")]
         order = [c for c in ml_model.FEATURE_COLUMNS if c.startswith("order_")]
-        addr = [c for c in ml_model.FEATURE_COLUMNS if c.startswith("addr_")]
-        assert len(user) == 14, f"user features should be 14, got {len(user)}"
+        assert len(user) == 17, f"user features should be 17, got {len(user)}"
         assert len(order) == 8, f"order features should be 8, got {len(order)}"
-        assert len(addr) == 3, f"addr features should be 3, got {len(addr)}"
-
     def test_features_to_array(self):
         """dict -> 1x25 ndarray, missing filled with 0, string -> float"""
         features = {
-            "user_total_orders": 10,         # 0
-            "user_orders_30d": 3,            # 1
+            "user_total_visits": 10,          # 0
+            "user_visits_30d": 3,             # 1
             # intentionally omit 22 middle keys -> 0
-            "addr_is_new": 0,                # 24 (last in FEATURE_COLUMNS)
+            "order_is_night": 0,              # 24 (last in FEATURE_COLUMNS)
         }
         arr = ml_model._features_to_array(features)
         assert arr.shape == (1, 25)
@@ -59,36 +56,35 @@ class TestFeatureColumns:
         causing XGBoost train/inference degraded to 0-imputation" bug (found 2026-08-07).
         If feature.py renames/reorders features, must sync this list.
         """
-        # 14 user + 8 order + 3 addr, aligned with feature.py's 3 feat_funcs dict order
+        # 17 user + 8 order, aligned with feature.py compute functions order
         expected = [
-            # --- 14 user features (compute_user_features) ---
-            "user_total_orders",
-            "user_orders_30d",
-            "user_orders_7d",
-            "user_total_amount",
-            "user_avg_order_amount",
-            "user_max_order_amount",
-            "user_refund_count",
-            "user_postsale_count",
-            "user_refund_rate",
-            "user_postsale_rate",
-            "user_refund_amount",
-            "user_cancel_count",
-            "user_complaint_count",
-            "user_address_count",
+            # --- 17 user features (compute_user_features) ---
+            "user_total_visits",
+            "user_visits_30d",
+            "user_visits_7d",
+            "user_total_claim_amount",
+            "user_avg_claim_amount",
+            "user_max_claim_amount",
+            "user_claim_count",
+            "user_claims_1h_hospitals",
+            "user_cancel_appt_count",
+            "user_cancel_appt_rate",
+            "user_rx_count",
+            "user_non_self_drug_count",
+            "user_insured_rate",
+            "user_night_claim_count",
+            "user_cross_hospital_count",
+            "user_out_region_count",
+            "user_drug_order_count",
             # --- 8 order features (compute_order_features) ---
-            "order_total_amount",
-            "order_item_count",
-            "order_sku_count",
-            "order_discount_amount",
-            "order_discount_rate",
-            "order_pay_interval_sec",
+            "order_claim_amount",
+            "order_insured_rate",
+            "order_rx_item_count",
+            "order_drug_count",
+            "order_dx_count",
+            "order_doctor_daily_rx_count",
+            "order_doctor_cross_hospital_count",
             "order_is_night",
-            "order_category_count",
-            # --- 3 addr features (compute_address_features) ---
-            "addr_total_count",
-            "addr_province_count",
-            "addr_is_new",
         ]
         assert ml_model.FEATURE_COLUMNS == expected, (
             "FEATURE_COLUMNS not aligned with the 25 keys computed by feature.py. "
@@ -118,41 +114,41 @@ class TestModelLoad:
 
         # 2. 准备一组"正常用户"特征 (低值, 期望 → 通过/标记)
         normal_features = {
-            "user_total_orders": 5,
-            "user_orders_30d": 1,
-            "user_orders_7d": 0,
-            "user_total_amount": 2000.0,
-            "user_avg_order_amount": 400.0,
-            "user_max_order_amount": 800.0,
-            "user_refund_count": 0,
-            "user_postsale_count": 0,
-            "user_refund_rate": 0.0,
-            "user_postsale_rate": 0.0,
-            "user_refund_amount": 0,
-            "user_cancel_count": 0,
-            "user_complaint_count": 0,
-            "user_address_count": 1,
-            "order_total_amount": 200.0,
-            "order_item_count": 1,
-            "order_sku_count": 1,
-            "order_discount_amount": 0,
-            "order_discount_rate": 0.0,
-            "order_pay_interval_sec": 60,
+            "user_total_visits": 5,
+            "user_visits_30d": 1,
+            "user_visits_7d": 0,
+            "user_total_claim_amount": 2000.0,
+            "user_avg_claim_amount": 400.0,
+            "user_max_claim_amount": 800.0,
+            "user_claim_count": 2,
+            "user_claims_1h_hospitals": 0,
+            "user_cancel_appt_count": 0,
+            "user_cancel_appt_rate": 0.0,
+            "user_rx_count": 0,
+            "user_non_self_drug_count": 0,
+            "user_insured_rate": 0.8,
+            "user_night_claim_count": 0,
+            "user_cross_hospital_count": 1,
+            "user_out_region_count": 0,
+            "user_drug_order_count": 0,
+            "order_claim_amount": 200.0,
+            "order_insured_rate": 0.8,
+            "order_rx_item_count": 1,
+            "order_drug_count": 1,
+            "order_dx_count": 1,
+            "order_doctor_daily_rx_count": 5,
+            "order_doctor_cross_hospital_count": 1,
             "order_is_night": 0,
-            "order_category_count": 1,
-            "addr_total_count": 1,
-            "addr_province_count": 1,
-            "addr_is_new": 0,
         }
         # 3. 准备一组"高风险用户"特征 (强信号, 期望 → 人工审核/拒绝)
         risky_features = dict(normal_features)
         risky_features.update({
-            "user_total_orders": 200,
-            "user_orders_30d": 80,
-            "user_total_amount": 80000.0,
-            "user_refund_count": 150,
-            "user_refund_rate": 0.95,
-            "user_complaint_count": 10,
+            "user_total_visits": 200,
+            "user_visits_30d": 80,
+            "user_total_claim_amount": 80000.0,
+            "user_claim_count": 150,
+            "user_cancel_appt_rate": 0.95,
+            "user_out_region_count": 10,
         })
 
         # 4. 推理 + 打印
@@ -188,9 +184,9 @@ class TestPredict:
     def test_predict_normal_user(self):
         """Normal user (low 25-dim features) -> reject probability low -> decision 'pass'"""
         result = ml_model.predict({
-            "user_total_orders": 5,
-            "user_orders_30d": 0,
-            "order_total_amount": 100,
+            "user_total_visits": 5,
+            "user_visits_30d": 0,
+            "order_claim_amount": 100,
         })
         assert 0.0 <= result.score <= 1.0
         # Normal user should be decided as "pass"
@@ -205,34 +201,33 @@ class TestPredict:
         from app.engine.ml_model import FEATURE_COLUMNS
         # 高风险用户: 25 维全部填, 高退款率/短间隔/大额/夜单
         risky = {
-            # 用户画像 (高退款 + 多售后)
-            "user_total_orders": 200,
-            "user_orders_30d": 100,
-            "user_orders_7d": 50,
-            "user_total_amount": 800000,       # 80w 累计
-            "user_avg_order_amount": 4000,
-            "user_max_order_amount": 50000,   # 5w 单笔
-            "user_refund_count": 180,         # 90% 退款率
-            "user_postsale_count": 120,
-            "user_refund_rate": 0.9,
-            "user_postsale_rate": 0.6,
-            "user_refund_amount": 700000,     # 退款金额也很高
-            "user_cancel_count": 50,
-            "user_complaint_count": 30,
-            "user_address_count": 8,          # 多地址 (可疑)
-            # 订单特征 (大额 + 短间隔 + 夜单 + 多品类)
-            "order_total_amount": 50000,
-            "order_item_count": 5,
-            "order_sku_count": 5,
-            "order_discount_amount": 49000,   # 几乎不打折
-            "order_discount_rate": 0.02,
-            "order_pay_interval_sec": 30,     # 30s 内支付 (极短)
-            "order_is_night": 1,              # 凌晨下单
-            "order_category_count": 5,
-            # 地址特征
-            "addr_total_count": 8,
-            "addr_province_count": 3,         # 跨省 (可疑)
-            "addr_is_new": 1,                  # 新地址
+            # 用户画像 (高就诊 + 跨院 + 取消挂号 + 异地结算)
+            "user_total_visits": 200,
+            "user_visits_30d": 100,
+            "user_visits_7d": 50,
+            "user_total_claim_amount": 800000,       # 80w 累计
+            "user_avg_claim_amount": 4000,
+            "user_max_claim_amount": 50000,
+            "user_claim_count": 180,
+            "user_claims_1h_hospitals": 5,           # 1 小时跨 5 家医院 (盗刷)
+            "user_cancel_appt_count": 50,            # 大量取消 (黄牛)
+            "user_cancel_appt_rate": 0.9,
+            "user_rx_count": 120,
+            "user_non_self_drug_count": 30,          # 非本人收药 (代购)
+            "user_insured_rate": 0.9,
+            "user_night_claim_count": 20,            # 夜间结算
+            "user_cross_hospital_count": 8,          # 跨 8 家医院
+            "user_out_region_count": 10,             # 异地结算 (套保)
+            "user_drug_order_count": 60,
+            # 业务单特征 (大额 + 多药 + 医生行为)
+            "order_claim_amount": 50000,
+            "order_insured_rate": 0.95,
+            "order_rx_item_count": 5,
+            "order_drug_count": 40,                  # 处方超量
+            "order_dx_count": 1,
+            "order_doctor_daily_rx_count": 80,       # 医生当日 80 处方 (统方)
+            "order_doctor_cross_hospital_count": 4,  # 医生跨 4 院
+            "order_is_night": 1,
         }
         # 验证 25 维都填了 (否则回退到训练分布外)
         assert set(risky.keys()) >= set(FEATURE_COLUMNS), (
@@ -244,11 +239,11 @@ class TestPredict:
         # 普通用户: 25 维都填, 都填低值
         normal = {col: 0.0 for col in FEATURE_COLUMNS}
         normal.update({
-            "user_total_orders": 5,
-            "user_orders_30d": 1,
-            "user_orders_7d": 0,
-            "user_total_amount": 500,
-            "order_total_amount": 100,
+            "user_total_visits": 5,
+            "user_visits_30d": 1,
+            "user_visits_7d": 0,
+            "user_total_claim_amount": 500,
+            "order_claim_amount": 100,
         })
         normal_result = ml_model.predict(normal)
         # 高风险用户应该 P(拒绝) >= 普通用户
@@ -266,7 +261,7 @@ class TestPredict:
         try:
             ml_model._LOADED = False
             ml_model._MODEL = None
-            result = ml_model.predict({"user_total_orders": 1})
+            result = ml_model.predict({"user_total_visits": 1})
             assert result.score == 0.0
             assert result.decision == "\u901a\u8fc7"  # "pass"
             assert result.is_loaded is False
@@ -322,9 +317,9 @@ class TestTrainAndSave:
         np.random.seed(42)
         X = np.random.randn(100, 25).astype(np.float32)
         y = (np.random.rand(100) > 0.5).astype(np.int32)
-        # 构造 user_total_orders 强相关 y (用真实 FEATURE_COLUMNS[0] 名字)
+        # 构造 user_total_visits 强相关 y (用真实 FEATURE_COLUMNS[0] 名字)
         from app.engine.ml_model import FEATURE_COLUMNS
-        target_col = FEATURE_COLUMNS[0]  # user_total_orders
+        target_col = FEATURE_COLUMNS[0]  # user_total_visits
         col_idx = 0
         X[:, col_idx] = y.astype(np.float32) * 5 + np.random.randn(100) * 0.1
         result = ml_model.train_and_save(X, y, model_path=save_path, num_boost_round=30, return_model=True)
@@ -340,7 +335,7 @@ class TestTrainAndSave:
         assert len(importance) > 0, "应该至少 1 个特征有非零 importance"
         # 特征名应该是真实名字, 不是 f0
         assert target_col in importance, f"{target_col} 应在 importance 中, 实际 keys={list(importance.keys())[:3]}"
-        # user_total_orders 应该是 Top 1 (相关性最强)
+        # user_total_visits 应该是 Top 1 (相关性最强)
         top_feature = max(importance, key=importance.get)
         assert top_feature == target_col, f"最强特征应是 {target_col}, 实际 {top_feature}"
         # 所有 importance 应该是 float
