@@ -1,4 +1,4 @@
-﻿/**
+/**
  * 电商风控系统 - 公共前端工具函数
  */
 
@@ -166,36 +166,35 @@ function buildPaginationHtml(currentPage, totalPages, pageSize, loadFnName, cont
  *   - 双向: UI ↔ JSON 互相转换
  * ============================================================ */
 
-// 1. 26 特征 key↔中文标签 (跟 ml_model.py FEATURE_COLUMNS 对齐, 中文按业务语义)
+// 1. 25 特征 key↔中文标签 (跟 ml_model.py FEATURE_COLUMNS 对齐, 中文按业务语义)
 const FEATURE_LABELS = {
-    // 用户画像 (14 维)
-    "user_total_orders":         "用户总订单数",
-    "user_orders_30d":           "用户30天订单数",
-    "user_orders_7d":            "用户7天订单数",
-    "user_total_amount":         "用户累计消费金额",
-    "user_avg_order_amount":     "用户平均订单金额",
-    "user_max_order_amount":     "用户最大单笔金额",
-    "user_refund_count":         "用户退款次数",
-    "user_postsale_count":       "用户售后次数",
-    "user_refund_rate":          "用户退款率",
-    "user_postsale_rate":        "用户售后率",
-    "user_refund_amount":        "用户退款金额",
-    "user_cancel_count":         "用户取消订单次数",
-    "user_complaint_count":      "用户投诉次数",
-    "user_address_count":        "用户使用地址数",
-    // 订单画像 (8 维)
-    "order_total_amount":        "订单总金额",
-    "order_item_count":          "订单商品件数",
-    "order_sku_count":           "订单SKU种类数",
-    "order_discount_amount":     "订单优惠金额",
-    "order_discount_rate":       "订单折扣率",
-    "order_pay_interval_sec":    "下单到支付间隔(秒)",
-    "order_is_night":            "是否凌晨下单",
-    "order_category_count":      "订单商品类目数",
-    // 地址画像 (3 维)
-    "addr_total_count":          "用户地址总数",
-    "addr_province_count":       "用户地址跨省数",
-    "addr_is_new":               "是否新地址",
+    // 用户画像 (17 维)
+    "user_total_visits":             "历史就诊次数",
+    "user_visits_30d":               "近30天就诊数",
+    "user_visits_7d":                "近7天就诊数",
+    "user_total_claim_amount":       "医保结算总金额",
+    "user_avg_claim_amount":         "平均单次结算金额",
+    "user_max_claim_amount":         "最大单笔结算金额",
+    "user_claim_count":              "医保结算次数",
+    "user_claims_1h_hospitals":      "近1小时跨院结算数",
+    "user_cancel_appt_count":        "取消挂号次数",
+    "user_cancel_appt_rate":         "取消挂号率",
+    "user_rx_count":                 "处方总数",
+    "user_non_self_drug_count":      "非本人收药订单数",
+    "user_insured_rate":             "医保报销率",
+    "user_night_claim_count":        "夜间结算次数",
+    "user_cross_hospital_count":     "结算涉及医院数",
+    "user_out_region_count":         "异地结算次数",
+    "user_drug_order_count":         "药品订单总数",
+    // 业务单画像 (8 维)
+    "order_claim_amount":            "本次结算/挂号金额",
+    "order_insured_rate":            "本次医保报销比例",
+    "order_rx_item_count":           "处方药品订单行数",
+    "order_drug_count":              "药品总数量",
+    "order_dx_count":                "处方是否有诊断",
+    "order_doctor_daily_rx_count":   "开方医生当日处方数",
+    "order_doctor_cross_hospital_count": "开方医生历史跨院数",
+    "order_is_night":                "本次是否夜间",
 };
 
 // 反向: 中文标签 → key (前端下拉显示中文, 内部存 key)
@@ -213,10 +212,10 @@ const RISK_LEVEL_SCORE_MAP = {
 
 // 3. 按 event_type 拆的阈值 (跟后端 config.py RISK_EVENT_THRESHOLDS 一致)
 const RISK_EVENT_THRESHOLDS = {
-    "下单":     {pass: 30, mark: 60, review: 80},
-    "支付":     {pass: 25, mark: 55, review: 75},
-    "售后申请":  {pass: 40, mark: 70, review: 85},
-    "物流投诉":  {pass: 35, mark: 65, review: 80},
+    "医保结算":  {pass: 30, mark: 60, review: 80},
+    "处方审核":  {pass: 30, mark: 60, review: 80},
+    "挂号":     {pass: 35, mark: 65, review: 80},
+    "药品代购":  {pass: 25, mark: 55, review: 75},
     "通用":     {pass: 30, mark: 60, review: 80},
 };
 
@@ -309,13 +308,13 @@ function renderCondNode(cond, parent, isRoot) {
         `;
         footer.querySelector('.cond-add-leaf').addEventListener('click', () => {
             for (let i = 0; i < 3; i++) {
-                children.push({field: 'user_total_orders', op: '>=', value: 0});
+                children.push({field: 'user_total_visits', op: '>=', value: 0});
             }
             buildConditionUI(collectCondition(parent), parent.id);
         });
         footer.querySelector('.cond-add-group').addEventListener('click', () => {
             // [P4-L5 2026-08-10] + 分组默认带 1 个 AND 子组 (嵌套场景), 用户可继续往里加
-            children.push({and: [{field: 'user_total_orders', op: '>=', value: 0}]});
+            children.push({and: [{field: 'user_total_visits', op: '>=', value: 0}]});
             buildConditionUI(collectCondition(parent), parent.id);
         });
         wrap.appendChild(footer);

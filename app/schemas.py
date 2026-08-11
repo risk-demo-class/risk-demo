@@ -12,7 +12,7 @@ from pydantic import BaseModel, Field
 class RiskCheckRequest(BaseModel):
     """风险检查请求"""
     event_type: Literal["医保结算", "处方审核", "挂号", "药品代购"]
-    source_id: str = Field(description="关联业务ID (order_id / postsale_id 等)")
+    source_id: str = Field(description="关联业务单ID (结算单/处方/挂号/药品订单)")
     user_id: str
     order_id: Optional[str] = None
     receive_id: Optional[str] = None

@@ -1,3 +1,4 @@
+# ⚠️ 已废弃 (2026-08-11): 电商版大数据生成器, 医疗造数请用 gen_risky_users.py / gen_train_dataset.py / gen_risk_data_with_dates.py
 """
 电商风控系统 - 10w 条随机业务数据生成 (异步, 一次性脚本)
 ================

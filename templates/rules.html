@@ -12,12 +12,12 @@
 <div class="mb-3 d-flex gap-2 align-items-center flex-wrap">
     <select class="form-select form-select-sm w-auto" id="filterCategory" onchange="loadRules(1)">
         <option value="">全部分类</option>
-        <option value="订单欺诈">订单欺诈</option>
-        <option value="支付风险">支付风险</option>
+        <option value="医保欺诈">医保欺诈</option>
+        <option value="处方风险">处方风险</option>
+        <option value="挂号风险">挂号风险</option>
+        <option value="药品风险">药品风险</option>
+        <option value="机构风险">机构风险</option>
         <option value="账户风险">账户风险</option>
-        <option value="售后滥用">售后滥用</option>
-        <option value="地址风险">地址风险</option>
-        <option value="物流风险">物流风险</option>
     </select>
     <span class="text-muted small">每页</span>
     <select class="form-select form-select-sm w-auto" id="pageSize" onchange="onPageSizeChange()">
@@ -70,12 +70,12 @@
                         <div class="col-md-4">
                             <label class="form-label">分类</label>
                             <select class="form-select" id="f_category" required>
-                                <option value="订单欺诈">订单欺诈</option>
-                                <option value="支付风险">支付风险</option>
+                                <option value="医保欺诈">医保欺诈</option>
+                                <option value="处方风险">处方风险</option>
+                                <option value="挂号风险">挂号风险</option>
+                                <option value="药品风险">药品风险</option>
+                                <option value="机构风险">机构风险</option>
                                 <option value="账户风险">账户风险</option>
-                                <option value="售后滥用">售后滥用</option>
-                                <option value="地址风险">地址风险</option>
-                                <option value="物流风险">物流风险</option>
                             </select>
                         </div>
                     </div>
@@ -84,10 +84,10 @@
                             <label class="form-label">事件类型</label>
                             <select class="form-select" id="f_event_type">
                                 <option value="通用">通用</option>
-                                <option value="下单">下单</option>
-                                <option value="支付">支付</option>
-                                <option value="售后申请">售后申请</option>
-                                <option value="物流投诉">物流投诉</option>
+                                <option value="医保结算">医保结算</option>
+                                <option value="处方审核">处方审核</option>
+                                <option value="挂号">挂号</option>
+                                <option value="药品代购">药品代购</option>
                             </select>
                         </div>
                         <div class="col-md-3">

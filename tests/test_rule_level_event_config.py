@@ -74,7 +74,7 @@ class TestRiskEventThresholds:
 
     def test_all_event_types_defined(self):
         assert set(settings.RISK_EVENT_THRESHOLDS.keys()) == {
-            "下单", "支付", "售后申请", "物流投诉", "通用"
+            "医保结算", "处方审核", "挂号", "药品代购", "通用"
         }
 
     def test_each_event_type_has_3_thresholds(self):
@@ -90,8 +90,8 @@ class TestRiskEventThresholds:
     def test_get_event_thresholds_with_fallback(self):
         """get_event_thresholds 找不到时 fallback 到全局."""
         # 命中: 返回对应 event_type 阈值
-        th = settings.get_event_thresholds("售后申请")
-        assert th["pass"] == 40  # 售后更严
+        th = settings.get_event_thresholds("挂号")
+        assert th["pass"] == 35  # 黄牛偏严
         # fallback: 通用阈值
         th_fallback = settings.get_event_thresholds("通用")
         assert th_fallback == {
@@ -103,28 +103,17 @@ class TestRiskEventThresholds:
         th_unknown = settings.get_event_thresholds("不存在的")
         assert th_unknown == th_fallback
 
-    def test_售后_比_下单_严(self):
-        """售后/支付阈值应该 >= 下单 (业务: 薅羊毛防风险)."""
-        th_下单 = settings.RISK_EVENT_THRESHOLDS["下单"]
-        th_售后 = settings.RISK_EVENT_THRESHOLDS["售后申请"]
-        th_支付 = settings.RISK_EVENT_THRESHOLDS["支付"]
-        # 售后 pass 阈值应该 >= 下单 pass (更严格)
-        assert th_售后["pass"] >= th_下单["pass"], (
-            "售后应该比下单严 (pass 阈值更高)"
+    def test_药品代购_比_医保结算_敏感(self):
+        """药品代购 pass 阈值更低 (处方药外流更敏感), 挂号 pass 更高 (黄牛更严)."""
+        th_结算 = settings.RISK_EVENT_THRESHOLDS["医保结算"]
+        th_药品 = settings.RISK_EVENT_THRESHOLDS["药品代购"]
+        th_挂号 = settings.RISK_EVENT_THRESHOLDS["挂号"]
+        assert th_药品["pass"] <= th_结算["pass"], (
+            "药品代购应该比医保结算敏感 (pass 阈值更低)"
         )
-        # 支付 pass 阈值应该 <= 下单 pass (支付更敏感)
-        assert th_支付["pass"] <= th_下单["pass"], (
-            "支付应该比下单敏感 (pass 阈值更低)"
+        assert th_挂号["pass"] >= th_结算["pass"], (
+            "挂号应该比医保结算严 (pass 阈值更高)"
         )
-
-
-# ============================================================
-# 3. decision._score_to_level / _score_to_decision 接 event_type
-# ============================================================
-
-class TestScoreToLevelWithEventType:
-    """_score_to_level / _score_to_decision 必须按 event_type 查表."""
-
     def test_score_to_level_default_event(self):
         from app.engine.decision import _score_to_level, _score_to_decision
         # 不传 event_type 用通用阈值 (PASS=30, MARK=60, REVIEW=80)
@@ -139,19 +128,19 @@ class TestScoreToLevelWithEventType:
 
     def test_score_to_level_with_event_type(self):
         from app.engine.decision import _score_to_level
-        # 售后: pass=40, mark=70, review=85
-        assert _score_to_level(39, "售后申请") == "低"
-        assert _score_to_level(40, "售后申请") == "中"
-        assert _score_to_level(69, "售后申请") == "中"
-        assert _score_to_level(70, "售后申请") == "高"
-        assert _score_to_level(85, "售后申请") == "极高"
+        # 挂号: pass=35, mark=65, review=80
+        assert _score_to_level(34, "挂号") == "低"
+        assert _score_to_level(35, "挂号") == "中"
+        assert _score_to_level(64, "挂号") == "中"
+        assert _score_to_level(65, "挂号") == "高"
+        assert _score_to_level(80, "挂号") == "极高"
 
     def test_score_to_decision_with_event_type(self):
         from app.engine.decision import _score_to_decision
-        # 支付: pass=25, mark=55, review=75
-        assert _score_to_decision(24, "支付") == "通过"
-        assert _score_to_decision(25, "支付") == "标记"
-        assert _score_to_decision(75, "支付") == "拒绝"
+        # 药品代购: pass=25, mark=55, review=75
+        assert _score_to_decision(24, "药品代购") == "通过"
+        assert _score_to_decision(25, "药品代购") == "标记"
+        assert _score_to_decision(75, "药品代购") == "拒绝"
 
     def test_score_to_level_fallback_unknown_event(self):
         """未知 event_type fallback 到全局."""
@@ -271,7 +260,7 @@ class TestFrontendRuleBuilder:
 
     def test_has_risk_event_thresholds(self, appjs):
         assert "RISK_EVENT_THRESHOLDS" in appjs
-        for et in ["下单", "支付", "售后申请", "物流投诉", "通用"]:
+        for et in ["医保结算", "处方审核", "挂号", "药品代购", "通用"]:
             assert f'"{et}"' in appjs
 
     def test_has_builder_functions(self, appjs):

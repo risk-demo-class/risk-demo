@@ -123,12 +123,12 @@ def _build_context(request: RiskCheckRequest) -> _RiskCheckContext:
     """步骤 1b: 请求 → Context, 顺便补全 order_id.
 
     业务规则:
-      - "下单" / "支付" 事件: source_id 就是 order_id
-      - "售后申请" 事件: source_id 是 postsale_id, order_id 要从 request 传
-      - "物流投诉" 事件: source_id 是 complaints_id
+      - 医疗 4 类事件 (医保结算/处方审核/挂号/药品代购): source_id 就是业务单 ID
+
+
     """
     order_id = request.order_id
-    if not order_id and request.event_type in ("下单", "支付"):
+    if not order_id:
         order_id = request.source_id
     return _RiskCheckContext(
         request=request,

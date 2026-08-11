@@ -42,13 +42,13 @@ class Settings(BaseSettings):
     RISK_VETO_MIN_SCORE: int = 90      # 一票否决时强制的最低分
 
     # 按 event_type 拆的阈值 (P4-L5 2026-08-10):
-    # 售后/物流比下单/支付严 (售后容易薅羊毛, 物流容易虚假签收)
+    # 药品代购/挂号比结算严 (处方药外流 / 挂号黄牛)
     # 找不到 event_type 时 fallback 到全局阈值
     RISK_EVENT_THRESHOLDS: dict[str, dict[str, int]] = {
-        "下单":     {"pass": 30, "mark": 60, "review": 80},   # 标准
-        "支付":     {"pass": 25, "mark": 55, "review": 75},   # 支付更严 (钱的事)
-        "售后申请":  {"pass": 40, "mark": 70, "review": 85},   # 售后更严 (薅羊毛)
-        "物流投诉":  {"pass": 35, "mark": 65, "review": 80},   # 物流偏严
+        "医保结算":  {"pass": 30, "mark": 60, "review": 80},   # 标准
+        "处方审核":  {"pass": 30, "mark": 60, "review": 80},   # 用药安全, 标准
+        "挂号":     {"pass": 35, "mark": 65, "review": 80},   # 黄牛偏严
+        "药品代购":  {"pass": 25, "mark": 55, "review": 75},   # 处方药外流更严
         "通用":     {"pass": 30, "mark": 60, "review": 80},   # = 全局默认
     }
 
