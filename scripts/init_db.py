@@ -2,7 +2,7 @@
 医疗风控系统 - 一键数据库初始化脚本 (异步)
 按顺序执行所有 SQL 脚本: 创建数据库 → 业务表 → 业务数据 → 风控表 → 风控规则
 
-总表数: 17 业务 + 9 风控 = 26 张 (2026-08-07 含 P4 2 张: risk_action_log + risk_alert)
+总表数: 8 业务 + 11 风控 = 19 张 (2026-08-11 P1 新增 2 张: risk_data_access_log + agent_session)
 老环境升级: 跑 sql/migration_add_p4_tables.sql + sql/migration_add_2026_08_07_fields.sql
    (后者含 6 个字段: 4 原 + 2 合并自 case_source_id migration)
 """
@@ -247,13 +247,13 @@ async def main():
         print(f"  错误: 无法连接 MySQL - {e}")
         sys.exit(1)
 
-    # 步骤 2: 用 ORM metadata 建表 (8 业务 + 9 风控 = 17 张, 单一来源)
+    # 步骤 2: 用 ORM metadata 建表 (8 业务 + 11 风控 = 19 张, 单一来源)
     print("\n[步骤 2/5] 用 ORM metadata 建表")
     from app.database import Base, async_engine
     from app import models  # noqa: F401  确保所有模型注册进 Base.metadata
     async with async_engine.begin() as create_conn:
         await create_conn.run_sync(Base.metadata.create_all)
-    print("  17 张表 (8 业务 + 9 风控) 已就绪")
+    print("  19 张表 (8 业务 + 11 风控) 已就绪")
 
     # 步骤 3-5: 按顺序执行数据/规则 SQL 脚本
     conn = await get_connection(args.host, args.port, args.user, args.password, db=args.db)
@@ -276,7 +276,7 @@ async def main():
     if total_errors == 0:
         print("初始化完成! 所有脚本执行成功。")
         if args.reset:
-            print("数据库已重置: 17 张表重建 (8 业务 + 9 风控) + 业务数据 + 19 条规则全部就绪")
+            print("数据库已重置: 19 张表重建 (8 业务 + 11 风控) + 业务数据 + 19 条规则全部就绪")
     else:
         print(f"初始化完成，但有 {total_errors} 个错误，请检查上方输出。")
     print("=" * 60)

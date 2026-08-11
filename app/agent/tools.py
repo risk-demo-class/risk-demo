@@ -19,7 +19,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import AsyncSessionLocal
 from app.engine.feature import compute_user_features
+from app.masking import mask_business_row, mask_kwargs
+from app.config import settings
 from app.models import (
+    AgentSession,
     Appointment,
     DrugOrder,
     InsuranceClaim,
@@ -27,6 +30,7 @@ from app.models import (
     RiskAssessment,
     RiskBlacklist,
     RiskCase,
+    RiskDataAccessLog,
     RiskRule,
 )
 from app.schemas import BlacklistCreate, RiskCheckRequest
@@ -58,7 +62,8 @@ async def _safe_call(error_label: str, impl, **kwargs) -> str:
         error_id = f"err_{ulid.new().str.lower()[:12]}"
         logger.exception(
             "%s 执行失败 [error_id=%s] args=%s",
-            error_label, error_id, {k: v for k, v in kwargs.items() if k != "db"},
+            error_label, error_id,
+            mask_kwargs({k: v for k, v in kwargs.items() if k != "db"}),
         )
         return f"{error_label}失败: {e} (error_id={error_id})"
 
@@ -490,10 +495,21 @@ async def _query_business_data_impl(
     if not handler:
         return f"不支持的查询类型: {query_type}, 可选: {', '.join(_BIZ_QUERY_HANDLERS)}"
     rows = await handler(db, user_id, order_id, limit)
-    return json.dumps(
-        [_row_to_dict(r) for r in rows],
-        ensure_ascii=False, indent=2,
-    )
+    # 【2026-08-11 P1】访问审计: 谁查了谁的什么业务数据 (医疗数据留痕)
+    db.add(RiskDataAccessLog(
+        operator="ai_agent",
+        query_type=query_type,
+        user_id=user_id or None,
+        order_id=order_id or None,
+        limit_count=limit,
+    ))
+    await db.commit()
+
+    payload = [_row_to_dict(r) for r in rows]
+    if settings.LLM_DATA_MASK:
+        # 【2026-08-11 P1】LLM 上下文脱敏: 姓名/诊断/收件人/卡号 → ****
+        payload = [mask_business_row(r) for r in payload]
+    return json.dumps(payload, ensure_ascii=False, indent=2)
 
 
 # ============================================================

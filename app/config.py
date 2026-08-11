@@ -91,6 +91,14 @@ class Settings(BaseSettings):
     AUTH_SECRET: str = ""           # 建议配置强随机; 为空由 ADMIN_PASSWORD 派生
     AUTH_TOKEN_TTL_HOURS: int = 8   # Token 有效期 (小时)
 
+    # ---- LLM 数据脱敏 (2026-08-11 P1) ----
+    # True: Agent 查业务数据时, 姓名/诊断/收件人/卡号替换为 **** 再发给 LLM
+    LLM_DATA_MASK: bool = True
+
+    # ---- Agent 会话 (2026-08-11 P1) ----
+    # 会话存 MySQL 表; 超过 N 小时未活动自动清理
+    AGENT_SESSION_TTL_HOURS: int = 24
+
     # ---- features 脱敏 (P3-M6) ----
     # True: 响应里 features 返回全量 25 维 (教学/内部 admin 用)
     # False: 响应里 features={} (前端不展示, 防敏感数据外泄)

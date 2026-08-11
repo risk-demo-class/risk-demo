@@ -22,6 +22,8 @@ import logging.config
 import logging.handlers
 import os
 
+from app.masking import MaskQueryStringFilter
+
 
 # 日志目录: 项目根/logs/  (跟 _run.py 保持一致)
 _PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -60,6 +62,11 @@ def build_logging_config(log_file: str = APP_LOG_FILE, level: str = "INFO") -> d
     return {
         "version": 1,
         "disable_existing_loggers": False,   # 不动已有 logger, 避免 import 顺序问题
+        "filters": {
+            "mask_query_string": {
+                "()": MaskQueryStringFilter,
+            },
+        },
         "formatters": {
             "default": DEFAULT_FORMATTER,
         },
@@ -98,6 +105,7 @@ def build_logging_config(log_file: str = APP_LOG_FILE, level: str = "INFO") -> d
                 "handlers": ["console", "file"],
                 "level": "INFO",
                 "propagate": False,
+                "filters": ["mask_query_string"],   # 2026-08-11: 查询串脱敏
             },
             # 业务 logger (app.*) 走 root 配置, 不用单独配
             # 例: app.engine.decision → logger = logging.getLogger(__name__)

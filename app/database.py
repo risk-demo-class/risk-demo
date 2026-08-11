@@ -111,5 +111,5 @@ if __name__ == "__main__":
     print(f"  使用方式           = Depends(get_db_async) → 路由函数参数 db: AsyncSession = Depends(...)")
 
     print("\n" + "=" * 60)
-    print("注意: 26 张表的 Base 来自 app.models, 启动时 Base.metadata 自动注册")
+    print("注意: 19 张表的 Base 来自 app.models, 启动时 Base.metadata 自动注册")
     print("建表: python scripts/init_db.py --yes")

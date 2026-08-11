@@ -4,7 +4,7 @@
 --
 -- 本系统共需初始化 4 个 SQL 脚本，按以下顺序执行:
 --
---   1. init_business_tables.sql  -- 17 张业务表 (DDL)
+--   1. init_business_tables.sql  -- 8 张业务表 (DDL, 医疗版)
 --   2. init_business_data.sql    -- 业务表测试数据 (~4100 条)
 --   3. init_risk_tables.sql      -- 9 张风控表 (DDL, 含 P4 2 张)
 --   4. init_risk_data.sql        -- 19 条预置风控规则 (R001-R020)

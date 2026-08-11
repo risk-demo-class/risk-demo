@@ -1,5 +1,5 @@
 """
-电商风控系统 - 风控表 ORM (7 张)
+医疗风控系统 - 风控表 ORM (11 张, 2026-08-11 P1 新增 2 张审计/会话表)
 风控系统自建表, 跟业务表分开管理
 - 规则配置 (RiskRule)
 - 事件审计 (RiskEvent / RiskFeature / RiskAssessment)
@@ -337,4 +337,59 @@ class RiskAlert(Base):
         Index("idx_alert_status", "status"),
         Index("idx_alert_level", "alert_level"),
         Index("idx_alert_create_time", "create_time"),
+    )
+
+
+# ============================================================
+# 【2026-08-11 P1 安全加固】两张新增审计/会话表 (加表不改原 9 张 schema)
+# ============================================================
+
+
+class RiskDataAccessLog(Base):
+    """
+    业务数据访问审计表 (2026-08-11 P1).
+
+    记录"谁(operator)在什么时间查了谁的什么业务数据".
+    AI Agent 查询业务数据时写一行, 满足医疗数据访问留痕要求.
+    """
+    __tablename__ = "risk_data_access_log"
+
+    log_id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True, comment="日志ID")
+    operator: Mapped[str] = mapped_column(String(50), nullable=False, default="ai_agent", comment="操作方(ai_agent/admin)")
+    query_type: Mapped[str] = mapped_column(String(50), nullable=False, comment="查询类型(user_claims/user_rxs/...)")
+    user_id: Mapped[Optional[str]] = mapped_column(String(50), comment="被查用户ID")
+    order_id: Mapped[Optional[str]] = mapped_column(String(50), comment="被查业务单ID")
+    limit_count: Mapped[int] = mapped_column(Integer, default=10, comment="返回条数上限")
+    create_time: Mapped[Optional[datetime]] = mapped_column(
+        DateTime, server_default=func.now(), default=datetime.now, comment="访问时间",
+    )
+
+    __table_args__ = (
+        Index("idx_data_access_user", "user_id"),
+        Index("idx_data_access_create_time", "create_time"),
+    )
+
+
+class AgentSession(Base):
+    """
+    Agent 会话表 (2026-08-11 P1).
+
+    会话历史从进程内 dict 迁到 MySQL, 解决:
+      1. gunicorn 4 worker 间会话不共享 (用户对话上下文乱跳)
+      2. 无 TTL 导致内存泄漏
+    超过 AGENT_SESSION_TTL_HOURS 未活动的会话由 chat() 自动清理.
+    """
+    __tablename__ = "agent_session"
+
+    session_id: Mapped[str] = mapped_column(String(64), primary_key=True, comment="会话ID")
+    messages: Mapped[str] = mapped_column(Text, nullable=False, comment="消息历史 JSON (LangChain message dict)")
+    create_time: Mapped[Optional[datetime]] = mapped_column(
+        DateTime, server_default=func.now(), default=datetime.now, comment="创建时间",
+    )
+    last_active: Mapped[Optional[datetime]] = mapped_column(
+        DateTime, server_default=func.now(), default=datetime.now, comment="最后活动时间",
+    )
+
+    __table_args__ = (
+        Index("idx_agent_session_last_active", "last_active"),
     )

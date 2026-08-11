@@ -91,7 +91,7 @@ python run_app.py
 python scripts/init_db.py --reset --yes
 ```
 
-- 用 ORM metadata 建 17 张表（8 业务 + 9 风控）
+- 用 ORM metadata 建 19 张表（8 业务 + 11 风控）
 - 导入 19 条医疗规则 + 黑名单种子
 - 导入基础数据：4 家医院 / 8 名医生 / 5 名参保人 + 业务样例
 
