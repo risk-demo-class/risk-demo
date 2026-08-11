@@ -1,32 +1,21 @@
 """
-电商风控系统 - ORM 模型总入口 (re-export hub)
-包含 17 张业务表 + 7 张风控表的 SQLAlchemy 2.x 映射
-
-
+医疗风控系统 - ORM 模型总入口 (re-export hub)
+包含 8 张业务表 + 9 张风控表的 SQLAlchemy 2.x 映射
 """
 
-# 业务表 (17 个)
+# 业务表 (8 个)
 from app.models_business import (
-    Logistics,
-    LogisticsCompany,
-    LogisticsComplaint,
-    LogisticsComplaintsRecord,
-    OrderDetail,
-    OrderInfo,
-    OrderLogistics,
-    OrderStatus,
-    Postsale,
-    PostsaleLogistics,
-    PostsaleReason,
-    PostsaleStatus,
-    ProductCategory,
-    ReceiveInfo,
-    Region,
-    SkuInfo,
+    Appointment,
+    BlacklistExtra,
+    Doctor,
+    DrugOrder,
+    Hospital,
+    InsuranceClaim,
+    Prescription,
     UserInfo,
 )
 
-# 风控表 (7 个)
+# 风控表 (9 个)
 from app.models_risk import (
     RiskActionLog,
     RiskAlert,
@@ -41,14 +30,10 @@ from app.models_risk import (
 
 
 __all__ = [
-    # 业务表 (17)
-    "UserInfo", "Region", "ProductCategory", "SkuInfo",
-    "OrderStatus", "OrderInfo", "OrderDetail",
-    "Logistics", "OrderLogistics", "LogisticsCompany",
-    "LogisticsComplaint", "LogisticsComplaintsRecord",
-    "PostsaleStatus", "PostsaleReason", "Postsale", "PostsaleLogistics",
-    "ReceiveInfo",
-    # 风控表 (9 = 7 业务 + 2 系统管理, P4 新增)
+    # 业务表 (8)
+    "UserInfo", "Hospital", "Doctor",
+    "Appointment", "Prescription", "InsuranceClaim", "DrugOrder", "BlacklistExtra",
+    # 风控表 (9)
     "RiskRule", "RiskEvent", "RiskFeature", "RiskAssessment",
     "RiskCase", "RiskBlacklist", "RiskUserProfile",
     "RiskActionLog", "RiskAlert",
@@ -56,25 +41,22 @@ __all__ = [
 
 
 # ============================================================
-# Demo: 列出 26 张表的所有 ORM 类 + 字段 — 无需连 DB (纯反射)
+# Demo: 列出 17 张表的所有 ORM 类 + 字段 — 无需连 DB (纯反射)
 # 跑法: python app/models.py
 # ============================================================
 if __name__ == "__main__":
     print("=" * 60)
-    print("ORM 模型总览 — 26 张表 (17 业务 + 9 风控)")
+    print("ORM 模型总览 — 17 张表 (8 业务 + 9 风控)")
     print("=" * 60)
 
     business_models = [
-        "UserInfo", "Region", "ProductCategory", "OrderStatus",
-        "LogisticsCompany", "PostsaleStatus", "PostsaleReason",
-        "ReceiveInfo", "SkuInfo", "OrderInfo", "OrderDetail",
-        "Logistics", "OrderLogistics", "LogisticsComplaint",
-        "LogisticsComplaintsRecord", "Postsale", "PostsaleLogistics",
+        "UserInfo", "Hospital", "Doctor",
+        "Appointment", "Prescription", "InsuranceClaim", "DrugOrder", "BlacklistExtra",
     ]
     risk_models = [
         "RiskRule", "RiskEvent", "RiskFeature", "RiskAssessment",
         "RiskCase", "RiskBlacklist", "RiskUserProfile",
-        "RiskActionLog", "RiskAlert",   # P4-L1/L2 系统管理表
+        "RiskActionLog", "RiskAlert",
     ]
     print(f"\n[1] 业务表 ({len(business_models)} 张):")
     for i, name in enumerate(business_models, 1):
@@ -94,11 +76,8 @@ if __name__ == "__main__":
         cols = list(cls.__table__.columns)
         print(f"  {i:>2}. {name:<30} {len(cols)} 字段  PK={cls.__table__.primary_key.columns.keys()}")
 
-    # Base.metadata 验证
     from app.database import Base
     total_tables = len(Base.metadata.tables)
     print(f"\n[3] Base.metadata 已注册表数: {total_tables} 张")
-    print(f"     (Base.metadata 是 SQLAlchemy 自动建表的源, init_db.py 用它 DDL)")
-
     print("\n" + "=" * 60)
-    print("结论: 26 张表 1 个导入点 (app.models), service/router 只 from app.models import X")
+    print("结论: 17 张表 1 个导入点 (app.models), service/router 只 from app.models import X")

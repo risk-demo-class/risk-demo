@@ -39,12 +39,11 @@ class RiskRule(Base):
     rule_id: Mapped[str] = mapped_column(String(50), primary_key=True, comment="规则ID")
     rule_name: Mapped[str] = mapped_column(String(100), nullable=False, comment="规则名称")
     rule_category: Mapped[str] = mapped_column(
-        Enum("订单欺诈", "支付风险", "账户风险", "售后滥用", "地址风险", "物流风险",
-             name="rule_category_enum"),
+        Enum("医保欺诈", "处方风险", "挂号风险", "药品风险", "机构风险", "账户风险", name="rule_category_enum"),
         nullable=False, comment="风险场景分类",
     )
     event_type: Mapped[str] = mapped_column(
-        Enum("下单", "支付", "售后申请", "物流投诉", "通用", name="rule_event_type_enum"),
+        Enum("医保结算", "处方审核", "挂号", "药品代购", "通用", name="rule_event_type_enum"),
         nullable=False, server_default="通用", comment="适用事件类型",
     )
     rule_condition: Mapped[str] = mapped_column(Text, nullable=False, comment="条件表达式(JSON)")
@@ -90,7 +89,7 @@ class RiskEvent(Base):
 
     event_id: Mapped[str] = mapped_column(String(50), primary_key=True, comment="事件ID")
     event_type: Mapped[str] = mapped_column(
-        Enum("下单", "支付", "售后申请", "物流投诉", name="event_type_enum"),
+        Enum("医保结算", "处方审核", "挂号", "药品代购", name="event_type_enum"),
         nullable=False, comment="事件类型",
     )
     event_source_id: Mapped[str] = mapped_column(String(50), nullable=False, comment="关联业务ID")
@@ -187,7 +186,7 @@ class RiskCase(Base):
     # --- 业务回溯字段 (重做检查时使用) ---
     source_id: Mapped[Optional[str]] = mapped_column(String(50), comment="原始业务ID(订单/售后/投诉ID)")
     event_type: Mapped[Optional[str]] = mapped_column(
-        Enum("下单", "支付", "售后申请", "物流投诉", name="case_event_type_enum"),
+        Enum("医保结算", "处方审核", "挂号", "药品代购", name="case_event_type_enum"),
         comment="触发案件的事件类型",
     )
     create_time: Mapped[Optional[datetime]] = mapped_column(
@@ -212,7 +211,7 @@ class RiskBlacklist(Base):
 
     blacklist_id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True, comment="黑名单ID")
     blacklist_type: Mapped[str] = mapped_column(
-        Enum("用户", "地址", "手机号", name="blacklist_type_enum"),
+        Enum("医保卡", "身份证", "执业证", "医院编码", "手机号", "用户", name="blacklist_type_enum"),
         nullable=False, comment="黑名单类型",
     )
     blacklist_value: Mapped[str] = mapped_column(String(200), nullable=False, comment="黑名单值")
