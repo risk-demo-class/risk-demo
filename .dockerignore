@@ -1,0 +1,9 @@
+# 不要拷进镜像: Windows venv 与运行时数据
+.venv
+__pycache__
+*.pyc
+logs
+.pytest_cache
+.git
+.idea
+.vscode
