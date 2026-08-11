@@ -2,6 +2,18 @@
 
 ## Session: 2026-08-11
 
+### 附加任务: 生成人工审核事件 (审核工作台测试数据)
+
+- **Status:** complete
+- Actions taken:
+  - 发现库里 0 个人工审核决策/0 个待审核案件 (双轨融合把高风险都推成拒绝)
+  - 新增 `scripts/gen_review_cases.py`: 生成时 XGB_ENABLED=false (纯规则), 跑 RISK 用户
+    4 类事件直到攒够目标个人工审核决策 (run_risk_check 自动建待审核案件)
+  - 运行: 81 条事件 → 通过 17 / 标记 8 / 人工审核 40 / 拒绝 16, 40 个待审核案件
+  - 验证: `GET /api/cases?active_only=true` total=40; 案件覆盖机构/医保/挂号等分类
+- Files created/modified:
+  - `scripts/gen_review_cases.py`（新建）
+
 ### Phase 1: P0 安全合规最小闭环
 
 - **Status:** complete
