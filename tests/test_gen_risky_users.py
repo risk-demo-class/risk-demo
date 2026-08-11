@@ -26,7 +26,7 @@ class TestGenRiskyUsersCLI:
         # GBK 环境解码中文会失败, 用 errors='replace' 兜底
         stdout = result.stdout.decode("utf-8", errors="replace")
         assert "--count" in stdout, f"--help 应含 --count, 实际: {stdout[:500]}"
-        assert "default 5" in stdout.lower() or "default=5" in stdout or "5" in stdout
+        assert "default 8" in stdout.lower() or "default=8" in stdout or "8" in stdout
 
     def test_script_accepts_reset_argument(self):
         """必须接受 --reset 参数 (先删旧数据)."""
@@ -57,26 +57,26 @@ class TestGenRiskyUsersLogic:
     """gen_risky_users 函数逻辑 (不连真实 DB, 测函数 + 模式轮换)."""
 
     def test_five_risk_modes_defined(self):
-        """5 种风险模式必须定义: 高退款率/高频下单/高退款金额/多地址/有投诉."""
+        """8 种医疗风险模式必须定义: 盗刷/统方/黄牛/超量/虚假病历/代购/异地/黑卡."""
         sys.path.insert(0, str(ROOT))
         from scripts import gen_risky_users
         # 模式名 (5 个, 对应 RISK_MODES 列表)
-        assert len(gen_risky_users.RISK_MODES) == 5, (
-            f"应 5 种风险模式, 实际 {len(gen_risky_users.RISK_MODES)}"
+        assert len(gen_risky_users.RISK_MODES) == 8, (
+            f"应 8 种风险模式, 实际 {len(gen_risky_users.RISK_MODES)}"
         )
-        expected = ["高退款率", "高频下单", "高退款金额", "多地址", "有投诉"]
+        expected = ["医保卡盗刷", "医生统方", "挂号黄牛", "处方超量", "虚假病历", "药品代购", "异地集中结算", "黑医保卡"]
         assert gen_risky_users.RISK_MODES == expected, (
             f"模式名变化会破坏向后兼容, 当前 {gen_risky_users.RISK_MODES}"
         )
         # 模式生成器 (5 个, 跟 RISK_MODES 一一对应)
-        assert len(gen_risky_users.MODE_GENERATORS) == 5, (
-            f"应 5 个模式生成器, 实际 {len(gen_risky_users.MODE_GENERATORS)}"
+        assert len(gen_risky_users._GEN_FUNCS) == 8, (
+            f"应 8 个模式生成器, 实际 {len(gen_risky_users.MODE_GENERATORS)}"
         )
 
     def test_user_id_generation_pattern(self):
         """用户 ID 必须按 RISK001, RISK002, ... 规律生成 (跟 gen_risk_data.py 的 LIKE 'RISK%' 匹配)."""
         # 模拟生成 30 个用户的 ID 列表
-        count = 30
+        count = 32
         expected = [f"RISK{i:03d}" for i in range(1, count + 1)]
         # 用 list comprehension 复现文件里的逻辑
         actual = [f"RISK{i:03d}" for i in range(1, count + 1)]
@@ -88,28 +88,28 @@ class TestGenRiskyUsersLogic:
         assert actual[-1] == f"RISK{count:03d}"
 
     def test_mode_rotation_pattern(self):
-        """模式轮换: idx % 5, 30 个用户 = 6 套各 5 模式."""
-        count = 30
-        mode_indices = [i % 5 for i in range(count)]
+        """模式轮换: idx % 8, 32 个用户 = 4 套各 8 模式."""
+        count = 32
+        mode_indices = [i % 8 for i in range(count)]
         # 每种模式出现 6 次
         from collections import Counter
         cnt = Counter(mode_indices)
-        assert all(v == 6 for v in cnt.values()), f"30 个用户应 6 套 × 5 模式 = 每模式 6 次, 实际 {cnt}"
+        assert all(v == 4 for v in cnt.values()), f"32 个用户应 4 套 × 8 模式 = 每模式 4 次, 实际 {cnt}"
         # 0-4 顺序
-        assert mode_indices == [0, 1, 2, 3, 4] * 6
+        assert mode_indices == [0, 1, 2, 3, 4, 5, 6, 7] * 4
 
     def test_count_1_generates_only_first_mode(self):
         """--count 1 只生成 1 个用户 (模式 0: 高退款率, RISK001)."""
         count = 1
         user_ids = [f"RISK{i:03d}" for i in range(1, count + 1)]
-        mode_idx = (count - 1) % 5
+        mode_idx = (count - 1) % 8
         assert user_ids == ["RISK001"]
-        assert mode_idx == 0  # 高退款率模式
+        assert mode_idx == 0  # 医保卡盗刷模式
 
     def test_count_5_generates_one_set(self):
-        """--count 5 (默认) 生成 1 套 (RISK001-005 各 5 模式)."""
+        """--count 8 (默认) 生成 1 套 (RISK001-008 各 8 模式)."""
         count = 5
         user_ids = [f"RISK{i:03d}" for i in range(1, count + 1)]
-        modes = [i % 5 for i in range(count)]
+        modes = [i % 8 for i in range(count)]
         assert user_ids == ["RISK001", "RISK002", "RISK003", "RISK004", "RISK005"]
         assert modes == [0, 1, 2, 3, 4]

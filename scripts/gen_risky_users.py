@@ -191,4 +191,6 @@ if __name__ == "__main__":
     parser.add_argument("--count", type=int, default=8, help="生成用户数 (默认 8)")
     parser.add_argument("--reset", action="store_true", help="先删除旧 RISK 用户再生成")
     args = parser.parse_args()
+    if args.count < 1:
+        raise ValueError('--count 必须 >= 1')
     asyncio.run(gen_risky_users(count=args.count, reset=args.reset))

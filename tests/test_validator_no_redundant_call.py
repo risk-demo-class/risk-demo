@@ -38,9 +38,9 @@ class TestDeadCodeRemoved:
             "ensure_user_exists 是 validate_risk_check_request 的依赖, 必须保留"
         )
 
-    def test_ensure_order_belongs_to_user_kept(self):
+    def test_ensure_business_belongs_to_user_kept(self):
         """防越权的核心函数, 保留."""
-        assert hasattr(validator_module, "ensure_order_belongs_to_user")
+        assert hasattr(validator_module, "ensure_business_belongs_to_user")
 
     def test_ensure_source_matches_event_type_kept(self):
         """event_type 派发表, 保留."""
@@ -136,7 +136,7 @@ class TestProcessEventCallsValidatorOnce:
 
         # 6. 跑
         request = RiskCheckRequest(
-            event_type="下单", source_id="ORD001", user_id="U001", order_id="ORD001"
+            event_type="医保结算", source_id="CLM001", user_id="U001", order_id="CLM001"
         )
         await event_module.process_event(db, request)
 
@@ -189,7 +189,7 @@ class TestValidatorPublicApi:
     def test_validator_demo_block_mentions_4_ensure(self):
         """__main__ demo 块打印 '4 个 ensure_*' (不是 6 个, 死代码已删)."""
         src = inspect.getsource(validator_module)
-        assert "4 个 ensure_*" in src, (
+        assert "4 个医疗事件" in src, (
             "__main__ demo 块描述应更新为 '4 个 ensure_*' (ensure_order_exists / ensure_postsale_exists 已删)"
         )
         assert "6 个 ensure_*" not in src, (

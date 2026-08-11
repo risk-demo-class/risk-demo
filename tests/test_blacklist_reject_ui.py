@@ -23,27 +23,27 @@ class TestBlacklistRejectResponse:
         """_blacklist_reject 必须填 message 字段, 前端直接显示."""
         from app.schemas import RiskCheckRequest
         req = RiskCheckRequest(
-            event_type="下单", source_id="ORD001", user_id="U001", order_id="ORD001",
+            event_type="医保结算", source_id="ORD001", user_id="U001", order_id="ORD001",
         )
-        resp = event_module._blacklist_reject(req, "用户")
+        resp = event_module._blacklist_reject(req, "医保卡")
         assert resp.message is not None, "撞黑响应必须有 message 字段"
-        assert "用户" in resp.message, f"message 应包含黑名单类型, 实际 {resp.message!r}"
+        assert "医保卡" in resp.message, f"message 应包含黑名单类型, 实际 {resp.message!r}"
 
     def test_blacklist_reject_has_blocked_by(self):
         from app.schemas import RiskCheckRequest
         req = RiskCheckRequest(
-            event_type="下单", source_id="ORD001", user_id="U001", order_id="ORD001",
+            event_type="医保结算", source_id="ORD001", user_id="U001", order_id="ORD001",
         )
-        resp = event_module._blacklist_reject(req, "地址")
-        assert resp.blocked_by == "地址"
+        resp = event_module._blacklist_reject(req, "医院编码")
+        assert resp.blocked_by == "医院编码"
 
     def test_blacklist_reject_ml_score_none(self):
         """撞黑场景 ml_score 必须 None (前端不渲染 ML 块, 避免'未加载模型'误导)."""
         from app.schemas import RiskCheckRequest
         req = RiskCheckRequest(
-            event_type="下单", source_id="ORD001", user_id="U001", order_id="ORD001",
+            event_type="医保结算", source_id="ORD001", user_id="U001", order_id="ORD001",
         )
-        resp = event_module._blacklist_reject(req, "手机号")
+        resp = event_module._blacklist_reject(req, "执业证")
         assert resp.ml_score is None
         assert resp.ml_decision is None
 
@@ -51,9 +51,9 @@ class TestBlacklistRejectResponse:
         """assessment_id='blacklist_reject' 是前端判断撞黑短路的标志."""
         from app.schemas import RiskCheckRequest
         req = RiskCheckRequest(
-            event_type="下单", source_id="ORD001", user_id="U001", order_id="ORD001",
+            event_type="医保结算", source_id="ORD001", user_id="U001", order_id="ORD001",
         )
-        resp = event_module._blacklist_reject(req, "用户")
+        resp = event_module._blacklist_reject(req, "医保卡")
         assert resp.assessment_id == "blacklist_reject"
         assert resp.event_id == "blacklist_reject"
 
@@ -61,9 +61,9 @@ class TestBlacklistRejectResponse:
         """撞黑不跑 7 步, 所以 rule_count=0, triggered_rules=[]."""
         from app.schemas import RiskCheckRequest
         req = RiskCheckRequest(
-            event_type="下单", source_id="ORD001", user_id="U001", order_id="ORD001",
+            event_type="医保结算", source_id="ORD001", user_id="U001", order_id="ORD001",
         )
-        resp = event_module._blacklist_reject(req, "用户")
+        resp = event_module._blacklist_reject(req, "医保卡")
         assert resp.rule_count == 0
         assert resp.triggered_rules == []
 
@@ -82,10 +82,10 @@ class TestRiskCheckResponseSchema:
             decision="拒绝", rule_count=0, triggered_rules=[],
             features={}, create_time="2026-01-01",
             message="撞黑名单: 用户",
-            blocked_by="用户",
+            blocked_by="医保卡",
         )
         assert resp.message == "撞黑名单: 用户"
-        assert resp.blocked_by == "用户"
+        assert resp.blocked_by == "医保卡"
 
     def test_message_field_optional(self):
         """不传 message 应该 OK (向后兼容, 旧代码不传这个字段)."""
@@ -119,7 +119,7 @@ class TestRiskCheckPageBlacklistHint:
 
     @pytest.fixture
     def html(self):
-        path = Path("D:/workroom/尚硅谷大模型项目之风控系统/3.代码/AI_Risk/templates/risk_check.html")
+        path = Path("D:/尚硅谷/尚硅谷/项目/电商风控/尚硅谷大模型项目之风控系统/3.代码/AI_Risk_Medical/templates/risk_check.html")
         return path.read_text(encoding="utf-8")
 
     def test_risk_check_html_references_message(self, html):
@@ -152,9 +152,9 @@ class TestBlacklistResponseShape:
         """撞黑响应必须包含的字段: decision / final_score / blocked_by / message / ml_score=null."""
         from app.schemas import RiskCheckRequest
         req = RiskCheckRequest(
-            event_type="下单", source_id="ORD001", user_id="U001", order_id="ORD001",
+            event_type="医保结算", source_id="ORD001", user_id="U001", order_id="ORD001",
         )
-        resp = event_module._blacklist_reject(req, "用户")
+        resp = event_module._blacklist_reject(req, "医保卡")
         # 响应转 dict 看完整字段
         d = resp.model_dump()
         required = ["assessment_id", "event_id", "user_id", "final_score", "risk_level",
@@ -166,6 +166,6 @@ class TestBlacklistResponseShape:
         assert d["decision"] == "拒绝"
         assert d["final_score"] == 100
         assert d["risk_level"] == "极高"
-        assert d["blocked_by"] == "用户"
-        assert d["message"] == "撞黑名单: 用户"
+        assert d["blocked_by"] == "医保卡"
+        assert d["message"] == "撞黑名单: 医保卡"
         assert d["ml_score"] is None  # 前端用这个判断不渲染 ML 块

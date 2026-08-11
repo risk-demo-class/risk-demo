@@ -1,106 +1,80 @@
 """
-测试 - 特征工程冗余调用优化 (P5)
-【P5 优化 2026-08-07】_feat_user_total_orders 在 compute_user_features 内被
-3 个派生函数 (avg / refund_rate / postsale_rate) 各调 1 次, 冗余.
-修复: 预计算 1 次 total_orders, 传给 3 个派生函数复用.
+测试 - 特征工程冗余调用优化 (医疗版)
+【优化】_feat_user_total_visits / _feat_user_claim_count 在 compute_user_features 内被
+派生函数 (avg_claim_amount / cancel_appt_rate) 各调 1 次, 冗余.
+修复: 预计算 1 次, 传给派生函数复用.
 验证:
-  1. SQL 次数: 1 次 (从 4 次 → 1 次)
-  2. 派生特征结果与原版完全一致
+  1. SQL 次数: 关键计数特征只查 1 次
+  2. 派生特征结果与原版一致
 """
 from types import SimpleNamespace
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import MagicMock
 
 import pytest
 
 from app.engine import feature as feature_module
 from app.engine.feature import (
-    _feat_user_avg_order_amount,
-    _feat_user_refund_rate,
-    _feat_user_postsale_rate,
-    _feat_user_total_orders,
+    _feat_user_avg_claim_amount,
+    _feat_user_cancel_appt_rate,
+    _feat_user_claim_count,
+    _feat_user_total_visits,
     compute_user_features,
 )
 
 
-def _row(value):
-    """构造 SQLAlchemy Row-like, 让 execute() 返回该值."""
-    return SimpleNamespace(scalar=MagicMock(return_value=value))
-
-
-class TestPreComputedTotalOrders:
-    """3 个派生函数接受 pre-computed total_orders 时不再查 SQL."""
+class TestPreComputedCounts:
+    """派生函数接受 pre-computed 计数时不再查 SQL."""
 
     @pytest.mark.asyncio
-    async def test_avg_skips_total_orders_query_when_pre_computed(self):
-        """传 total_orders=10 → 不该调 _feat_user_total_orders"""
+    async def test_avg_skips_claim_count_query_when_pre_computed(self):
+        """传 claim_count=10 → 不该调 _feat_user_claim_count"""
         db = MagicMock()
         call_log = []
 
-        async def fake_total_orders(*_args, **_kwargs):
-            call_log.append("total_orders")
+        async def fake_claim_count(*_args, **_kwargs):
+            call_log.append("claim_count")
             return 0  # 不该被调
 
         async def fake_total_amount(*_args, **_kwargs):
             call_log.append("total_amount")
             return 100.0
 
-        # patch 让 _feat_user_total_orders / _feat_user_total_amount 走 fake
         with pytest.MonkeyPatch.context() as mp:
-            mp.setattr(feature_module, "_feat_user_total_orders", fake_total_orders)
-            mp.setattr(feature_module, "_feat_user_total_amount", fake_total_amount)
-            result = await _feat_user_avg_order_amount(db, "u1", total_orders=10)
+            mp.setattr(feature_module, "_feat_user_claim_count", fake_claim_count)
+            mp.setattr(feature_module, "_feat_user_total_claim_amount", fake_total_amount)
+            result = await _feat_user_avg_claim_amount(db, "u1", claim_count=10)
         assert result == 10.0  # 100 / 10
-        assert "total_orders" not in call_log, "传 total_orders 时不该再查 _feat_user_total_orders"
+        assert "claim_count" not in call_log, "传 claim_count 时不该再查 _feat_user_claim_count"
         assert "total_amount" in call_log
 
     @pytest.mark.asyncio
-    async def test_refund_rate_skips_query_when_pre_computed(self):
+    async def test_cancel_rate_skips_query_when_pre_computed(self):
         db = MagicMock()
         call_log = []
 
-        async def fake_total_orders(*_args, **_kwargs):
-            call_log.append("total_orders")
+        async def fake_total_visits(*_args, **_kwargs):
+            call_log.append("total_visits")
             return 0
 
-        async def fake_refund_count(*_args, **_kwargs):
-            call_log.append("refund_count")
+        async def fake_cancel_count(*_args, **_kwargs):
+            call_log.append("cancel_count")
             return 5
 
         with pytest.MonkeyPatch.context() as mp:
-            mp.setattr(feature_module, "_feat_user_total_orders", fake_total_orders)
-            mp.setattr(feature_module, "_feat_user_refund_count", fake_refund_count)
-            result = await _feat_user_refund_rate(db, "u1", total_orders=10)
+            mp.setattr(feature_module, "_feat_user_total_visits", fake_total_visits)
+            mp.setattr(feature_module, "_feat_user_cancel_appt_count", fake_cancel_count)
+            result = await _feat_user_cancel_appt_rate(db, "u1", total_visits=10)
         assert result == 0.5  # 5 / 10
-        assert "total_orders" not in call_log
-
-    @pytest.mark.asyncio
-    async def test_postsale_rate_skips_query_when_pre_computed(self):
-        db = MagicMock()
-        call_log = []
-
-        async def fake_total_orders(*_args, **_kwargs):
-            call_log.append("total_orders")
-            return 0
-
-        async def fake_postsale_count(*_args, **_kwargs):
-            call_log.append("postsale_count")
-            return 3
-
-        with pytest.MonkeyPatch.context() as mp:
-            mp.setattr(feature_module, "_feat_user_total_orders", fake_total_orders)
-            mp.setattr(feature_module, "_feat_user_postsale_count", fake_postsale_count)
-            result = await _feat_user_postsale_rate(db, "u1", total_orders=10)
-        assert result == 0.3  # 3 / 10
-        assert "total_orders" not in call_log
+        assert "total_visits" not in call_log
 
     @pytest.mark.asyncio
     async def test_avg_falls_back_to_query_when_not_provided(self):
-        """不传 total_orders → 正常调 _feat_user_total_orders (向后兼容)"""
+        """不传 claim_count → 正常调 _feat_user_claim_count (向后兼容)"""
         db = MagicMock()
         call_log = []
 
-        async def fake_total_orders(*_args, **_kwargs):
-            call_log.append("total_orders")
+        async def fake_claim_count(*_args, **_kwargs):
+            call_log.append("claim_count")
             return 5
 
         async def fake_total_amount(*_args, **_kwargs):
@@ -108,15 +82,15 @@ class TestPreComputedTotalOrders:
             return 200.0
 
         with pytest.MonkeyPatch.context() as mp:
-            mp.setattr(feature_module, "_feat_user_total_orders", fake_total_orders)
-            mp.setattr(feature_module, "_feat_user_total_amount", fake_total_amount)
-            result = await _feat_user_avg_order_amount(db, "u1")
+            mp.setattr(feature_module, "_feat_user_claim_count", fake_claim_count)
+            mp.setattr(feature_module, "_feat_user_total_claim_amount", fake_total_amount)
+            result = await _feat_user_avg_claim_amount(db, "u1")
         assert result == 40.0  # 200 / 5
-        assert "total_orders" in call_log  # 向后兼容, 没传就调
+        assert "claim_count" in call_log  # 向后兼容, 没传就调
 
     @pytest.mark.asyncio
-    async def test_zero_total_orders_returns_zero(self):
-        """total_orders=0 时, 3 个派生特征都返回 0, 不再查更多 SQL"""
+    async def test_zero_counts_return_zero(self):
+        """claim_count=0 / total_visits=0 时, 派生特征返回 0, 不再查更多 SQL"""
         db = MagicMock()
         call_log = []
 
@@ -125,59 +99,56 @@ class TestPreComputedTotalOrders:
             return 99
 
         with pytest.MonkeyPatch.context() as mp:
-            # total_amount / refund_count / postsale_count 都不该被调
-            mp.setattr(feature_module, "_feat_user_total_amount", fake_should_not_call)
-            mp.setattr(feature_module, "_feat_user_refund_count", fake_should_not_call)
-            mp.setattr(feature_module, "_feat_user_postsale_count", fake_should_not_call)
-            assert await _feat_user_avg_order_amount(db, "u1", total_orders=0) == 0
-            assert await _feat_user_refund_rate(db, "u1", total_orders=0) == 0
-            assert await _feat_user_postsale_rate(db, "u1", total_orders=0) == 0
-        assert call_log == [], f"total_orders=0 时不该查更多, 实际调了 {call_log}"
+            mp.setattr(feature_module, "_feat_user_total_claim_amount", fake_should_not_call)
+            mp.setattr(feature_module, "_feat_user_cancel_appt_count", fake_should_not_call)
+            assert await _feat_user_avg_claim_amount(db, "u1", claim_count=0) == 0
+            assert await _feat_user_cancel_appt_rate(db, "u1", total_visits=0) == 0
+        assert call_log == [], f"计数为 0 时不该查更多, 实际调了 {call_log}"
 
 
 class TestComputeUserFeaturesOptimization:
-    """compute_user_features 内部: total_orders 只算 1 次."""
+    """compute_user_features 内部: total_visits / claim_count 各只算 1 次."""
 
     @pytest.mark.asyncio
-    async def test_total_orders_called_only_once(self):
-        """_feat_user_total_orders 整个 compute_user_features 流程里只被调 1 次"""
-        call_log = []
-        call_counts = {"_feat_user_total_orders": 0}
+    async def test_key_counts_called_only_once(self):
+        """_feat_user_total_visits / _feat_user_claim_count 全程各只调 1 次"""
+        call_counts = {"_feat_user_total_visits": 0, "_feat_user_claim_count": 0}
 
-        async def counting_total_orders(*_args, **_kwargs):
-            call_counts["_feat_user_total_orders"] += 1
-            return 100  # 假设有 100 单
+        async def counting_total_visits(*_args, **_kwargs):
+            call_counts["_feat_user_total_visits"] += 1
+            return 100
 
-        # 模拟其他 11 个特征函数 (不依赖 total_orders)
+        async def counting_claim_count(*_args, **_kwargs):
+            call_counts["_feat_user_claim_count"] += 1
+            return 50
+
         async def fake_independent(*_args, **_kwargs):
             return 0.0
 
         with pytest.MonkeyPatch.context() as mp:
-            # 把 _feat_user_total_orders 替换成计数版本
-            mp.setattr(feature_module, "_feat_user_total_orders", counting_total_orders)
-            # 把其他特征都换成 fake
+            mp.setattr(feature_module, "_feat_user_total_visits", counting_total_visits)
+            mp.setattr(feature_module, "_feat_user_claim_count", counting_claim_count)
             for fn_name in [
-                "_feat_user_orders_30d", "_feat_user_orders_7d",
-                "_feat_user_total_amount", "_feat_user_max_order_amount",
-                "_feat_user_refund_count", "_feat_user_postsale_count",
-                "_feat_user_refund_amount", "_feat_user_cancel_count",
-                "_feat_user_complaint_count", "_feat_user_address_count",
+                "_feat_user_visits_30d", "_feat_user_visits_7d",
+                "_feat_user_total_claim_amount", "_feat_user_max_claim_amount",
+                "_feat_user_claims_1h_hospitals", "_feat_user_cancel_appt_count",
+                "_feat_user_rx_count", "_feat_user_non_self_drug_count",
+                "_feat_user_insured_rate", "_feat_user_night_claim_count",
+                "_feat_user_cross_hospital_count", "_feat_user_out_region_count",
+                "_feat_user_drug_order_count",
             ]:
                 mp.setattr(feature_module, fn_name, fake_independent)
-            # refund_rate / postsale_rate 内部还会调 _feat_user_total_orders / _feat_user_refund_count 等
-            # 但因 total_orders=0 (本测试返回 0) 走 early return, 不调其他
-            mp.setattr(feature_module, "_feat_user_refund_count", fake_independent)
-            mp.setattr(feature_module, "_feat_user_postsale_count", fake_independent)
 
             db = MagicMock()
             features = await compute_user_features(db, "u1")
 
-        # 关键断言: _feat_user_total_orders 只被调 1 次
-        assert call_counts["_feat_user_total_orders"] == 1, (
-            f"_feat_user_total_orders 应该是 1 次, 实际 {call_counts['_feat_user_total_orders']} 次, "
-            f"优化失败 (3 个派生特征各自重算了)"
+        assert call_counts["_feat_user_total_visits"] == 1, (
+            f"_feat_user_total_visits 应该是 1 次, 实际 {call_counts['_feat_user_total_visits']} 次"
         )
-        # 14 个特征都返回了
-        assert len(features) == 14
-        # user_total_orders = 100 (用预计算值)
-        assert features["user_total_orders"] == 100
+        assert call_counts["_feat_user_claim_count"] == 1, (
+            f"_feat_user_claim_count 应该是 1 次, 实际 {call_counts['_feat_user_claim_count']} 次"
+        )
+        # 17 个用户特征都返回了
+        assert len(features) == 17
+        assert features["user_total_visits"] == 100
+        assert features["user_claim_count"] == 50

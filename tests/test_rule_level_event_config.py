@@ -229,7 +229,7 @@ class TestFrontendRuleBuilder:
 
     @pytest.fixture
     def appjs(self):
-        p = Path("D:/workroom/尚硅谷大模型项目之风控系统/3.代码/AI_Risk/static/app.js")
+        p = Path("D:/尚硅谷/尚硅谷/项目/电商风控/尚硅谷大模型项目之风控系统/3.代码/AI_Risk_Medical/static/app.js")
         return p.read_text(encoding="utf-8")
 
     def test_has_feature_labels_dict(self, appjs):
@@ -290,7 +290,7 @@ class TestFrontendRulesPage:
 
     @pytest.fixture
     def html(self):
-        p = Path("D:/workroom/尚硅谷大模型项目之风控系统/3.代码/AI_Risk/templates/rules.html")
+        p = Path("D:/尚硅谷/尚硅谷/项目/电商风控/尚硅谷大模型项目之风控系统/3.代码/AI_Risk_Medical/templates/rules.html")
         return p.read_text(encoding="utf-8")
 
     def test_uses_cond_builder(self, html):
