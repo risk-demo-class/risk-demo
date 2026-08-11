@@ -79,12 +79,12 @@ class TestGenRiskDataForcedPosLogic:
     """--force-pos-ratio 配套函数 + 逻辑验证."""
 
     def test_force_pos_pickers_defined(self):
-        """3 个高风险 picker 必须存在: 售后 / 物流投诉 / 高额订单."""
+        """3 个高风险 picker 必须存在: 处方 / 医保结算 / 药品订单 (医疗版)."""
         script = SCRIPT_PATH.read_text(encoding="utf-8")
         # 3 个 _pick_forced_* 函数
-        assert "_pick_forced_postsale" in script, "必须有 _pick_forced_postsale (RISK 售后)"
-        assert "_pick_forced_logistics_complaint" in script, "必须有 _pick_forced_logistics_complaint (物流投诉)"
-        assert "_pick_forced_order_for_high_amount" in script, "必须有 _pick_forced_order_for_high_amount (高额订单)"
+        assert "_pick_forced_rx" in script, "必须有 _pick_forced_rx (RISK 售后)"
+        assert "_pick_forced_claim" in script, "必须有 _pick_forced_claim (物流投诉)"
+        assert "_pick_forced_drug" in script, "必须有 _pick_forced_drug (高额订单)"
 
     def test_force_pos_retry_logic(self):
         """--force-pos-ratio 必须有 retry 机制 (max_tries > 1, 决策没触发就换 picker)."""
@@ -94,7 +94,7 @@ class TestGenRiskDataForcedPosLogic:
         # max_tries = 3 if use_force_pos else 1
         assert "3 if use_force_pos else 1" in script, "force 模式 max_tries=3, 普通模式 max_tries=1"
         # pickers 列表 3 个高风险
-        assert "_pick_forced_postsale" in script and "_pick_forced_logistics_complaint" in script, (
+        assert "_pick_forced_rx" in script and "_pick_forced_claim" in script, (
             "force 模式 picker 列表应包含 3 个高风险 picker"
         )
 
@@ -138,9 +138,9 @@ class TestGenRiskDataWithDatesLogic:
         assert 'RISKY_USER_PREFIX = "RISK"' in script or "RISKY_USER_PREFIX='RISK'" in script, (
             "必须定义 RISKY_USER_PREFIX 常量 (跟 gen_risk_data.py 对齐)"
         )
-        # _pick_order_for_balance / _pick_postsale_for_balance 函数必须存在
-        assert "_pick_order_for_balance" in script, "必须有 _pick_order_for_balance 函数"
-        assert "_pick_postsale_for_balance" in script, "必须有 _pick_postsale_for_balance 函数"
+        # _pick_claim_for_balance / _pick_rx_for_balance 函数必须存在
+        assert "_pick_claim_for_balance" in script, "必须有 _pick_claim_for_balance 函数"
+        assert "_pick_rx_for_balance" in script, "必须有 _pick_rx_for_balance 函数"
         # 必须用 LIKE 'RISK%' 查 RISK 用户
         assert "user_id LIKE :prefix" in script, "必须用 LIKE :prefix 查 RISK 用户"
 
