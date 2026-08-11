@@ -11,14 +11,14 @@
 1. [项目简介](#1-项目简介)
 2. [环境准备](#2-环境准备)
 3. [数据库初始化](#3-数据库初始化)
-4. [造数（风险种子 + 训练数据）](#4-造数)
-5. [XGBoost 训练](#5-xgboost-训练)
-6. [回填 ML 评分](#6-回填-ml-评分)
-7. [启动服务](#7-启动服务)
-8. [跑测试](#8-跑测试)
-9. [训练指标](#9-训练指标)
-10. [生产部署（Docker）](#10-生产部署-docker)
-11. [常见问题 FAQ](#11-常见问题-faq)
+5. [造数（风险种子 + 训练数据）](#4-造数)
+6. [XGBoost 训练](#5-xgboost-训练)
+7. [回填 ML 评分](#6-回填-ml-评分)
+8. [启动服务](#7-启动服务)
+9. [跑测试](#8-跑测试)
+10. [训练指标](#9-训练指标)
+11. [生产部署（Docker）](#10-生产部署-docker)
+12. [常见问题 FAQ](#11-常见问题-faq)
 
 ---
 
@@ -58,7 +58,32 @@ docker run -d --name risk-mysql \
 
 `.env` 配置：`DB_HOST / DB_PORT / DB_USER / DB_PASSWORD / DB_NAME / LLM_API_KEY` 等。
 
-## 3. 数据库初始化
+## 3. 新环境迁移（一条命令初始化）
+
+换机器 / 换环境部署时，拿到代码后按顺序：
+
+```bash
+# 1. 装依赖
+uv sync --extra test
+
+# 2. 配置 .env（DB_HOST / DB_PASSWORD / LLM_API_KEY，见 §2）
+
+# 3. 起 MySQL 8.0（见 §2 的 docker 命令）
+
+# 4. 一条命令从零到可用：
+#    建库(init_db) → 30 个风险用户 → 训练数据 → 训练模型 → 回填 ML 评分 → 今日演示数据
+python scripts/one_command.py
+
+# 5. 启动服务
+python run_app.py
+```
+
+`one_command.py` 内置 6 步：`init_db --reset` → `gen_risky_users --count 30` → `gen_train_dataset --reset` → `train_xgb_model` → `backfill_ml_score` → `gen_risk_data_with_dates --live`（已完整验证，约 5 分钟）。
+
+> 注意：one_command 默认是演示规模（30 个风险用户）。需要加大数据量时用下面的分步命令（§4-§6）。
+
+## 4. 数据库初始化
+
 
 ```bash
 python scripts/init_db.py --reset --yes
@@ -68,7 +93,7 @@ python scripts/init_db.py --reset --yes
 - 导入 11 条医疗规则 + 黑名单种子
 - 导入基础数据：4 家医院 / 8 名医生 / 5 名参保人 + 业务样例
 
-## 4. 造数
+## 5. 造数
 
 ```bash
 # 100 个高风险种子参保人（8 种风险模式轮换）
@@ -83,7 +108,7 @@ python scripts/gen_risk_data.py --count 5000 --balance-pos
 
 8 种风险模式：医保卡盗刷 / 医生统方 / 挂号黄牛 / 处方超量 / 虚假病历 / 药品代购 / 异地集中结算 / 黑医保卡。
 
-## 5. XGBoost 训练
+## 6. XGBoost 训练
 
 ```bash
 python scripts/train_xgb_model.py
@@ -93,7 +118,7 @@ python scripts/train_xgb_model.py
 - 输出：val_auc / val_f1 / val_accuracy / best_iteration / 假收敛检测
 - 产物：`app/engine/xgb_model.json`
 
-## 6. 回填 ML 评分
+## 7. 回填 ML 评分
 
 ```bash
 python scripts/backfill_ml_score.py
@@ -101,7 +126,7 @@ python scripts/backfill_ml_score.py
 
 给历史评估回填 `ml_score / ml_decision`（前端 ML 评分小节的来源，忘了跑前端恒 0）。
 
-## 7. 启动服务
+## 8. 启动服务
 
 ```bash
 python run_app.py                      # 含 6 步启动自检（交互确认）
@@ -116,14 +141,14 @@ python -m uvicorn scripts.main:app --host 0.0.0.0 --port 8000
 - 案件工作台：拒绝/审核案件列表 + 证据链 + 复核
 - AI 稽核助手：风控检查 / 案件查询 / 用户画像 / 黑名单 / 业务数据查询
 
-## 8. 跑测试
+## 9. 跑测试
 
 ```bash
 pytest tests/ -k "not scheduler"
 # 414 passed
 ```
 
-## 9. 训练指标
+## 10. 训练指标
 
 训练时间：2026-08-11（教学强标注数据）
 
@@ -138,7 +163,7 @@ pytest tests/ -k "not scheduler"
 
 > 说明：教学数据为强标注构造（RISK 用户特征与标签强相关），指标饱和属预期；真实场景需人工稽核标注回流，指标会回归合理区间。
 
-## 10. 生产部署（Docker）
+## 11. 生产部署（Docker）
 
 ```bash
 cd docker
@@ -149,7 +174,7 @@ docker compose exec app python scripts/init_db.py --yes
 
 详见 `docker/README.md`。
 
-## 11. 常见问题 FAQ
+## 12. 常见问题 FAQ
 
 **Q: 前端 ML 评分恒 0？**
 A: 先训练再 `python scripts/backfill_ml_score.py` 回填。
