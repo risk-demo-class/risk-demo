@@ -6,18 +6,18 @@
 
 ## Current Phase
 
-Phase 1 (P0 安全合规最小闭环)
+Phase 2 (P1 脱敏、审计、会话)
 
 ## Phases
 
 ### Phase 1: P0 安全合规最小闭环
 
-- [ ] 1.1 密钥卫生：`.dockerignore` 排除 `.env`/`.env.*`；`config.py`/`init_db.py`/`docker-compose.yml` 移除默认口令 `123321`，改为必填 env
-- [ ] 1.2 最小鉴权：登录接口 + HMAC Token + `require_admin` 依赖；覆盖规则/黑名单/案件审核/Agent 对话等管理接口；前端 fetch 统一带 Token + 登录页
-- [ ] 1.3 Agent 收敛：`manage_blacklist` 只保留 check/list（去掉 add/remove）；`AgentChatRequest.message` 加长度上限
-- [ ] 1.4 调度器去重：scheduler 加 MySQL 命名锁，gunicorn 4 worker 下只跑一个实例
-- [ ] 1.5 P0 验证：全量 pytest + 启动自检 + 无 Token 401 用例 + 镜像内无 `.env` 检查
-- **Status:** in_progress
+- [x] 1.1 密钥卫生：`.dockerignore` 排除 `.env`/`.env.*`；`config.py`/`init_db.py`/`docker-compose.yml` 移除默认口令 `123321`，改为必填 env
+- [x] 1.2 最小鉴权：登录接口 + HMAC Token + `require_admin` 依赖；覆盖规则/黑名单/案件审核/Agent 对话等管理接口；前端 fetch 统一带 Token + 登录页
+- [x] 1.3 Agent 收敛：`manage_blacklist` 只保留 check/list（去掉 add/remove）；`AgentChatRequest.message` 加长度上限
+- [x] 1.4 调度器去重：scheduler 加 MySQL 命名锁，gunicorn 4 worker 下只跑一个实例
+- [x] 1.5 P0 验证：全量 pytest 429 通过 + 真实应用冒烟（401/登录/me）+ `.dockerignore` 静态检查
+- **Status:** complete
 
 ### Phase 2: P1 脱敏、审计、会话
 

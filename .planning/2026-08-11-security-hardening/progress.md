@@ -4,13 +4,20 @@
 
 ### Phase 1: P0 安全合规最小闭环
 
-- **Status:** in_progress
+- **Status:** complete
 - **Started:** 2026-08-11（用户批准执行）
 - Actions taken:
-  - 计划书提交（初始）
-  - 开始 1.1 密钥卫生
+  - 1.1 密钥卫生：`.dockerignore` 排除 .env/密钥/开发目录；config.py/init_db.py/compose 移除默认口令；init_db 读 .env；compose 必填校验（commit 1d6bfb9）
+  - 1.3 Agent 收敛：manage_blacklist 只读（check/list），add/remove 返回安全限制；chat message ≤2000（commit fe4db5c）
+  - 1.4 调度器去重：MySQL GET_LOCK 命名锁，4 worker 单实例（commit 5324f74）
+  - 1.2 最小鉴权：app/auth.py HMAC Token + require_admin；登录路由；规则/黑名单/案件/Agent/告警接口保护；前端全局 fetch 包装 + 登录页 /login；本地 .env 补 ADMIN_*（commit 8281ea5）
+  - 1.5 验证：全量 pytest 429 passed；真实 app 冒烟（/login 200、无 Token 401、登录后 me 200）；.dockerignore 静态检查
 - Files created/modified:
   - `.planning/2026-08-11-security-hardening/*`（提交）
+  - `app/auth.py`、`app/routers/auth.py`（新建）
+  - `templates/login.html`（新建）
+  - `app/routers/{rule,blacklist,case,agent,alert}.py`、`app/api.py`、`scripts/main.py`、`static/app.js`、`templates/base.html`（鉴权）
+  - `.dockerignore`、`app/config.py`、`scripts/init_db.py`、`docker/*`（密钥卫生）
 
 ### Phase 0: 审查（已完成，非执行阶段）
 
@@ -33,6 +40,8 @@
 |------|-------|----------|--------|--------|
 | 全量 pytest（上轮基线） | `pytest tests/ -k "not scheduler"` | 412 passed | 412 passed, 1 skipped, 1 deselected | ✓ |
 | 规则命中率（上轮） | 30 天 × 200 条评估 | 19 规则全命中 | 19/19 命中，0.6%~19.7% | ✓ |
+| 全量 pytest（P0 后） | `pytest tests/ -k "not scheduler"` | 429 passed | 429 passed, 1 skipped, 1 deselected | ✓ |
+| 真实应用冒烟 | TestClient 全 app | 登录流正常 | /login 200；无 Token 写接口 401；登录后 me 200 | ✓ |
 
 ## Error Log
 
@@ -40,6 +49,8 @@
 |-----------|-------|---------|------------|
 | 2026-08-11（上轮） | SQL 里 JSON `"qty":14` → bind parameter '14' | 1 | 冒号后加空格 `"qty": 14` |
 | 2026-08-11（上轮） | aiomysql 关闭连接报 "Event loop is closed" | 1 | 仅退出噪音，功能正常；可忽略 |
+| 2026-08-11（P0） | app.js fetch 包装在 Node 单测环境崩（window.fetch undefined） | 1 | 加 `typeof window !== 'undefined' && window.fetch` 防御 |
+| 2026-08-11（P0） | get_dependant 返回的依赖可调用对象在 `d.call` 而非 `d.dependency` | 1 | 测试 helper 同时检查 `.call`/`.dependency` |
 
 ## 5-Question Reboot Check
 
