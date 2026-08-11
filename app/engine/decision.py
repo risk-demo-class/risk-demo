@@ -30,7 +30,7 @@ from app.engine.feature import compute_all_features
 from app.engine.ml_model import is_model_loaded, predict
 from app.engine.rule import RuleHitResult, load_enabled_rules, match_rules
 from app.models import (
-    OrderInfo, RiskAssessment, RiskCase, RiskEvent, RiskFeature, RiskUserProfile,
+    RiskAssessment, RiskCase, RiskEvent, RiskFeature, RiskUserProfile,
 )
 from app.schemas import RiskCheckRequest, RiskCheckResponse, RuleHitInfo
 
@@ -139,19 +139,12 @@ def _build_context(request: RiskCheckRequest) -> _RiskCheckContext:
 
 
 async def _enrich_receive_id(db: AsyncSession, ctx: _RiskCheckContext) -> None:
-    """步骤 1c: 从订单里补全 receive_id (地址 ID).
+    """步骤 1c: 补全 receive_id (医疗版 = 医院ID, 已在 process_event 补全).
 
-    退出条件 (任一满足就不补): 已有 receive_id / 没有 order_id (售后/物流投诉场景).
+    流程占位: 保持 7 步结构不变; 医院ID 由 event.py _enrich_request 填充,
+    这里不再查询 (原电商版是查 OrderInfo.receive_id).
     """
-    if ctx.receive_id or not ctx.order_id:
-        return
-    row = (await db.execute(
-        select(OrderInfo.receive_id).where(OrderInfo.order_id == ctx.order_id)
-    )).first()
-    if row:
-        ctx.receive_id = row.receive_id
-
-
+    return
 # ============================================================
 # 步骤 2: 创建事件记录
 # ============================================================
@@ -176,11 +169,12 @@ def _create_event_record(db: AsyncSession, ctx: _RiskCheckContext) -> str:
 # ============================================================
 
 async def _compute_features(db: AsyncSession, ctx: _RiskCheckContext) -> dict:
-    """步骤 3: 调 feature.py 计算 25 个风控特征 (用户/订单/地址 3 类)"""
+    """步骤 3: 调 feature.py 计算 25 个风控特征 (用户 17 + 业务单 8)"""
     return await compute_all_features(
         db,
         user_id=ctx.user_id,
-        order_id=ctx.order_id,        # 可能 None (售后场景只算用户+地址)
+        order_id=ctx.order_id,        # 可能 None (部分事件只算用户特征)
+        event_type=ctx.request.event_type,
         receive_id=ctx.receive_id,
     )
 
