@@ -169,6 +169,9 @@
                 <a class="nav-link {% if request.url.path == '/blacklist' %}active{% endif %}" href="/blacklist">
                     <i class="bi bi-shield-x"></i> 黑名单
                 </a>
+                <a class="nav-link" href="#" onclick="logout(); return false;" style="border-top:1px solid #334155;margin-top:8px;padding-top:12px;">
+                    <i class="bi bi-box-arrow-right"></i> 退出登录
+                </a>
             </nav>
         </div>
         <!-- 主内容区 -->
@@ -181,7 +184,7 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <!-- 改版加 ?v=YYYYMMDD[vN] 破 FastAPI StaticFiles 强缓存 (max-age=1y), 否则浏览器永远用旧版 -->
 <!-- 2026-08-10v6: buildConditionUI 加 console.log children 调试 -->
-<script src="/static/app.js?v=20260810v6"></script>
+<script src="/static/app.js?v=20260811v1"></script>
 {% block extra_js %}{% endblock %}
 </body>
 </html>

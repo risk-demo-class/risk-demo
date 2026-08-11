@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>登录 - 风控中心</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background: #1e293b; height: 100vh; display: flex; align-items: center; justify-content: center; }
+        .login-card { width: 380px; border-radius: 12px; }
+    </style>
+</head>
+<body>
+    <div class="card login-card shadow">
+        <div class="card-body p-4">
+            <h4 class="mb-1"><i class="bi bi-shield-check"></i> 风控中心登录</h4>
+            <p class="text-muted small mb-4">使用 .env 配置的 ADMIN_USERNAME / ADMIN_PASSWORD</p>
+            <div id="alert-box"></div>
+            <form id="login-form">
+                <div class="mb-3">
+                    <label class="form-label">用户名</label>
+                    <input type="text" class="form-control" id="username" required autocomplete="username">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">密码</label>
+                    <input type="password" class="form-control" id="password" required autocomplete="current-password">
+                </div>
+                <button type="submit" class="btn btn-primary w-100" id="login-btn">登 录</button>
+            </form>
+        </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/static/app.js?v=20260811v1"></script>
+    <script>
+        document.getElementById('login-form').addEventListener('submit', async function (e) {
+            e.preventDefault();
+            const btn = document.getElementById('login-btn');
+            btn.disabled = true;
+            const box = document.getElementById('alert-box');
+            box.innerHTML = '';
+            try {
+                const res = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        username: document.getElementById('username').value,
+                        password: document.getElementById('password').value,
+                    }),
+                });
+                const data = await res.json().catch(() => ({}));
+                if (!res.ok) {
+                    throw new Error(data.detail || ('HTTP ' + res.status));
+                }
+                setToken(data.token);
+                const next = new URLSearchParams(window.location.search).get('next') || '/';
+                window.location.href = next;
+            } catch (err) {
+                box.innerHTML = '<div class="alert alert-danger py-2 small">' + err.message + '</div>';
+            } finally {
+                btn.disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>

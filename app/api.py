@@ -26,6 +26,7 @@ from app.routers.agent import agent_router
 from app.routers.alert import alert_router
 # 【P3-S9 新增 2026-08-08】评估历史路由
 from app.routers.assessment import assessment_router
+from app.routers.auth import auth_router
 
 
 __all__ = [
@@ -39,4 +40,5 @@ __all__ = [
     "agent_router",
     "alert_router",
     "assessment_router",   # 【P3-S9】
+    "auth_router",         # 【2026-08-11】登录/会话
 ]

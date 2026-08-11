@@ -85,6 +85,12 @@ class Settings(BaseSettings):
     LLM_BASE_URL: str = "https://dashscope.aliyuncs.com/compatible-mode/v1"
     LLM_MODEL_NAME: str = "qwen-plus"
 
+    # ---- 鉴权 (2026-08-11 最小鉴权) ----
+    ADMIN_USERNAME: str = "admin"
+    ADMIN_PASSWORD: str = ""        # 必须配置 (env 注入); 为空登录接口直接 503
+    AUTH_SECRET: str = ""           # 建议配置强随机; 为空由 ADMIN_PASSWORD 派生
+    AUTH_TOKEN_TTL_HOURS: int = 8   # Token 有效期 (小时)
+
     # ---- features 脱敏 (P3-M6) ----
     # True: 响应里 features 返回全量 25 维 (教学/内部 admin 用)
     # False: 响应里 features={} (前端不展示, 防敏感数据外泄)

@@ -2,6 +2,41 @@
  * 电商风控系统 - 公共前端工具函数
  */
 
+/* ============================================================
+ * 鉴权 (2026-08-11): Token 存取 + 全局 fetch 包装
+ * - 管理接口需要 Authorization: Bearer <token>
+ * - 401 自动清 token 并跳登录页 (登录接口本身除外)
+ * ============================================================ */
+const TOKEN_KEY = 'ai_risk_token';
+
+function getToken() { return localStorage.getItem(TOKEN_KEY) || ''; }
+function setToken(t) { localStorage.setItem(TOKEN_KEY, t); }
+function clearToken() { localStorage.removeItem(TOKEN_KEY); }
+function logout() { clearToken(); window.location.href = '/login'; }
+
+// 全局 fetch 包装: 自动带 Bearer 头; 401 跳登录 (避免每个页面手工加头)
+// 兼容无 window.fetch 的环境 (Node 单测跑 app.js), 只做防御性包装
+const _originalFetch = (typeof window !== 'undefined' && window.fetch)
+    ? window.fetch.bind(window)
+    : null;
+if (_originalFetch) {
+    window.fetch = async function (input, init = {}) {
+        const headers = new Headers(init.headers || {});
+        const token = getToken();
+        if (token) headers.set('Authorization', 'Bearer ' + token);
+        const res = await _originalFetch(input, { ...init, headers });
+        if (res.status === 401) {
+            const url = typeof input === 'string' ? input : (input && input.url) || '';
+            if (!url.includes('/api/auth/login') && !url.includes('/login')) {
+                clearToken();
+                const next = encodeURIComponent(window.location.pathname + window.location.search);
+                window.location.href = '/login?next=' + next;
+            }
+        }
+        return res;
+    };
+}
+
 // 风险等级对应的Badge类名
 function getRiskBadgeClass(level) {
     const map = {

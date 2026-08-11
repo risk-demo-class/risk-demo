@@ -1,7 +1,7 @@
 # 医疗风控系统 AI_Risk_Medical — 项目启动文档
 
 > 场景 F：医保结算 / 处方审核 / 挂号 / 药品代购 4 大风险场景
-> 规则引擎 + XGBoost 双轨融合 · 8 张业务表 · 25 维医疗特征 · 19 条规则 · 412 个测试全绿
+> 规则引擎 + XGBoost 双轨融合 · 8 张业务表 · 25 维医疗特征 · 19 条规则 · 429 个测试全绿
 > 基线：尚硅谷 AI_Risk 电商风控版（风控核心 9 张表 + 决策流水线复用，业务层全量重写）
 
 ---
@@ -56,7 +56,9 @@ docker run -d --name risk-mysql \
   mysql:8.0 --character-set-server=utf8mb4
 ```
 
-`.env` 配置：`DB_HOST / DB_PORT / DB_USER / DB_PASSWORD / DB_NAME / LLM_API_KEY` 等。
+`.env` 配置：`DB_HOST / DB_PORT / DB_USER / DB_PASSWORD / DB_NAME / LLM_API_KEY / ADMIN_USERNAME / ADMIN_PASSWORD / AUTH_SECRET` 等。
+
+> ⚠️ 安全（2026-08-11）：代码中已无默认数据库口令；`ADMIN_PASSWORD` 未配置时登录接口返回 503（安全默认，拒绝登录）。管理接口（规则增删改 / 黑名单增删 / 案件审核 / AI 助手 / 告警触发）需要先登录 `/login` 拿 Token，前端自动带 `Authorization: Bearer <token>`。
 
 ## 3. 新环境迁移（一条命令初始化）
 
@@ -145,7 +147,7 @@ python -m uvicorn scripts.main:app --host 0.0.0.0 --port 8000
 
 ```bash
 pytest tests/ -k "not scheduler"
-# 412 passed
+# 429 passed
 ```
 
 ## 10. 训练指标

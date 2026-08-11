@@ -2,6 +2,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.auth import require_admin
 from app.database import get_db_async
 from app.schemas import BlacklistCreate, BlacklistListResponse, BlacklistResponse
 from app.service.case import add_blacklist, get_blacklist, remove_blacklist
@@ -26,6 +27,7 @@ async def api_list_blacklist(
 async def api_add_blacklist(
     data: BlacklistCreate,
     db: AsyncSession = Depends(get_db_async),
+    _admin: str = Depends(require_admin),
 ):
     result = await add_blacklist(db, data)
     # add_blacklist 内部 flush 拿 ID 但不 commit, 这里统一 commit
@@ -37,6 +39,7 @@ async def api_add_blacklist(
 async def api_remove_blacklist(
     blacklist_id: int,
     db: AsyncSession = Depends(get_db_async),
+    _admin: str = Depends(require_admin),
 ):
     if not await remove_blacklist(db, blacklist_id):
         raise HTTPException(status_code=404, detail="记录不存在")

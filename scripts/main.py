@@ -20,6 +20,7 @@ from app.api import (
     agent_router,
     alert_router,
     assessment_router,
+    auth_router,
     blacklist_router,
     case_router,
     dashboard_router,
@@ -69,6 +70,7 @@ app.include_router(dashboard_router)
 app.include_router(agent_router)
 app.include_router(alert_router)   # 【P4-L2】告警路由
 app.include_router(assessment_router)   # 【P3-S9】评估历史路由
+app.include_router(auth_router)   # 【2026-08-11】登录/会话
 
 if __name__ == "__main__":
     import uvicorn

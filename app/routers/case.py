@@ -2,6 +2,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.auth import require_admin
 from app.database import get_db_async
 from app.schemas import CaseDetailResponse, CaseListResponse, CaseReviewRequest, CaseStatistics
 from app.service.case import get_case_detail, get_case_list, get_case_statistics, review_case
@@ -44,6 +45,7 @@ async def api_review_case(
     case_id: str,
     data: CaseReviewRequest,
     db: AsyncSession = Depends(get_db_async),
+    _admin: str = Depends(require_admin),
 ):
     result = await review_case(db, case_id, data)
     if not result:

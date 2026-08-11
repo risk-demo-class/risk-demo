@@ -14,12 +14,14 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.auth import require_admin
 from app.database import get_db_async
 from app.models import RiskAlert
 from app.service.alert import run_all_alert_checks
 
 
-alert_router = APIRouter(prefix="/api/alerts", tags=["告警"])
+# 告警触发/处理是管理操作, 要求登录
+alert_router = APIRouter(prefix="/api/alerts", tags=["告警"], dependencies=[Depends(require_admin)])
 
 
 @alert_router.post("/check")

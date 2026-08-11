@@ -47,3 +47,9 @@ async def chat_page(request: Request):
 @page_router.get("/blacklist", response_class=HTMLResponse)
 async def blacklist_page(request: Request):
     return templates.TemplateResponse(request, "blacklist.html")
+
+
+@page_router.get("/login", response_class=HTMLResponse)
+async def login_page(request: Request):
+    """登录页 (2026-08-11 最小鉴权)"""
+    return templates.TemplateResponse(request, "login.html")

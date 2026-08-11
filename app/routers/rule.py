@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.auth import require_admin
 from app.database import get_db_async
 from app.engine.rule import RuleScoreLevelMismatchError, validate_rule_score_level
 from app.models import RiskRule
@@ -56,7 +57,11 @@ async def api_get_rule(rule_id: str, db: AsyncSession = Depends(get_db_async)):
 
 
 @rule_router.post("", response_model=RuleResponse, status_code=201)
-async def api_create_rule(data: RuleCreate, db: AsyncSession = Depends(get_db_async)):
+async def api_create_rule(
+    data: RuleCreate,
+    db: AsyncSession = Depends(get_db_async),
+    _admin: str = Depends(require_admin),
+):
     # 【P4-L5 2026-08-10】risk_level ↔ risk_score 互验: 防止业务方填错
     try:
         validate_rule_score_level(data.risk_level, data.risk_score)
@@ -97,7 +102,12 @@ async def api_create_rule(data: RuleCreate, db: AsyncSession = Depends(get_db_as
 
 
 @rule_router.put("/{rule_id}", response_model=RuleResponse)
-async def api_update_rule(rule_id: str, data: RuleUpdate, db: AsyncSession = Depends(get_db_async)):
+async def api_update_rule(
+    rule_id: str,
+    data: RuleUpdate,
+    db: AsyncSession = Depends(get_db_async),
+    _admin: str = Depends(require_admin),
+):
     rule = (await db.execute(
         select(RiskRule).where(RiskRule.rule_id == rule_id)
     )).scalar_one_or_none()
@@ -134,7 +144,11 @@ async def api_update_rule(rule_id: str, data: RuleUpdate, db: AsyncSession = Dep
 
 
 @rule_router.put("/{rule_id}/toggle")
-async def api_toggle_rule(rule_id: str, db: AsyncSession = Depends(get_db_async)):
+async def api_toggle_rule(
+    rule_id: str,
+    db: AsyncSession = Depends(get_db_async),
+    _admin: str = Depends(require_admin),
+):
     rule = (await db.execute(
         select(RiskRule).where(RiskRule.rule_id == rule_id)
     )).scalar_one_or_none()
@@ -155,7 +169,11 @@ async def api_toggle_rule(rule_id: str, db: AsyncSession = Depends(get_db_async)
 
 
 @rule_router.delete("/{rule_id}")
-async def api_delete_rule(rule_id: str, db: AsyncSession = Depends(get_db_async)):
+async def api_delete_rule(
+    rule_id: str,
+    db: AsyncSession = Depends(get_db_async),
+    _admin: str = Depends(require_admin),
+):
     rule = (await db.execute(
         select(RiskRule).where(RiskRule.rule_id == rule_id)
     )).scalar_one_or_none()
