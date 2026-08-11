@@ -289,7 +289,7 @@ class UserProfileResponse(BaseModel):
 
 class AgentChatRequest(BaseModel):
     """Agent 对话请求"""
-    message: str
+    message: str = Field(min_length=1, max_length=2000)
     session_id: Optional[str] = None
 
 

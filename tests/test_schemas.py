@@ -110,3 +110,9 @@ class TestAgentChatRequest:
         assert req.message == "今天风控情况怎样?"
         # session_id 可选, 默认 None
         assert req.session_id is None
+
+    def test_message_too_long_rejected(self):
+        """【2026-08-11 安全收敛】message 超 2000 字符应校验失败."""
+        from pydantic import ValidationError
+        with pytest.raises(ValidationError):
+            AgentChatRequest(message="a" * 2001)

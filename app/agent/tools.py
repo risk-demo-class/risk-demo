@@ -186,11 +186,20 @@ _BLACKLIST_ACTIONS = {
 # 哪些 action 需要 blacklist_type (其余 action 不传, 避免 list 抛 TypeError)
 _BLACKLIST_TYPE_REQUIRED = {"add", "check", "remove"}
 
+# 【2026-08-11 安全收敛】LLM 工具只读边界:
+# Agent 只能 check/list; add/remove 是写操作, 必须人工后台 (防 prompt injection 直接删黑名单)
+_AGENT_BLACKLIST_WRITE_ACTIONS = {"add", "remove"}
+
 
 async def _manage_blacklist_impl(
     *, db: AsyncSession, action: str, blacklist_type: Literal["用户","手机号","地址"], value: str, reason: str,
 ) -> str:
-    """黑名单管理统一入口 (字典派发 4 个 action).
+    """黑名单管理统一入口 (Agent 只读: 仅 check/list).
+
+    【2026-08-11 安全收敛】add/remove 不再对 LLM 开放:
+      1. 无鉴权环境下 LLM 是最大写库风险面 (prompt injection 可诱导删黑名单)
+      2. 黑名单增删属于高危管理操作, 必须人工后台 + 审计
+      3. 后台管理接口 (routers/blacklist.py) 仍保留 add/remove, 走 require_admin
 
     按 action 动态构造 kwargs:
       - add:    {blacklist_type, value, reason}
@@ -200,9 +209,11 @@ async def _manage_blacklist_impl(
 
     【P4-L5 2026-08-10 修复】之前无脑传 blacklist_type 给所有 action, list 报 TypeError.
     """
+    if action in _AGENT_BLACKLIST_WRITE_ACTIONS:
+        return "安全限制: Agent 只允许黑名单 check/list (只读), 增删黑名单请通过管理后台人工操作"
     impl = _BLACKLIST_ACTIONS.get(action)
     if not impl:
-        return f"不支持的操作: {action}, 请使用 add/remove/check/list"
+        return f"不支持的操作: {action}, 请使用 check/list"
     # 按 action 动态构造 kwargs
     kwargs: dict = {"db": db}
     if action in _BLACKLIST_TYPE_REQUIRED:
@@ -526,9 +537,9 @@ async def query_user_profile(user_id: str) -> str:
 
 @tool(
     description=(
-        "管理风控黑名单。"
-        "参数: action (操作类型: add/remove/check/list)、blacklist_type (黑名单类型: 医保卡/身份证/执业证/医院编码/手机号/用户)、value (黑名单值, 添加/检查/移除时需要)、reason (加黑原因, 添加时需要)。"
-        "返回: 操作结果 (文本或 JSON)。"
+        "查询风控黑名单 (只读)。"
+        "参数: action (仅支持 check/list; add/remove 已被安全限制, 需人工后台操作)、blacklist_type (黑名单类型: 医保卡/身份证/执业证/医院编码/手机号/用户)、value (黑名单值, check 时需要)。"
+        "返回: 查询结果 (文本或 JSON)。"
     )
 )
 async def manage_blacklist(
@@ -646,7 +657,7 @@ if __name__ == "__main__":
         ("risk_check",            "对用户和事件执行实时风控检查"),
         ("query_cases",           "查询案件列表 (按 status)"),
         ("query_user_profile",    "查询用户风险画像"),
-        ("manage_blacklist",      "黑名单管理 (4 action: add/check/list/remove)"),
+        ("manage_blacklist",      "黑名单查询 (只读: check/list, 增删走人工后台)"),
         ("query_dashboard_stats", "仪表盘统计 (今日+待审+7天趋势+TOP5 规则)"),
         ("analyze_risk_trend",    "指定天数内风险趋势分析"),
         ("analyze_rule_effectiveness", "所有启用规则命中率分析"),
@@ -657,7 +668,7 @@ if __name__ == "__main__":
 
     # 4. dispatch table
     print("\n[4] 字典派发表 (代码内 lookup):")
-    print(f"  _BLACKLIST_ACTIONS  = {list(_BLACKLIST_ACTIONS.keys())}  (4 个 action)")
+    print(f"  _BLACKLIST_ACTIONS  = {list(_BLACKLIST_ACTIONS.keys())}  (4 个 action, Agent 仅开放 check/list)")
     print(f"  _BIZ_QUERY_HANDLERS = {list(_BIZ_QUERY_HANDLERS.keys())}  (6 个 query_type)")
 
     # 5. 8 个 _impl 计数

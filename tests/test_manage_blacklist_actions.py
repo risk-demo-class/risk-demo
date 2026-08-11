@@ -72,54 +72,32 @@ class TestManageBlacklistAllActions:
 
     @pytest.mark.asyncio
     async def test_add_action_uses_blacklist_type_and_reason(self):
-        """add 必须传 blacklist_type + reason."""
-        from app.schemas import BlacklistResponse
-
+        """【2026-08-11 安全收敛】add 对 Agent 关闭, 返回安全限制提示."""
         db = _make_db()
-        fake_resp = BlacklistResponse(
-            blacklist_id=1, blacklist_type="用户", blacklist_value="U001",
-            reason="test_reason", expire_time=None, create_time="2026-01-01T00:00:00",
+        result = await tools_module._manage_blacklist_impl(
+            db=db, action="add", blacklist_type="用户", value="U001", reason="test_reason",
         )
-        with patch("app.agent.tools.add_blacklist", new=AsyncMock(return_value=fake_resp)):
-            result = await tools_module._manage_blacklist_impl(
-                db=db, action="add", blacklist_type="用户", value="U001", reason="test_reason",
-            )
-        assert "已添加到黑名单" in result
-        assert "test_reason" in result
+        assert "安全限制" in result
+        assert "check/list" in result
 
     @pytest.mark.asyncio
     async def test_remove_action_uses_soft_delete_via_case_remove(self):
-        """【P4-L5 修复】remove 走 case.remove_blacklist (软删 + 审计), 不用 db.delete()."""
+        """【2026-08-11 安全收敛】remove 对 Agent 关闭, 返回安全限制提示."""
         db = _make_db()
-        # 1. 工具层 SELECT 拿到 blacklist_id
-        fake_bl = RiskBlacklist(
-            blacklist_id=42, blacklist_type="用户", blacklist_value="U001", reason="old"
+        result = await tools_module._manage_blacklist_impl(
+            db=db, action="remove", blacklist_type="用户", value="U001", reason="",
         )
-        db.execute = AsyncMock(return_value=MagicMock(
-            scalar_one_or_none=MagicMock(return_value=fake_bl)
-        ))
-        # 2. 验证 case.remove_blacklist 被调, 而不是 db.delete
-        with patch("app.agent.tools.remove_blacklist", new=AsyncMock(return_value=True)) as mock_remove:
-            result = await tools_module._manage_blacklist_impl(
-                db=db, action="remove", blacklist_type="用户", value="U001", reason="",
-            )
-        # 走的是软删, 调的是 case.remove_blacklist
-        mock_remove.assert_called_once()
-        assert mock_remove.call_args[0][1] == 42, "传 blacklist_id=42 给 case.remove_blacklist"
-        # 工具层不能自己 db.delete (硬删), 必须走 case.remove_blacklist
-        assert "已从黑名单移除" in result
+        assert "安全限制" in result
+        assert "check/list" in result
 
     @pytest.mark.asyncio
     async def test_remove_action_record_not_found(self):
-        """没找到记录 → 友好提示, 不抛异常."""
+        """【2026-08-11 安全收敛】remove 直接安全限制, 不查库."""
         db = _make_db()
-        db.execute = AsyncMock(return_value=MagicMock(
-            scalar_one_or_none=MagicMock(return_value=None)
-        ))
         result = await tools_module._manage_blacklist_impl(
             db=db, action="remove", blacklist_type="用户", value="NONEXIST", reason="",
         )
-        assert "未找到黑名单记录" in result
+        assert "安全限制" in result
 
     @pytest.mark.asyncio
     async def test_unknown_action_returns_friendly_error(self):
@@ -129,7 +107,7 @@ class TestManageBlacklistAllActions:
             db=db, action="delete_all", blacklist_type="用户", value="", reason="",
         )
         assert "不支持的操作" in result
-        assert "add/remove/check/list" in result
+        assert "check/list" in result
 
 
 # ============================================================
