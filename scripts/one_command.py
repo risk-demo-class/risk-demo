@@ -158,7 +158,7 @@ def main() -> None:
         print(f"\n[FAIL] 步骤失败, 中断: {e}")
         print("=" * 70)
         print("排查建议:")
-        print("  1. 检查 MySQL 是否启动 (默认 localhost:3306, root/root)")
+        print("  1. 检查 MySQL 是否启动 (默认 localhost:3306, root/密码见 .env)")
         print("  2. 检查 .env 配置 (DB_HOST/DB_USER/DB_PASSWORD/DB_NAME)")
         print("  3. 查看 scripts/logs/gen_risk_fail.log 失败日志")
         print("  4. 分步跑 (--skip-init / --skip-train 跳过已完成的)")

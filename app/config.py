@@ -16,7 +16,8 @@ class Settings(BaseSettings):
     DB_HOST: str = "localhost"
     DB_PORT: int = 3306
     DB_USER: str = "root"
-    DB_PASSWORD: str = "123321"
+    # 生产必须从 .env / 环境变量注入; 留空 = 启动即连不上库, 避免默认口令上线
+    DB_PASSWORD: str = ""
     DB_NAME: str = "ecs"
     TEST_DB_NAME: str = "ecs_test"
 

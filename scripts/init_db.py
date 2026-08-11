@@ -13,10 +13,13 @@ import os
 import sys
 
 import aiomysql
+from dotenv import load_dotenv
 
 # 项目根目录
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SQL_DIR = os.path.join(BASE_DIR, "sql")
+# 读取项目根 .env (本机开发不用每次手输密码; 生产用环境变量注入)
+load_dotenv(os.path.join(BASE_DIR, ".env"))
 
 # SQL 脚本执行顺序 (建表走 ORM metadata, 见步骤 2; 这里只放数据/规则种子)
 SQL_FILES = [
@@ -28,7 +31,7 @@ SQL_FILES = [
 DEFAULT_HOST = "localhost"
 DEFAULT_PORT = 3306
 DEFAULT_USER = "root"
-DEFAULT_PASSWORD = "123321"
+DEFAULT_PASSWORD = os.environ.get("DB_PASSWORD", "")
 DEFAULT_DB = "ecs"
 
 

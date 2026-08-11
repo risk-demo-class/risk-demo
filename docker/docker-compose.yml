@@ -17,7 +17,7 @@ services:
     container_name: ai_risk_mysql
     restart: unless-stopped
     environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-123321}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?set MYSQL_ROOT_PASSWORD in docker/.env}
       MYSQL_DATABASE: ${MYSQL_DATABASE:-ecs}
       TZ: Asia/Shanghai
     command:
@@ -33,7 +33,7 @@ services:
       # 增量 migration (老环境用, 新装可注释)
       - ../sql/migration_add_2026_08_07_fields.sql:/docker-entrypoint-initdb.d/02_migration.sql:ro
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-p${MYSQL_ROOT_PASSWORD:-123321}"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-p${MYSQL_ROOT_PASSWORD:?set MYSQL_ROOT_PASSWORD in docker/.env}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -52,7 +52,7 @@ services:
       DB_HOST: mysql
       DB_PORT: 3306
       DB_USER: root
-      DB_PASSWORD: ${MYSQL_ROOT_PASSWORD:-123321}
+      DB_PASSWORD: ${MYSQL_ROOT_PASSWORD:?set MYSQL_ROOT_PASSWORD in docker/.env}
       DB_NAME: ${MYSQL_DATABASE:-ecs}
       # 阿里云百炼 LLM (生产填真实 key)
       LLM_API_KEY: ${LLM_API_KEY:-}
