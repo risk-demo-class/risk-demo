@@ -31,5 +31,5 @@ async def api_agent_chat(data: AgentChatRequest):
 
 @agent_router.post("/clear")
 async def api_clear_session(session_id: str):
-    clear_session(session_id)
+    await clear_session(session_id)
     return {"detail": "已清除"}
