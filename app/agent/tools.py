@@ -20,10 +20,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import AsyncSessionLocal
 from app.engine.feature import compute_user_features
 from app.models import (
-    OrderDetail,
-    OrderInfo,
-    Postsale,
-    ReceiveInfo,
+    Appointment,
+    DrugOrder,
+    InsuranceClaim,
+    Prescription,
     RiskAssessment,
     RiskBlacklist,
     RiskCase,
@@ -403,148 +403,71 @@ async def _analyze_rule_effectiveness_impl(*, db: AsyncSession) -> str:
 # 业务数据查询 (字典派发 6 种 query_type)
 # ============================================================
 
-async def _biz_user_orders(db: AsyncSession, user_id: str, order_id: str, limit: int) -> list[Any]:
-    """用户的所有订单 (含聚合总金额). LEFT JOIN 保没明细的订单 total_amount 显 0."""
-    order_total_subq = (
-        select(
-            OrderDetail.order_id,
-            func.coalesce(func.sum(OrderDetail.final_amount), 0).label("total_amount"),
-        )
-        .group_by(OrderDetail.order_id)
-        .subquery()
-    )
-    stmt = (
-        select(
-            OrderInfo.order_id,
-            OrderInfo.create_time,
-            OrderInfo.order_status,
-            func.coalesce(order_total_subq.c.total_amount, 0).label("total_amount"),
-        )
-        .select_from(OrderInfo)
-        .outerjoin(order_total_subq, OrderInfo.order_id == order_total_subq.c.order_id)
-        .where(OrderInfo.user_id == user_id)
-        .order_by(OrderInfo.create_time.desc())
-        .limit(limit)
-    )
+async def _biz_user_visits(db: AsyncSession, user_id: str, order_id: str, limit: int) -> list[Any]:
+    """参保人挂号记录"""
+    stmt = select(
+        Appointment.appt_id, Appointment.hospital_id, Appointment.department,
+        Appointment.doctor_id, Appointment.appt_time, Appointment.pay_amount, Appointment.appt_status,
+    ).where(Appointment.user_id == user_id).order_by(Appointment.appt_time.desc()).limit(limit)
     return list((await db.execute(stmt)).all())
 
 
-async def _biz_user_postsales(db: AsyncSession, user_id: str, order_id: str, limit: int) -> list[Any]:
-    """用户的售后记录 (3 表 JOIN: postsale → order_detail → order_info)."""
-    stmt = (
-        select(
-            Postsale.postsale_id,
-            Postsale.create_time,
-            Postsale.postsale_type,
-            Postsale.postsale_reason,
-            Postsale.postsale_status,
-            Postsale.refund_amount,
-        )
-        .select_from(Postsale)
-        .join(OrderDetail, Postsale.order_detail_id == OrderDetail.order_detail_id)
-        .join(OrderInfo, OrderDetail.order_id == OrderInfo.order_id)
-        .where(OrderInfo.user_id == user_id)
-        .order_by(Postsale.create_time.desc())
-        .limit(limit)
-    )
+async def _biz_user_claims(db: AsyncSession, user_id: str, order_id: str, limit: int) -> list[Any]:
+    """参保人医保结算记录"""
+    stmt = select(
+        InsuranceClaim.claim_id, InsuranceClaim.hospital_id, InsuranceClaim.total_amount,
+        InsuranceClaim.insured_amount, InsuranceClaim.self_amount, InsuranceClaim.claim_status,
+        InsuranceClaim.submit_at,
+    ).where(InsuranceClaim.user_id == user_id).order_by(InsuranceClaim.submit_at.desc()).limit(limit)
     return list((await db.execute(stmt)).all())
 
 
-async def _biz_user_addresses(db: AsyncSession, user_id: str, order_id: str, limit: int) -> list[Any]:
-    """用户的收货地址."""
-    stmt = (
-        select(
-            ReceiveInfo.receive_id,
-            ReceiveInfo.receiver_name,
-            ReceiveInfo.receiver_phone,
-            ReceiveInfo.receive_province,
-            ReceiveInfo.receive_city,
-            ReceiveInfo.receive_district,
-        )
-        .where(ReceiveInfo.user_id == user_id)
-        .limit(limit)
-    )
+async def _biz_user_rxs(db: AsyncSession, user_id: str, order_id: str, limit: int) -> list[Any]:
+    """参保人处方记录"""
+    stmt = select(
+        Prescription.rx_id, Prescription.doctor_id, Prescription.hospital_id,
+        Prescription.diagnosis_code, Prescription.diagnosis_name, Prescription.total_amount,
+        Prescription.create_time,
+    ).where(Prescription.user_id == user_id).order_by(Prescription.create_time.desc()).limit(limit)
     return list((await db.execute(stmt)).all())
 
 
-async def _biz_order_detail(db: AsyncSession, user_id: str, order_id: str, limit: int) -> list[Any]:
-    """订单的明细行."""
-    stmt = (
-        select(
-            OrderDetail.order_detail_id,
-            OrderDetail.sku_id,
-            OrderDetail.sku_name,
-            OrderDetail.sku_count,
-            OrderDetail.total_amount,
-            OrderDetail.discount_amount,
-            OrderDetail.final_amount,
-        )
-        .where(OrderDetail.order_id == order_id)
-        .limit(limit)
-    )
+async def _biz_drug_orders(db: AsyncSession, user_id: str, order_id: str, limit: int) -> list[Any]:
+    """参保人药品订单记录"""
+    stmt = select(
+        DrugOrder.drug_order_id, DrugOrder.rx_id, DrugOrder.drug_name, DrugOrder.quantity,
+        DrugOrder.drug_category, DrugOrder.receiver_name, DrugOrder.total_amount, DrugOrder.create_time,
+    ).where(DrugOrder.user_id == user_id).order_by(DrugOrder.create_time.desc()).limit(limit)
     return list((await db.execute(stmt)).all())
 
 
-async def _biz_recent_orders(db: AsyncSession, user_id: str, order_id: str, limit: int) -> list[Any]:
-    """系统最近的订单 (不限 user, 管理员视角)."""
-    order_total_subq = (
-        select(
-            OrderDetail.order_id,
-            func.coalesce(func.sum(OrderDetail.final_amount), 0).label("total_amount"),
-        )
-        .group_by(OrderDetail.order_id)
-        .subquery()
-    )
-    stmt = (
-        select(
-            OrderInfo.order_id,
-            OrderInfo.user_id,
-            OrderInfo.create_time,
-            OrderInfo.order_status,
-            func.coalesce(order_total_subq.c.total_amount, 0).label("total_amount"),
-        )
-        .select_from(OrderInfo)
-        .outerjoin(order_total_subq, OrderInfo.order_id == order_total_subq.c.order_id)
-        .order_by(OrderInfo.create_time.desc())
-        .limit(limit)
-    )
+async def _biz_claim_detail(db: AsyncSession, user_id: str, order_id: str, limit: int) -> list[Any]:
+    """医保结算单详情 (order_id = claim_id)"""
+    stmt = select(
+        InsuranceClaim.claim_id, InsuranceClaim.user_id, InsuranceClaim.hospital_id,
+        InsuranceClaim.total_amount, InsuranceClaim.insured_amount, InsuranceClaim.self_amount,
+        InsuranceClaim.claim_status, InsuranceClaim.submit_at,
+    ).where(InsuranceClaim.claim_id == order_id).limit(limit)
     return list((await db.execute(stmt)).all())
 
 
-async def _biz_high_value_orders(db: AsyncSession, user_id: str, order_id: str, limit: int) -> list[Any]:
-    """高价值订单 (单笔总价 >= 1000, GROUP BY + HAVING 筛选).
-
-    HAVING 在 GROUP BY 之后筛选聚合结果, 区别于 WHERE (筛行).
-    """
-    stmt = (
-        select(
-            OrderInfo.order_id,
-            OrderInfo.user_id,
-            OrderInfo.create_time,
-            func.sum(OrderDetail.final_amount).label("total_amount"),
-        )
-        .select_from(OrderInfo)
-        .join(OrderDetail, OrderInfo.order_id == OrderDetail.order_id)
-        .group_by(
-            OrderInfo.order_id,
-            OrderInfo.user_id,
-            OrderInfo.create_time,
-        )
-        .having(func.sum(OrderDetail.final_amount) >= 1000)
-        .order_by(func.sum(OrderDetail.final_amount).desc())
-        .limit(limit)
-    )
+async def _biz_high_value_claims(db: AsyncSession, user_id: str, order_id: str, limit: int) -> list[Any]:
+    """大额结算记录 (单笔 >= 1000)"""
+    stmt = select(
+        InsuranceClaim.claim_id, InsuranceClaim.user_id, InsuranceClaim.hospital_id,
+        InsuranceClaim.total_amount, InsuranceClaim.insured_amount, InsuranceClaim.submit_at,
+    ).where(InsuranceClaim.total_amount >= 1000).order_by(InsuranceClaim.total_amount.desc()).limit(limit)
     return list((await db.execute(stmt)).all())
 
 
-# 业务查询 dispatch table
+# 业务查询 dispatch table (医疗版)
 _BIZ_QUERY_HANDLERS = {
-    "user_orders": _biz_user_orders,
-    "user_postsales": _biz_user_postsales,
-    "user_addresses": _biz_user_addresses,
-    "order_detail": _biz_order_detail,
-    "recent_orders": _biz_recent_orders,
-    "high_value_orders": _biz_high_value_orders,
+    "user_visits": _biz_user_visits,
+    "user_claims": _biz_user_claims,
+    "user_rxs": _biz_user_rxs,
+    "drug_orders": _biz_drug_orders,
+    "claim_detail": _biz_claim_detail,
+    "high_value_claims": _biz_high_value_claims,
 }
 
 
@@ -569,7 +492,7 @@ async def _query_business_data_impl(
 @tool(
     description=(
         "对指定用户和事件执行实时风险检查。"
-        "参数: user_id (用户ID, 如 '1001')、event_type (事件类型, 可选值: 下单/支付/售后申请/物流投诉)、source_id (关联业务ID, 如订单号)。"
+        "参数: user_id (用户ID, 如 '1001')、event_type (事件类型, 可选值: 医保结算/处方审核/挂号/药品代购)、source_id (关联业务单ID, 如结算单号/处方号/挂号ID/药品订单号)。"
         "返回: 风控评估结果字符串, 含评分、风险等级、决策和命中规则。"
         "内部: 走 process_event 7 步流水线 (校验→黑名单→补全→决策)。"
     )
@@ -594,7 +517,7 @@ async def query_cases(status: str = "", page: int = 1) -> str:
     description=(
         "查询用户的风险画像信息。"
         "参数: user_id (用户ID, 如 '1001')。"
-        "返回: 用户的风险评分、订单统计、退款率、地址数等画像数据; 没画像时实时算 14 个 user 特征。"
+        "返回: 用户的风险评分、就诊统计、结算金额、跨院数等画像数据; 没画像时实时算 17 个 user 特征。"
     )
 )
 async def query_user_profile(user_id: str) -> str:
@@ -604,7 +527,7 @@ async def query_user_profile(user_id: str) -> str:
 @tool(
     description=(
         "管理风控黑名单。"
-        "参数: action (操作类型: add/remove/check/list)、blacklist_type (黑名单类型: 用户/地址/手机号)、value (黑名单值, 添加/检查/移除时需要)、reason (加黑原因, 添加时需要)。"
+        "参数: action (操作类型: add/remove/check/list)、blacklist_type (黑名单类型: 医保卡/身份证/执业证/医院编码/手机号/用户)、value (黑名单值, 添加/检查/移除时需要)、reason (加黑原因, 添加时需要)。"
         "返回: 操作结果 (文本或 JSON)。"
     )
 )
@@ -649,7 +572,7 @@ async def analyze_rule_effectiveness() -> str:
 @tool(
     description=(
         "查询业务数据, 用于数据分析和风控辅助判断。"
-        "参数: query_type (查询类型, 可选值: user_orders/user_postsales/user_addresses/order_detail/recent_orders/high_value_orders)、user_id (部分需要)、order_id (部分需要)、limit (返回数量, 默认10)。"
+        "参数: query_type (查询类型, 可选值: user_visits/user_claims/user_rxs/drug_orders/claim_detail/high_value_claims)、user_id (部分需要)、order_id (部分需要)、limit (返回数量, 默认10)。"
         "返回: 业务数据 (JSON 字符串)。"
     )
 )
@@ -745,8 +668,8 @@ if __name__ == "__main__":
         _manage_blacklist_impl, _stats_today, _stats_pending_cases, _stats_trend_7d,
         _count_rule_hits, _enrich_with_rule_names, _parse_top_rules,
         _query_dashboard_stats_impl, _analyze_risk_trend_impl, _analyze_rule_effectiveness_impl,
-        _biz_user_orders, _biz_user_postsales, _biz_user_addresses,
-        _biz_order_detail, _biz_recent_orders, _biz_high_value_orders,
+        _biz_user_visits, _biz_user_claims, _biz_user_rxs,
+        _biz_drug_orders, _biz_claim_detail, _biz_high_value_claims,
         _query_business_data_impl,
     ]
     print(f"  共 {len(impls)} 个 _impl (其中 4 个黑名单 + 6 个业务查询 + 4 个统计)")
