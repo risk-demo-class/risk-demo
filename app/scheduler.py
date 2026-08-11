@@ -7,10 +7,18 @@
 - 优雅停止: stop_scheduler() 设标志 + 等当前任务完成
 - 间隔可配: settings.ALERT_SCHEDULER_INTERVAL_MIN, 设 0 关闭
 - 日志: 每次执行打印 [scheduled] 跑了啥 + 几个告警
+
+【2026-08-11 安全/工程修复】多 worker 去重:
+gunicorn 4 worker 各自跑 lifespan, 每个进程都会启动本调度器.
+用 MySQL 命名锁 (GET_LOCK) 保证同一时刻只有一个 worker 真正执行,
+其余 worker 每轮跳过 (避免告警重复插入 risk_alert).
+锁跟数据库连接绑定, 因此检查必须与加锁共用同一个 session/连接.
 """
 import asyncio
 import logging
 from typing import Optional
+
+from sqlalchemy import text
 
 from app.config import settings
 from app.database import AsyncSessionLocal
@@ -24,22 +32,47 @@ logger = logging.getLogger(__name__)
 _scheduler_task: Optional[asyncio.Task] = None
 _stop_flag: bool = False
 
+# MySQL 命名锁: 4 worker 下保证调度检查单实例执行 (锁随连接释放, 进程挂掉自动归还)
+_SCHEDULER_LOCK_NAME = "ai_risk_scheduler_lock"
 
-async def _run_once() -> dict:
-    """跑一轮: 案件超时关闭 + 告警检查, 返回执行结果 (用于测试 + 日志)."""
-    result = {"closed_cases": 0, "alerts_created": 0, "errors": []}
-    async with AsyncSessionLocal() as db:
+
+async def _acquire_scheduler_lock(db) -> bool:
+    """非阻塞获取调度命名锁 (GET_LOCK). 返回 True=本进程拿到执行权."""
+    result = await db.execute(
+        text("SELECT GET_LOCK(:name, 0)"), {"name": _SCHEDULER_LOCK_NAME}
+    )
+    return bool(result.scalar() or 0)
+
+
+async def _release_scheduler_lock(db) -> None:
+    """释放调度命名锁 (必须与 GET_LOCK 同一连接)."""
+    await db.execute(text("SELECT RELEASE_LOCK(:name)"), {"name": _SCHEDULER_LOCK_NAME})
+
+
+async def _run_once(db=None) -> dict:
+    """跑一轮: 案件超时关闭 + 告警检查, 返回执行结果 (用于测试 + 日志).
+
+    传 db 则复用调用方 session (锁持有期间必须同一连接), 否则自开 session.
+    """
+    result = {"closed_cases": 0, "alerts_created": [], "errors": []}
+
+    async def _do(session) -> dict:
         try:
-            result["closed_cases"] = await auto_close_timeout_cases(db)
+            result["closed_cases"] = await auto_close_timeout_cases(session)
         except Exception as e:
             result["errors"].append(f"auto_close: {e}")
             logger.exception("[scheduled] auto_close_timeout_cases 失败")
         try:
-            result["alerts_created"] = await run_all_alert_checks(db)
+            result["alerts_created"] = await run_all_alert_checks(session)
         except Exception as e:
             result["errors"].append(f"alert_check: {e}")
             logger.exception("[scheduled] run_all_alert_checks 失败")
-    return result
+        return result
+
+    if db is None:
+        async with AsyncSessionLocal() as session:
+            return await _do(session)
+    return await _do(db)
 
 
 async def _scheduler_loop() -> None:
@@ -55,12 +88,20 @@ async def _scheduler_loop() -> None:
 
     while not _stop_flag:
         try:
-            result = await _run_once()
-            # P4-L4 2026-08-08 修复: alerts_created 是 list[RiskAlert], 用 len() 转 int
-            logger.info(
-                "[scheduled] 本轮: 关案 %d, 告警 %d, 错误 %d",
-                result["closed_cases"], len(result["alerts_created"]), len(result["errors"]),
-            )
+            # 加锁 + 执行必须共用同一 session (GET_LOCK 是连接级锁)
+            async with AsyncSessionLocal() as db:
+                if not await _acquire_scheduler_lock(db):
+                    logger.info("[scheduled] 调度锁被其他 worker 持有, 本轮跳过")
+                else:
+                    try:
+                        result = await _run_once(db)
+                        # P4-L4 2026-08-08 修复: alerts_created 是 list[RiskAlert], 用 len() 转 int
+                        logger.info(
+                            "[scheduled] 本轮: 关案 %d, 告警 %d, 错误 %d",
+                            result["closed_cases"], len(result["alerts_created"]), len(result["errors"]),
+                        )
+                    finally:
+                        await _release_scheduler_lock(db)
         except Exception as e:
             logger.exception("[scheduled] _run_once 失败: %s", e)
 
