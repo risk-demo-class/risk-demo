@@ -105,99 +105,103 @@ async def clean_risk_tables(db):
 # ============================================================
 # 【P4-L3 2026-08-08 第三轮】--balance-pos 配套: 优先从 RISK 用户挑
 # ============================================================
-async def _pick_order_for_balance(db, balance_pos: bool):
-    """从订单池挑一条; balance_pos=True 时 80% 概率挑 RISK 用户订单."""
-    if balance_pos:
-        if random.random() < 0.8:
-            r = await db.execute(text("""
-                SELECT order_id, user_id, receive_id
-                FROM order_info
-                WHERE user_id LIKE :prefix
-                ORDER BY RAND() LIMIT 1
-            """), {"prefix": f"{RISKY_USER_PREFIX}%"})
-            row = r.first()
-            if row:
-                return (row.order_id, row.user_id, row.receive_id)
+async def _pick_claim_for_balance(db, balance_pos: bool):
+    """从医保结算池挑一条; balance_pos=True 时 80% 概率挑 RISK 用户结算."""
+    if balance_pos and random.random() < 0.8:
+        r = await db.execute(text("""
+            SELECT claim_id, user_id FROM insurance_claim
+            WHERE user_id LIKE :prefix ORDER BY RAND() LIMIT 1
+        """), {"prefix": f"{RISKY_USER_PREFIX}%"})
+        row = r.first()
+        if row:
+            return (row.claim_id, row.user_id)
     r = await db.execute(text("""
-        SELECT order_id, user_id, receive_id
-        FROM order_info
-        ORDER BY RAND() LIMIT 1
+        SELECT claim_id, user_id FROM insurance_claim ORDER BY RAND() LIMIT 1
     """))
     row = r.first()
-    return (row.order_id, row.user_id, row.receive_id) if row else None
+    return (row.claim_id, row.user_id) if row else None
 
 
-async def _pick_postsale_for_balance(db, balance_pos: bool):
-    """从售后池挑一条; balance_pos=True 时 80% 概率挑 RISK 用户售后."""
-    if balance_pos:
-        if random.random() < 0.8:
-            r = await db.execute(text("""
-                SELECT p.postsale_id, oi.user_id
-                FROM postsale p
-                JOIN order_detail od ON p.order_detail_id = od.order_detail_id
-                JOIN order_info oi ON od.order_id = oi.order_id
-                WHERE oi.user_id LIKE :prefix
-                ORDER BY RAND() LIMIT 1
-            """), {"prefix": f"{RISKY_USER_PREFIX}%"})
-            row = r.first()
-            if row:
-                return (row.postsale_id, row.user_id)
+async def _pick_rx_for_balance(db, balance_pos: bool):
+    """从处方池挑一条; balance_pos=True 时 80% 概率挑 RISK 用户处方."""
+    if balance_pos and random.random() < 0.8:
+        r = await db.execute(text("""
+            SELECT rx_id, user_id FROM prescription
+            WHERE user_id LIKE :prefix ORDER BY RAND() LIMIT 1
+        """), {"prefix": f"{RISKY_USER_PREFIX}%"})
+        row = r.first()
+        if row:
+            return (row.rx_id, row.user_id)
     r = await db.execute(text("""
-        SELECT p.postsale_id, oi.user_id
-        FROM postsale p
-        JOIN order_detail od ON p.order_detail_id = od.order_detail_id
-        JOIN order_info oi ON od.order_id = oi.order_id
-        ORDER BY RAND() LIMIT 1
+        SELECT rx_id, user_id FROM prescription ORDER BY RAND() LIMIT 1
     """))
     row = r.first()
-    return (row.postsale_id, row.user_id) if row else None
+    return (row.rx_id, row.user_id) if row else None
 
 
-# ============================================================
-# 【P4-L3 2026-08-08 第五轮】--force-pos-ratio 配套: 强制造"高风险事件"路径
-# 区别于 --balance-pos (只挑 RISK 用户, 但业务规则不保证命中),
-# --force-pos-ratio 选"已知能触发高风险规则"的事件 (RISK001-005 原始 5 个高风险用户的售后)
-# + 跑完 process_event 后判断 decision, 如果还是"通过/标记"就 retry (换其他高风险事件)
-# 这样能保证最终正例比例 >= force_pos_ratio * 0.7 (经验值)
-# ============================================================
-async def _pick_forced_postsale(db):
-    """强制正例路径: 选 RISK 用户的售后 (必触发高退款率规则)."""
+async def _pick_appt_for_balance(db, balance_pos: bool):
+    """从挂号池挑一条; balance_pos=True 时 80% 概率挑 RISK 用户挂号."""
+    if balance_pos and random.random() < 0.8:
+        r = await db.execute(text("""
+            SELECT appt_id, user_id FROM appointment
+            WHERE user_id LIKE :prefix ORDER BY RAND() LIMIT 1
+        """), {"prefix": f"{RISKY_USER_PREFIX}%"})
+        row = r.first()
+        if row:
+            return (row.appt_id, row.user_id)
     r = await db.execute(text("""
-        SELECT p.postsale_id, oi.user_id
-        FROM postsale p
-        JOIN order_detail od ON p.order_detail_id = od.order_detail_id
-        JOIN order_info oi ON od.order_id = oi.order_id
-        WHERE oi.user_id LIKE :prefix
-        ORDER BY RAND() LIMIT 1
+        SELECT appt_id, user_id FROM appointment ORDER BY RAND() LIMIT 1
+    """))
+    row = r.first()
+    return (row.appt_id, row.user_id) if row else None
+
+
+async def _pick_drug_for_balance(db, balance_pos: bool):
+    """从药品订单池挑一条; balance_pos=True 时 80% 概率挑 RISK 用户订单."""
+    if balance_pos and random.random() < 0.8:
+        r = await db.execute(text("""
+            SELECT drug_order_id, user_id FROM drug_order
+            WHERE user_id LIKE :prefix ORDER BY RAND() LIMIT 1
+        """), {"prefix": f"{RISKY_USER_PREFIX}%"})
+        row = r.first()
+        if row:
+            return (row.drug_order_id, row.user_id)
+    r = await db.execute(text("""
+        SELECT drug_order_id, user_id FROM drug_order ORDER BY RAND() LIMIT 1
+    """))
+    row = r.first()
+    return (row.drug_order_id, row.user_id) if row else None
+
+
+async def _pick_forced_rx(db):
+    """强制正例路径: RISK 用户的处方 (触发 R002 统方 / R004 超量 / R009 无诊断)."""
+    r = await db.execute(text("""
+        SELECT rx_id, user_id FROM prescription
+        WHERE user_id LIKE :prefix ORDER BY RAND() LIMIT 1
     """), {"prefix": f"{RISKY_USER_PREFIX}%"})
     row = r.first()
-    return (row.postsale_id, row.user_id) if row else None
+    return (row.rx_id, row.user_id) if row else None
 
 
-async def _pick_forced_logistics_complaint(db):
-    """强制正例路径: 物流投诉 (必触发物流投诉规则)."""
+async def _pick_forced_claim(db):
+    """强制正例路径: RISK 用户的医保结算 (触发 R001 盗刷 / R007 异地结算)."""
     r = await db.execute(text("""
-        SELECT record_id, user_id
-        FROM logistics_complaints_record
-        WHERE user_id LIKE :prefix
-        ORDER BY RAND() LIMIT 1
+        SELECT claim_id, user_id FROM insurance_claim
+        WHERE user_id LIKE :prefix ORDER BY RAND() LIMIT 1
     """), {"prefix": f"{RISKY_USER_PREFIX}%"})
     row = r.first()
-    return (row.record_id, row.user_id) if row else None
+    return (row.claim_id, row.user_id) if row else None
 
 
-async def _pick_forced_order_for_high_amount(db):
-    """强制正例路径: RISK 用户的高额订单 (可能触发'高额订单'规则)."""
+async def _pick_forced_drug(db):
+    """强制正例路径: RISK 用户的药品订单 (触发 R006 药品代购)."""
     r = await db.execute(text("""
-        SELECT oi.order_id, oi.user_id, oi.receive_id
-        FROM order_info oi
-        JOIN order_detail od ON oi.order_id = od.order_id
-        WHERE oi.user_id LIKE :prefix
-        AND od.final_amount > 1000
-        ORDER BY RAND() LIMIT 1
+        SELECT drug_order_id, user_id FROM drug_order
+        WHERE user_id LIKE :prefix ORDER BY RAND() LIMIT 1
     """), {"prefix": f"{RISKY_USER_PREFIX}%"})
     row = r.first()
-    return (row.order_id, row.user_id, row.receive_id) if row else None
+    return (row.drug_order_id, row.user_id) if row else None
+
 
 
 async def backdate_record(db, table: str, time_col: str, event_id: str, target_time: datetime):
@@ -275,32 +279,20 @@ async def generate_risk_data_with_dates(
             print(f"📌 --live 模式: 不回写 create_time, 数据 create_time=now, 仪表盘'今日'能看到")
         # 【P4-L3 第五轮】--force-pos-ratio 模式提示
         if force_pos_ratio is not None:
-            print(f"[FORCE-POS] --force-pos-ratio 模式: 强制 {force_pos_ratio*100:.0f}% 走高风险事件路径 (RISK 售后/物流投诉/高额订单 + retry)")
+            print(f"[FORCE-POS] --force-pos-ratio 模式: 强制 {force_pos_ratio*100:.0f}% 走高风险事件路径 (RISK 处方/结算/药品订单 + retry)")
 
         print(f"日期范围: {start_dt.date()} ~ {end_dt.date()}")
         print(f"每天数据量: {daily_rule}")
 
-        # 1. 拿所有可用的 (order, user) 配对
-        all_orders_result = await db.execute(text("""
-            SELECT oi.order_id, oi.user_id, oi.receive_id
-            FROM order_info oi
-        """))
-        all_orders = all_orders_result.all()
-
-        all_postsales_result = await db.execute(text("""
-            SELECT p.postsale_id, oi.user_id
-            FROM postsale p
-            JOIN order_detail od ON p.order_detail_id = od.order_detail_id
-            JOIN order_info oi ON od.order_id = oi.order_id
-        """))
-        all_postsales = all_postsales_result.all()
-
-        if not all_orders:
-            print("错误: 数据库里没有订单数据, 请先跑 init_db.py")
+        # 1. 医疗业务单数量统计 (balance picker 实时查, 这里只做可用性提示)
+        claim_cnt = (await db.execute(text("SELECT COUNT(*) FROM insurance_claim"))).scalar() or 0
+        rx_cnt = (await db.execute(text("SELECT COUNT(*) FROM prescription"))).scalar() or 0
+        appt_cnt = (await db.execute(text("SELECT COUNT(*) FROM appointment"))).scalar() or 0
+        drug_cnt = (await db.execute(text("SELECT COUNT(*) FROM drug_order"))).scalar() or 0
+        if claim_cnt + rx_cnt + appt_cnt + drug_cnt == 0:
+            print("错误: 数据库里没有医疗业务数据, 请先跑 init_db.py + gen_risky_users.py")
             return
-
-        print(f"可用订单: {len(all_orders)} 条, 售后: {len(all_postsales)} 条\n")
-
+        print(f"可用业务单: 结算 {claim_cnt} / 处方 {rx_cnt} / 挂号 {appt_cnt} / 药品 {drug_cnt}\n")
         total_days = (end_dt.date() - start_dt.date()).days + 1
         grand_total = 0
         grand_success = 0
@@ -342,9 +334,9 @@ async def generate_risk_data_with_dates(
                 # 准备 picker 列表 (force 模式 3 个高风险 picker, 普通模式 None)
                 if use_force_pos:
                     pickers = [
-                        ("售后申请", _pick_forced_postsale, "postsale"),
-                        ("物流投诉", _pick_forced_logistics_complaint, "complaint"),
-                        ("下单", _pick_forced_order_for_high_amount, "order"),
+                        ("处方审核", _pick_forced_rx, "rx"),
+                        ("医保结算", _pick_forced_claim, "claim"),
+                        ("药品代购", _pick_forced_drug, "drug"),
                     ]
                     random.shuffle(pickers)
                 # 最多 retry 次数 (force 模式 3 次, 普通 1 次)
@@ -358,68 +350,42 @@ async def generate_risk_data_with_dates(
                         picked = await picker(db)
                         if picked is None:
                             continue  # 试下一个 picker
-                        if ptype == "postsale":
-                            ps_id, user_id = picked
-                            request = RiskCheckRequest(
-                                event_type=et, source_id=ps_id, user_id=user_id,
-                            )
-                        elif ptype == "complaint":
-                            rec_id, user_id = picked
-                            # 【P4-L4 2026-08-08 修复】source_id 必须跟 validator.py 校验规则对得上
-                            # validator: ("物流投诉",): (LogisticsComplaintsRecord, "record_id", int, ...)
-                            # record_id 是 bigint AUTO_INCREMENT, 强转 int("COMP_xxx") 会 ValueError
-                            # 修复: 直接用 record_id, 不加 "COMP_" 前缀
-                            request = RiskCheckRequest(
-                                event_type=et, source_id=str(rec_id), user_id=user_id,
-                            )
-                        else:  # order
-                            order_id, user_id, receive_id = picked
-                            request = RiskCheckRequest(
-                                event_type=et, source_id=order_id, user_id=user_id,
-                                order_id=order_id, receive_id=receive_id,
-                            )
+                        sid, user_id = picked
+                        request = RiskCheckRequest(event_type=et, source_id=sid, user_id=user_id)
                     else:
-                        # 普通路径: --balance-pos 80% 概率从 RISK 用户挑, 60% 概率用售后
-                        if balance_pos:
-                            ps_odds = 0.6
-                        else:
-                            ps_odds = 0.3
-                        use_postsale = random.random() < ps_odds
-                        if use_postsale and all_postsales:
-                            picked = await _pick_postsale_for_balance(db, balance_pos)
+                        # 普通路径: --balance-pos 80% 概率从 RISK 用户挑, 混 4 类医疗事件
+                        rx_odds = 0.4 if balance_pos else 0.25
+                        if random.random() < rx_odds:
+                            picked = await _pick_rx_for_balance(db, balance_pos)
                             if picked:
-                                ps_id, user_id = picked
-                                request = RiskCheckRequest(
-                                    event_type="售后申请",
-                                    source_id=ps_id,
-                                    user_id=user_id,
-                                )
+                                rx_id, user_id = picked
+                                request = RiskCheckRequest(event_type="处方审核", source_id=rx_id, user_id=user_id)
                             else:
-                                picked = await _pick_order_for_balance(db, balance_pos)
+                                picked = await _pick_claim_for_balance(db, balance_pos)
                                 if not picked:
                                     break
-                                order_id, user_id, receive_id = picked
-                                event_type = random.choice(["下单", "下单", "下单", "支付", "支付"])
-                                request = RiskCheckRequest(
-                                    event_type=event_type,
-                                    source_id=order_id,
-                                    user_id=user_id,
-                                    order_id=order_id,
-                                    receive_id=receive_id,
-                                )
+                                claim_id, user_id = picked
+                                request = RiskCheckRequest(event_type="医保结算", source_id=claim_id, user_id=user_id)
                         else:
-                            picked = await _pick_order_for_balance(db, balance_pos)
-                            if not picked:
-                                break
-                            order_id, user_id, receive_id = picked
-                            event_type = random.choice(["下单", "下单", "下单", "支付", "支付"])
-                            request = RiskCheckRequest(
-                                event_type=event_type,
-                                source_id=order_id,
-                                user_id=user_id,
-                                order_id=order_id,
-                                receive_id=receive_id,
-                            )
+                            event_type = random.choice(["医保结算", "医保结算", "挂号", "药品代购"])
+                            if event_type == "医保结算":
+                                picked = await _pick_claim_for_balance(db, balance_pos)
+                                if not picked:
+                                    break
+                                claim_id, user_id = picked
+                                request = RiskCheckRequest(event_type=event_type, source_id=claim_id, user_id=user_id)
+                            elif event_type == "挂号":
+                                picked = await _pick_appt_for_balance(db, balance_pos)
+                                if not picked:
+                                    break
+                                appt_id, user_id = picked
+                                request = RiskCheckRequest(event_type=event_type, source_id=appt_id, user_id=user_id)
+                            else:  # 药品代购
+                                picked = await _pick_drug_for_balance(db, balance_pos)
+                                if not picked:
+                                    break
+                                drug_id, user_id = picked
+                                request = RiskCheckRequest(event_type=event_type, source_id=drug_id, user_id=user_id)
 
                     try:
                         await process_event(db, request)
