@@ -225,13 +225,13 @@ if __name__ == "__main__":
     # 3. 创建规则示例
     print("\n[3] POST /api/rules 创建规则 (示例):")
     example = {
-        "rule_id": "R013",
+        "rule_id": "R999",
         "rule_name": "Demo 规则",
         "rule_category": "医保欺诈",
         "event_type": "医保结算",
         "rule_condition": {"field": "order_claim_amount", "op": ">=", "value": 1000},
         "risk_level": "高",
-        "risk_score": 50,
+        "risk_score": 75,
         "action": "人工审核",
         "priority": 70,
         "description": "单笔≥1000 即中等风险",

@@ -4,7 +4,7 @@
 【目的】
   造一份**严格标注**的 XGBoost 训练数据集 (1500 条), 满足:
     1. 数量: 1500 条 (100 RISK 用户 × 25 高风险 + 普通用户 × 25 正常)
-    2. 标签: 真实由 30 规则跑出 (decision 字段), 不是随机
+    2. 标签: 真实由 19 规则跑出 (decision 字段), 不是随机
     3. 特征: 25 维真实从 DB 查 (feature.py), 不是捏造
     4. ml_score 字段: 强制 NULL (写库后 UPDATE), 不存"未训练的垃圾模型"推理值
        → 训完基础模型后, 用 scripts/backfill_ml_score.py 回填合理值
@@ -70,7 +70,7 @@ async def _pick_risk_users(db, n: int) -> list[str]:
 
 
 async def _pick_normal_users(db, n: int) -> list[str]:
-    """从普通用户里选 N 个 (按订单数 DESC 选最活跃的, 触发 30 规则的概率小)."""
+    """从普通用户里选 N 个 (按订单数 DESC 选最活跃的, 触发 19 规则的概率小)."""
     r = await db.execute(text("""
         SELECT user_id
         FROM user_info
@@ -234,7 +234,6 @@ async def gen_train_dataset(
                             event_type="挂号", source_id=appt_id, user_id=user_id,
                         )
 
-                result = await process_event(db, request)
                 result = await process_event(db, request)
                 success += 1
                 if result.decision in ("拒绝", "人工审核"):

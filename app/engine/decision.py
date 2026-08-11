@@ -100,7 +100,7 @@ def calculate_final_score(hits: list[RuleHitResult]) -> int:
 def check_veto(hits: list[RuleHitResult]) -> bool:
     """一票否决: 任意 1 条 risk_level="极高" 就 True, 短路返回.
 
-    当前项目"极高"级别 3 条规则: R002 (单笔 10000+) / R007 (30 天 30 单) / R015 (退款率 80%+).
+    当前医疗版"极高"级别 3 条规则: R001 (跨院盗刷) / R002 (医生统方) / R004 (处方超量).
     """
     return any(h.risk_level == "极高" for h in hits)
 

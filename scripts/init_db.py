@@ -21,7 +21,7 @@ SQL_DIR = os.path.join(BASE_DIR, "sql")
 # SQL 脚本执行顺序 (建表走 ORM metadata, 见步骤 2; 这里只放数据/规则种子)
 SQL_FILES = [
     ("init_business_data.sql", "导入业务基础数据"),
-    ("init_risk_data.sql", "导入 11 条预置风控规则 + 黑名单种子"),
+    ("init_risk_data.sql", "导入 19 条预置风控规则 + 黑名单种子"),
 ]
 
 # 默认连接配置 (与 .env 一致)
@@ -273,7 +273,7 @@ async def main():
     if total_errors == 0:
         print("初始化完成! 所有脚本执行成功。")
         if args.reset:
-            print("数据库已重置: 17 张表重建 (8 业务 + 9 风控) + 业务数据 + 11 条规则全部就绪")
+            print("数据库已重置: 17 张表重建 (8 业务 + 9 风控) + 业务数据 + 19 条规则全部就绪")
     else:
         print(f"初始化完成，但有 {total_errors} 个错误，请检查上方输出。")
     print("=" * 60)

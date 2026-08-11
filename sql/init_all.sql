@@ -7,7 +7,7 @@
 --   1. init_business_tables.sql  -- 17 张业务表 (DDL)
 --   2. init_business_data.sql    -- 业务表测试数据 (~4100 条)
 --   3. init_risk_tables.sql      -- 9 张风控表 (DDL, 含 P4 2 张)
---   4. init_risk_data.sql        -- 30 条预置风控规则 (R001-R030)
+--   4. init_risk_data.sql        -- 19 条预置风控规则 (R001-R020)
 --
 -- ============================================
 -- 使用方式

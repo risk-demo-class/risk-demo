@@ -3,7 +3,7 @@
 从零开始, 一键完成所有准备 + 训练, 最后启动 Web 服务.
 
 【工作流 6 步】
-  1. 重置数据库 (init_db.py --reset --yes, 含 11 条医疗规则)
+  1. 重置数据库 (init_db.py --reset --yes, 含 19 条医疗规则)
   2. 造 30 个 RISK 高风险用户 (gen_risky_users.py --count 30)
   3. 造 1500 条强标注训练数据 (gen_train_dataset.py --reset, ml_score=NULL)
   4. 训练 XGBoost 模型 (train_xgb_model.py)
@@ -64,7 +64,7 @@ def step_1_reset_db() -> None:
 
 
 def step_2_risk_users() -> None:
-    """步骤 2: 造 30 个 RISK 高风险用户 (8 种医疗风险模式轮换)."""
+    """步骤 2: 造 30 个 RISK 高风险用户 (16 种医疗风险模式轮换)."""
     _run_subprocess(
         "2/6 造 30 个 RISK 用户 (gen_risky_users.py --count 30)",
         [sys.executable, os.path.join(SCRIPTS, "gen_risky_users.py"), "--count", "30"],

@@ -66,10 +66,10 @@ class TestGenTrainDatasetScript:
         )
 
     def test_script_uses_process_event(self):
-        """走 process_event 让 30 规则跑 (decision 真实)"""
+        """走 process_event 让 19 规则跑 (decision 真实)"""
         src = GEN_PY.read_text(encoding="utf-8")
         assert "from app.service.event import process_event" in src
-        assert "await process_event(" in src, "应调 process_event 跑 30 规则"
+        assert "await process_event(" in src, "应调 process_event 跑 19 规则"
 
     def test_script_default_1500_samples(self):
         """默认 30 RISK + 30 普通 × 25 = 1500 条"""

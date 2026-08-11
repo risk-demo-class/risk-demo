@@ -28,7 +28,7 @@ services:
       - "${MYSQL_PORT:-3306}:3306"
     volumes:
       - mysql_data:/var/lib/mysql
-      # 首次启动自动执行 init SQL (建表 + 30 规则)
+      # 首次启动自动执行 init SQL (建表 + 19 规则)
       - ../sql/init_all.sql:/docker-entrypoint-initdb.d/01_init_all.sql:ro
       # 增量 migration (老环境用, 新装可注释)
       - ../sql/migration_add_2026_08_07_fields.sql:/docker-entrypoint-initdb.d/02_migration.sql:ro

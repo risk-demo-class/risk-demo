@@ -239,4 +239,4 @@ if __name__ == "__main__":
         print(f"    {h.rule_id:<6} | {h.risk_level:<4} | {h.risk_score} 分 | {h.action:<8} | {h.rule_name}")
 
     print("\n" + "=" * 60)
-    print("结论: 14 种 op + 递归 and/or, 复杂规则如 R030 (3 条件 AND) 也能正确求值")
+    print("结论: 14 种 op + 递归 and/or, 复杂规则如 R007 (3 条件 AND) 也能正确求值")
