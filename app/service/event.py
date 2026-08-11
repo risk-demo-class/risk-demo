@@ -72,21 +72,22 @@ async def _enrich_request(db: AsyncSession, request: RiskCheckRequest) -> RiskCh
     )).first()
     if row is None:
         return request
+    entity = row[0]
 
     # receive_id 承载"医院ID" (黑名单"医院编码"检查用)
     if hospital_field and not request.receive_id:
-        request.receive_id = getattr(row, hospital_field, None)
+        request.receive_id = getattr(entity, hospital_field, None)
     if request.event_type == "药品代购" and not request.receive_id:
         # 药品代购: 经处方关联 Prescription 拿医院
         rx = (await db.execute(
-            select(Prescription.hospital_id).where(Prescription.rx_id == row.rx_id)
+            select(Prescription.hospital_id).where(Prescription.rx_id == entity.rx_id)
         )).first()
         if rx and rx[0]:
             request.receive_id = rx[0]
 
     # doctor_id 放进 event_data (执业证黑名单检查用)
     if doctor_field:
-        did = getattr(row, doctor_field, None)
+        did = getattr(entity, doctor_field, None)
         if did:
             request.event_data = dict(request.event_data or {})
             request.event_data["doctor_id"] = did

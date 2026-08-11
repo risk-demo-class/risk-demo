@@ -3,7 +3,7 @@
 
 【目的】
   造一份**严格标注**的 XGBoost 训练数据集 (1500 条), 满足:
-    1. 数量: 1500 条 (30 RISK 用户 × 25 高风险 + 30 普通用户 × 25 正常)
+    1. 数量: 1500 条 (100 RISK 用户 × 25 高风险 + 普通用户 × 25 正常)
     2. 标签: 真实由 30 规则跑出 (decision 字段), 不是随机
     3. 特征: 25 维真实从 DB 查 (feature.py), 不是捏造
     4. ml_score 字段: 强制 NULL (写库后 UPDATE), 不存"未训练的垃圾模型"推理值
@@ -87,30 +87,37 @@ async def _pick_normal_users(db, n: int) -> list[str]:
 # 造事件
 # ============================================================
 
-async def _pick_postsale_for_user(db, user_id: str) -> tuple | None:
-    """挑该用户的一条售后记录 (postsale_id, user_id)."""
+async def _pick_claim_for_user(db, user_id: str) -> tuple | None:
+    """挑该用户的一条医保结算记录 (claim_id, user_id)."""
     r = await db.execute(text("""
-        SELECT p.postsale_id, oi.user_id
-        FROM postsale p
-        JOIN order_detail od ON p.order_detail_id = od.order_detail_id
-        JOIN order_info oi ON od.order_id = oi.order_id
-        WHERE oi.user_id = :uid
-        ORDER BY RAND() LIMIT 1
-    """), {"uid": user_id})
-    row = r.first()
-    return (row.postsale_id, row.user_id) if row else None
-
-
-async def _pick_order_for_user(db, user_id: str) -> tuple | None:
-    """挑该用户的一条订单 (order_id, user_id, receive_id)."""
-    r = await db.execute(text("""
-        SELECT order_id, user_id, receive_id
-        FROM order_info
+        SELECT claim_id, user_id FROM insurance_claim
         WHERE user_id = :uid
         ORDER BY RAND() LIMIT 1
     """), {"uid": user_id})
     row = r.first()
-    return (row.order_id, row.user_id, row.receive_id) if row else None
+    return (row.claim_id, row.user_id) if row else None
+
+
+async def _pick_rx_for_user(db, user_id: str) -> tuple | None:
+    """挑该用户的一条处方 (rx_id, user_id)."""
+    r = await db.execute(text("""
+        SELECT rx_id, user_id FROM prescription
+        WHERE user_id = :uid
+        ORDER BY RAND() LIMIT 1
+    """), {"uid": user_id})
+    row = r.first()
+    return (row.rx_id, row.user_id) if row else None
+
+
+async def _pick_appt_for_user(db, user_id: str) -> tuple | None:
+    """挑该用户的一条挂号记录 (appt_id, user_id)."""
+    r = await db.execute(text("""
+        SELECT appt_id, user_id FROM appointment
+        WHERE user_id = :uid
+        ORDER BY RAND() LIMIT 1
+    """), {"uid": user_id})
+    row = r.first()
+    return (row.appt_id, row.user_id) if row else None
 
 
 # ============================================================
@@ -177,14 +184,14 @@ async def gen_train_dataset(
         neg_count = 0
         failed = 0
         plan = []
-        # RISK 用户 → 售后申请 (99% 触发 R004 高退款率等)
+        # RISK 用户 → 处方审核 (首选, 触发医疗高风险规则) / 医保结算 (fallback)
         for uid in risk_users:
             for _ in range(per_user):
-                plan.append((uid, "售后申请"))
-        # 普通用户 → 普通下单 (99% 不触规则)
+                plan.append((uid, "处方审核"))
+        # 普通用户 → 挂号 (首选) / 医保结算 (fallback)
         for uid in normal_users:
             for _ in range(per_user):
-                plan.append((uid, "下单"))
+                plan.append((uid, "挂号"))
 
         random.shuffle(plan)  # 乱序, 避免时间戳聚集
         print(f"\n[2] 造 {len(plan)} 条事件 (乱序)...")
@@ -192,35 +199,42 @@ async def gen_train_dataset(
         normal_pos = 0
         for idx, (uid, event_type) in enumerate(plan, 1):
             try:
-                if event_type == "售后申请":
-                    picked = await _pick_postsale_for_user(db, uid)
+                if event_type == "处方审核":
+                    picked = await _pick_rx_for_user(db, uid)
                     if not picked:
-                        # 售后不够, fallback 到下单
-                        picked = await _pick_order_for_user(db, uid)
+                        # 处方不够, fallback 到医保结算
+                        picked = await _pick_claim_for_user(db, uid)
                         if not picked:
                             failed += 1
                             continue
-                        order_id, user_id, receive_id = picked
+                        claim_id, user_id = picked
                         request = RiskCheckRequest(
-                            event_type="下单", source_id=order_id, user_id=user_id,
-                            order_id=order_id, receive_id=receive_id,
+                            event_type="医保结算", source_id=claim_id, user_id=user_id,
                         )
                     else:
-                        ps_id, user_id = picked
+                        rx_id, user_id = picked
                         request = RiskCheckRequest(
-                            event_type="售后申请", source_id=ps_id, user_id=user_id,
+                            event_type="处方审核", source_id=rx_id, user_id=user_id,
                         )
-                else:  # 下单
-                    picked = await _pick_order_for_user(db, uid)
+                else:  # 挂号
+                    picked = await _pick_appt_for_user(db, uid)
                     if not picked:
-                        failed += 1
-                        continue
-                    order_id, user_id, receive_id = picked
-                    request = RiskCheckRequest(
-                        event_type="下单", source_id=order_id, user_id=user_id,
-                        order_id=order_id, receive_id=receive_id,
-                    )
+                        # 挂号不够, fallback 到医保结算
+                        picked = await _pick_claim_for_user(db, uid)
+                        if not picked:
+                            failed += 1
+                            continue
+                        claim_id, user_id = picked
+                        request = RiskCheckRequest(
+                            event_type="医保结算", source_id=claim_id, user_id=user_id,
+                        )
+                    else:
+                        appt_id, user_id = picked
+                        request = RiskCheckRequest(
+                            event_type="挂号", source_id=appt_id, user_id=user_id,
+                        )
 
+                result = await process_event(db, request)
                 result = await process_event(db, request)
                 success += 1
                 if result.decision in ("拒绝", "人工审核"):

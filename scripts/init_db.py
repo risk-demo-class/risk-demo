@@ -1,5 +1,5 @@
 """
-电商风控系统 - 一键数据库初始化脚本 (异步)
+医疗风控系统 - 一键数据库初始化脚本 (异步)
 按顺序执行所有 SQL 脚本: 创建数据库 → 业务表 → 业务数据 → 风控表 → 风控规则
 
 总表数: 17 业务 + 9 风控 = 26 张 (2026-08-07 含 P4 2 张: risk_action_log + risk_alert)
@@ -18,12 +18,10 @@ import aiomysql
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SQL_DIR = os.path.join(BASE_DIR, "sql")
 
-# SQL 脚本执行顺序
+# SQL 脚本执行顺序 (建表走 ORM metadata, 见步骤 2; 这里只放数据/规则种子)
 SQL_FILES = [
-    ("init_business_tables.sql", "创建 17 张业务表"),
-    ("init_business_data.sql", "导入业务测试数据"),
-    ("init_risk_tables.sql", "创建 9 张风控表 (7 原 + 2 P4 系统管理表)"),
-    ("init_risk_data.sql", "导入 30 条预置风控规则 (R001-R030)"),
+    ("init_business_data.sql", "导入业务基础数据"),
+    ("init_risk_data.sql", "导入 11 条预置风控规则 + 黑名单种子"),
 ]
 
 # 默认连接配置 (与 .env 一致)
@@ -217,7 +215,7 @@ async def main():
         args.reset = True
 
     print("=" * 60)
-    print("电商风控系统 - 数据库初始化 (异步)")
+    print("医疗风控系统 - 数据库初始化 (异步)")
     print(f"目标: {args.user}@{args.host}:{args.port}/{args.db}")
     print(f"模式: {'[RESET] 先删后建' if args.reset else '[KEEP-DATA] 保留数据, 只补表'}")
     print("=" * 60)
@@ -246,12 +244,20 @@ async def main():
         print(f"  错误: 无法连接 MySQL - {e}")
         sys.exit(1)
 
-    # 步骤 2-5: 按顺序执行 SQL 脚本
+    # 步骤 2: 用 ORM metadata 建表 (8 业务 + 9 风控 = 17 张, 单一来源)
+    print("\n[步骤 2/5] 用 ORM metadata 建表")
+    from app.database import Base, async_engine
+    from app import models  # noqa: F401  确保所有模型注册进 Base.metadata
+    async with async_engine.begin() as create_conn:
+        await create_conn.run_sync(Base.metadata.create_all)
+    print("  17 张表 (8 业务 + 9 风控) 已就绪")
+
+    # 步骤 3-5: 按顺序执行数据/规则 SQL 脚本
     conn = await get_connection(args.host, args.port, args.user, args.password, db=args.db)
     total_errors = 0
 
     try:
-        for idx, (filename, desc) in enumerate(SQL_FILES, start=2):
+        for idx, (filename, desc) in enumerate(SQL_FILES, start=3):
             filepath = os.path.join(SQL_DIR, filename)
             if not os.path.exists(filepath):
                 print(f"\n[步骤 {idx}/5] 跳过: {filename} 不存在")
@@ -267,7 +273,7 @@ async def main():
     if total_errors == 0:
         print("初始化完成! 所有脚本执行成功。")
         if args.reset:
-            print("数据库已重置: 26 张表重建 + 业务数据 + 30 条规则全部就绪")
+            print("数据库已重置: 17 张表重建 (8 业务 + 9 风控) + 业务数据 + 11 条规则全部就绪")
     else:
         print(f"初始化完成，但有 {total_errors} 个错误，请检查上方输出。")
     print("=" * 60)

@@ -82,7 +82,7 @@ async def backfill_ml_score(limit: int | None = None, dry_run: bool = False):
 
     # 3. 逐条推理回填
     print(f"\n[3] 推理 + 回填...")
-    engine = create_async_engine(settings.DB_URL, echo=False)
+    engine = create_async_engine(settings.get_database_url_async(), echo=False)
     SessionLocal = async_sessionmaker(engine, expire_on_commit=False)
     try:
         updated = 0
@@ -96,7 +96,7 @@ async def backfill_ml_score(limit: int | None = None, dry_run: bool = False):
                     # 找该 event 的 order_id 和 receive_id
                     ev_row = (await db.execute(
                         __import__("sqlalchemy").text("""
-                            SELECT order_id, receive_id, source_id, event_type
+                            SELECT event_source_id, event_type
                             FROM risk_event
                             WHERE event_id = :eid
                         """),
@@ -106,7 +106,7 @@ async def backfill_ml_score(limit: int | None = None, dry_run: bool = False):
                         continue
                     # 算 25 维特征
                     features = await compute_all_features(
-                        db, uid, order_id=ev_row.order_id, receive_id=ev_row.receive_id,
+                        db, uid, order_id=ev_row.event_source_id, event_type=ev_row.event_type,
                     )
                     # 推理
                     ml = predict(features)

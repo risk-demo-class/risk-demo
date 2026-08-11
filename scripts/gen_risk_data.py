@@ -82,7 +82,7 @@ async def generate_risk_data(
 
     total = sum(results.values())
     pos = results["人工审核"] + results["拒绝"]
-    print(f"✔ 生成 {total} 条评估: {results}")
+    print(f"[OK] 生成 {total} 条评估: {results}")
     if total:
         print(f"  正例比例 (人工审核+拒绝) = {pos / total:.1%}")
     return results

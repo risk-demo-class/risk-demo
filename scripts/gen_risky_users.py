@@ -68,7 +68,7 @@ async def _gen_doctor_tongfang(conn, user_id: str, mode_idx: int):
             INSERT IGNORE INTO prescription
             (rx_id, doctor_id, user_id, hospital_id, diagnosis_code, diagnosis_name, items, total_amount, is_insured, create_time)
             VALUES (:rx, 'D001', :pid, 'H001', 'I10', '原发性高血压',
-                    '[{"drug":"氨氯地平","qty":14}]', 120, 1, DATE_SUB(NOW(), INTERVAL :h HOUR))
+                    '[{"drug":"氨氯地平","qty": 14}]', 120, 1, DATE_SUB(NOW(), INTERVAL :h HOUR))
         """), {"rx": f"RX_{user_id}_{i:03d}", "pid": pid, "h": (50 - i) // 12})
 
 
@@ -90,7 +90,7 @@ async def _gen_rx_overdose(conn, user_id: str, mode_idx: int):
         INSERT IGNORE INTO prescription
         (rx_id, doctor_id, user_id, hospital_id, diagnosis_code, diagnosis_name, items, total_amount, is_insured, create_time)
         VALUES (:rx, 'D002', :uid, 'H001', 'F41', '焦虑状态',
-                '[{"drug":"阿普唑仑","qty":40}]', 260, 1, NOW())
+                '[{"drug":"阿普唑仑","qty": 40}]', 260, 1, NOW())
     """), {"rx": f"RX_{user_id}_001", "uid": user_id})
     await conn.execute(text("""
         INSERT IGNORE INTO drug_order
@@ -107,7 +107,7 @@ async def _gen_fake_record(conn, user_id: str, mode_idx: int):
             INSERT IGNORE INTO prescription
             (rx_id, doctor_id, user_id, hospital_id, diagnosis_code, diagnosis_name, items, total_amount, is_insured, create_time)
             VALUES (:rx, 'D003', :uid, 'H002', 'J45', '支气管哮喘',
-                    '[{"drug":"沙丁胺醇","qty":7}]', 90, 1, NOW())
+                    '[{"drug":"沙丁胺醇","qty": 7}]', 90, 1, NOW())
         """), {"rx": f"RX_{user_id}_{i:03d}", "uid": user_id})
     for i in range(1, 4):
         await conn.execute(text("""
@@ -131,7 +131,7 @@ async def _gen_drug_resale(conn, user_id: str, mode_idx: int):
         INSERT IGNORE INTO prescription
         (rx_id, doctor_id, user_id, hospital_id, diagnosis_code, diagnosis_name, items, total_amount, is_insured, create_time)
         VALUES (:rx, 'D001', :uid, 'H001', 'I10', '原发性高血压',
-                '[{"drug":"氨氯地平","qty":28}]', 240, 1, NOW())
+                '[{"drug":"氨氯地平","qty": 28}]', 240, 1, NOW())
     """), {"rx": f"RX_{user_id}_001", "uid": user_id})
     await conn.execute(text("""
         INSERT IGNORE INTO drug_order
@@ -168,7 +168,7 @@ _GEN_FUNCS = [
 
 async def gen_risky_users(count: int = 8, reset: bool = False):
     """生成 count 个高风险参保人 (8 模式轮换)."""
-    engine = create_async_engine(settings.DB_URL)
+    engine = create_async_engine(settings.get_database_url_async())
     async with engine.begin() as conn:
         if reset:
             await conn.execute(text("""
@@ -183,7 +183,7 @@ async def gen_risky_users(count: int = 8, reset: bool = False):
             mode = (i - 1) % MODE_COUNT
             await _GEN_FUNCS[mode](conn, user_id, mode)
     await engine.dispose()
-    print(f"✔ 已生成 {count} 个高风险参保人 (RISK001-RISK{count:03d}), 模式轮换: {' / '.join(RISK_MODES)}")
+    print(f"[OK] 已生成 {count} 个高风险参保人 (RISK001-RISK{count:03d}), 模式轮换: {' / '.join(RISK_MODES)}")
 
 
 if __name__ == "__main__":
