@@ -41,6 +41,11 @@ class Settings(BaseSettings):
     RISK_REVIEW_THRESHOLD: int = 80
     RISK_MULTI_RULE_BONUS: int = 3     # 多规则命中时, 每条额外规则加的分
     RISK_VETO_MIN_SCORE: int = 90      # 一票否决时强制的最低分
+    # 【2026-08-11 P2】人工审核规则 ML 豁免:
+    # True: 命中 action=人工审核 的规则时, ML 只作展示参考, 不参与 final_score 融合.
+    #   否则 ML 高分会把 60-84 分的"人工审核"规则推成"拒绝", 在线永远造不出待审核案件;
+    #   ML 低分又会把"人工审核"降成"标记". 业务语义: 规则说要审, 就让机器审.
+    RISK_REVIEW_ML_EXEMPT: bool = True
 
     # 按 event_type 拆的阈值 (P4-L5 2026-08-10):
     # 药品代购/挂号比结算严 (处方药外流 / 挂号黄牛)

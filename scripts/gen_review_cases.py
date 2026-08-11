@@ -2,12 +2,12 @@
 生成"人工审核"事件 / 待审核案件 (2026-08-11).
 
 背景:
-  双轨融合 (规则 + XGBoost) 会把高风险事件推成"拒绝", 库里全是"已拒绝"案件,
-  审核工作台没有"待审核"数据可测.
+  RISK_REVIEW_ML_EXEMPT=True (2026-08-11 P2) 之后, 命中 action=人工审核 的规则
+  会保持"人工审核"决策, ML 只作展示参考 → 本脚本直接跑 RISK 用户事件即可
+  稳定产出"待审核"案件, 且案件自带真实 ML 评分.
 
-本脚本生成时把 XGB_ENABLED 置为 false (纯规则), 让命中 高/中 级"人工审核"
-规则的事件停在"人工审核"决策 → run_risk_check 自动建"待审核"案件,
-供人工审核工作台 (案件管理) 测试.
+历史: 之前版本强制 XGB_ENABLED=false (纯规则) 造人工审核, 但案件 ML 分全为 0;
+      方案 B 后不再需要, 已移除.
 
 用法:
   python scripts/gen_review_cases.py                # 目标 40 个待审核案件
@@ -18,9 +18,6 @@ import argparse
 import asyncio
 import os
 import sys
-
-# 必须在 import app.* 之前设置: settings 在模块导入时读 env
-os.environ["XGB_ENABLED"] = "false"
 
 # 将项目根目录加入 Python 路径
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))

@@ -159,13 +159,12 @@ class TestVetoHardVetoAfterFusion:
         assert decision_str == "拒绝"
         assert risk_level == "极高"
 
-    def test_no_veto_high_rule_low_ml_becomes_mark(self, monkeypatch):
-        """没 veto + 规则高 + ML 低 → 会被融合成"标记" (验证不破坏正常路径)"""
+    def test_review_rule_exempt_keeps_manual_review_even_with_low_ml(self, monkeypatch):
+        """【2026-08-11 P2】命中 action=人工审核 规则 → ML 豁免, 即使 ML 低分也保持人工审核"""
         from app.engine import decision
 
-        # 普通高风险规则 (不是 veto)
-        normal_hit = RuleHitResult(_MockRule(
-            "R001", "单笔超高金额", "医保欺诈", "高", 70, "人工审核",
+        review_hit = RuleHitResult(_MockRule(
+            "R009", "无诊断开药", "处方风险", "高", 70, "人工审核",
         ))
 
         class _FakeMlResult:
@@ -175,16 +174,78 @@ class TestVetoHardVetoAfterFusion:
         monkeypatch.setattr(decision, "predict", lambda features: _FakeMlResult())
         monkeypatch.setattr(decision, "is_model_loaded", lambda: True)
 
-        final_score, risk_level, decision_str, *_ = decision._calculate_decision(
-            [normal_hit],
-            {"order_total_amount": 6000},
+        final_score, risk_level, decision_str, ml_score, ml_decision = decision._calculate_decision(
+            [review_hit],
+            {"order_dx_count": 0},
         )
-        # rule_score=70, ml_score_100 = sigmoid 校准 0.1→26 (P4-L4 2026-08-08 修复)
-        # final_score = 0.5×70 + 0.5×26 = 48 → "标记" (中风险)
-        # 注: 之前线性是 40 (0.1×100=10), 现在校准后是 48, 仍判"标记"
-        assert decision_str == "标记", f"融合后应=标记, 实际={decision_str}"
-        assert risk_level == "中"
-        assert final_score == 48, f"sigmoid 校准后 final_score=48, 实际={final_score}"
+        # ML 豁免: final_score 保持纯规则 70, 不被 ML 低分(校准 26)拉成 48→标记
+        assert decision_str == "人工审核", f"人工审核规则应保持人工审核, 实际={decision_str}"
+        assert risk_level == "高"
+        assert final_score == 70
+        # ML 仍随返回值展示 (前端参考, 不参与决策)
+        assert ml_score == 0.1
+        assert ml_decision == "通过"
+
+
+class TestReviewRuleMLExempt:
+    """【2026-08-11 P2】人工审核规则 ML 豁免: ML 只展示, 不参与融合."""
+
+    def _high_ml(self, monkeypatch):
+        from app.engine import decision
+
+        class _FakeMlResult:
+            score = 0.95
+            decision = "拒绝"
+            is_loaded = True
+        monkeypatch.setattr(decision, "predict", lambda features: _FakeMlResult())
+        monkeypatch.setattr(decision, "is_model_loaded", lambda: True)
+        return decision
+
+    def test_high_ml_does_not_push_review_to_reject(self, monkeypatch):
+        """人工审核规则 75 分 + ML 0.95 → 保持人工审核 (否则融合成 84 → 拒绝)"""
+        from app.engine import decision
+
+        decision = self._high_ml(monkeypatch)
+        review_hit = RuleHitResult(_MockRule(
+            "R013", "慢病频繁购药", "处方风险", "高", 75, "人工审核",
+        ))
+        final_score, risk_level, decision_str, ml_score, ml_decision = decision._calculate_decision(
+            [review_hit], {},
+        )
+        assert decision_str == "人工审核", f"豁免后应=人工审核, 实际={decision_str}"
+        assert risk_level == "高"
+        assert final_score == 75
+        # ML 分仍展示 (0.95, ML 决策=拒绝), 只是不参与 final_score
+        assert ml_score == 0.95
+        assert ml_decision == "拒绝"
+
+    def test_exempt_disabled_restores_fusion(self, monkeypatch):
+        """RISK_REVIEW_ML_EXEMPT=False → 恢复旧融合行为 (ML 参与)"""
+        from app.engine import decision
+
+        monkeypatch.setattr(decision.settings, "RISK_REVIEW_ML_EXEMPT", False)
+        decision = self._high_ml(monkeypatch)
+        review_hit = RuleHitResult(_MockRule(
+            "R013", "慢病频繁购药", "处方风险", "高", 75, "人工审核",
+        ))
+        final_score, _, decision_str, *_ = decision._calculate_decision([review_hit], {})
+        # sigmoid(0.95)=94, 融合 round(0.5×75 + 0.5×94)=84 → 拒绝 (旧行为)
+        assert final_score == 84
+        assert decision_str == "拒绝"
+
+    def test_non_review_rule_still_fuses(self, monkeypatch):
+        """非人工审核规则 (标记) → ML 照常参与融合"""
+        from app.engine import decision
+
+        decision = self._high_ml(monkeypatch)
+        mark_hit = RuleHitResult(_MockRule(
+            "R019", "夜间频繁结算", "医保欺诈", "中", 55, "标记",
+        ))
+        final_score, _, decision_str, ml_score, *_ = decision._calculate_decision([mark_hit], {})
+        # round(0.5×55 + 0.5×94) = 74 → 人工审核 (ML 参与, 未被豁免)
+        assert final_score == 74
+        assert decision_str == "人工审核"
+        assert ml_score == 0.95
 
 
 class TestCaseDeduplication:

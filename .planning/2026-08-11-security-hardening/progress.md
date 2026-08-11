@@ -14,6 +14,22 @@
 - Files created/modified:
   - `scripts/gen_review_cases.py`（新建）
 
+### 附加任务: 方案 B — 人工审核规则 ML 豁免
+
+- **Status:** complete
+- Actions taken:
+  - 用户疑问: 生成的待审核案件 ML 分全 0 (生成时 XGB 关闭的占位值) → 选择方案 B
+  - config 新增 `RISK_REVIEW_ML_EXEMPT=True`: 命中 action=人工审核 规则时 ML 只展示、不参与融合
+  - decision.py `_calculate_decision` 按该开关跳过 ML 融合 (veto 不受影响)
+  - 更新旧测试 (低 ML + 人工审核规则不再被降成标记) + 新增 3 个豁免专项测试
+  - gen_review_cases.py 移除强制 XGB_ENABLED=false (方案 B 后不再需要)
+  - 真实冒烟: RX_RISK028_012 在线检查 → 决策=人工审核, ML=0.9873 参考分
+  - 已有待审核案件 ML 回填: 39 条全部有真实分 (分布 0.01~0.99, 平均 0.55)
+  - 全量 pytest 450 passed
+- Files created/modified:
+  - `app/config.py`、`app/engine/decision.py`、`tests/test_risk_decision.py`
+  - `scripts/gen_review_cases.py`、`README.md`
+
 ### Phase 1: P0 安全合规最小闭环
 
 - **Status:** complete

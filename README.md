@@ -195,3 +195,6 @@ A: `python scripts/init_db.py --reset --yes`（会删库重建，含规则与基
 
 **Q: 造数脚本报 "A value is required for bind parameter '14'"？**
 A: SQL 里 JSON 字段 `"qty":14` 冒号后无空格会被 SQLAlchemy `text()` 误判为命名绑定参数，统一写成 `"qty": 14`（冒号后带空格）即可。
+
+**Q: 为什么有的案件 ML 评分很高、决策却是"人工审核"？**
+A: 命中 `action=人工审核` 的规则时，ML 只作展示参考、不参与 final_score 融合（`RISK_REVIEW_ML_EXEMPT=True`，2026-08-11 P2）。否则 ML 高分会把"人工审核"推成"拒绝"、低分又降成"标记"，规则说要审的案件就永远到不了人工审核。关闭该开关可恢复旧的双轨融合行为。

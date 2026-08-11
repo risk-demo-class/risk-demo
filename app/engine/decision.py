@@ -303,15 +303,26 @@ def _calculate_decision(
     ml_score_100 = _ml_prob_to_risk_score(ml_result.score) if ml_result else 0
     ml_decision = ml_result.decision if ml_result else "通过"
 
+    # 【2026-08-11 P2】人工审核规则 ML 豁免:
+    # 命中 action=人工审核 的规则时, ML 只作展示参考、不参与 final_score 融合,
+    # 保证 60-84 分的"人工审核"规则稳定产出"人工审核"决策.
+    # 否则: ML 高分把"人工审核"推成"拒绝" (在线造不出待审核案件);
+    #       ML 低分把"人工审核"降成"标记" (规则说审, 机器说不审).
+    review_rule_hit = any(h.action == "人工审核" for h in rules)
+    ml_fused = bool(
+        ml_result and ml_result.is_loaded
+        and not (settings.RISK_REVIEW_ML_EXEMPT and review_rule_hit)
+    )
+
     # 双轨融合 (加权平均, 截到 [0, 100])
-    if ml_result and ml_result.is_loaded:
+    if ml_fused:
         final_score = int(round(
             settings.ML_WEIGHT_RULE * rule_score
             + settings.ML_WEIGHT_XGB * ml_score_100
         ))
         final_score = max(0, min(100, final_score))
     else:
-        # XGBoost 没启用, 走纯规则
+        # 未融合: XGBoost 未启用, 或命中人工审核规则被豁免 (ML 仍随返回值展示)
         final_score = rule_score
 
     risk_level = _score_to_level(final_score, event_type)
