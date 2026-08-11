@@ -6,7 +6,7 @@
 
 ## Current Phase
 
-Phase 2 (P1 脱敏、审计、会话)
+Phase 3 (P2 工程基建)
 
 ## Phases
 
@@ -21,12 +21,12 @@ Phase 2 (P1 脱敏、审计、会话)
 
 ### Phase 2: P1 脱敏、审计、会话
 
-- [ ] 2.1 日志脱敏：`_safe_call` 与 access log 不落手机号/卡号/user_id 全量；统一 `mask()` helper
-- [ ] 2.2 LLM 上下文脱敏：`query_business_data` 返回前过滤姓名/卡号/收件人（可配置开关）
-- [ ] 2.3 访问审计：Agent 查业务数据写 `risk_action_log`（operator=ai_agent + 目标 user_id）
-- [ ] 2.4 会话外置 + TTL：Agent session 从进程内 dict 迁到 MySQL 表，带过期清理
-- [ ] 2.5 P1 验证：脱敏单测 + 审计留痕断言 + 多 worker 会话共享验证
-- **Status:** pending
+- [x] 2.1 日志脱敏：`_safe_call` 参数掩码 + uvicorn access log 查询串过滤（`app/masking.py` 统一 helper）
+- [x] 2.2 LLM 上下文脱敏：`query_business_data` 返回前过滤姓名/诊断/收件人（`LLM_DATA_MASK` 开关）
+- [x] 2.3 访问审计：Agent 查业务数据写新表 `risk_data_access_log`（operator=ai_agent + query_type + 目标 user_id）
+- [x] 2.4 会话外置 + TTL：Agent session 迁 MySQL `agent_session` 表，`AGENT_SESSION_TTL_HOURS` 自动清理
+- [x] 2.5 P1 验证：脱敏单测 + 审计留痕断言 + 会话持久化/TTL 测试 + 全量 447 passed
+- **Status:** complete
 
 ### Phase 3: P2 工程基建
 

@@ -1,7 +1,7 @@
 # 医疗风控系统 AI_Risk_Medical — 项目启动文档
 
 > 场景 F：医保结算 / 处方审核 / 挂号 / 药品代购 4 大风险场景
-> 规则引擎 + XGBoost 双轨融合 · 8 张业务表 · 25 维医疗特征 · 19 条规则 · 429 个测试全绿
+> 规则引擎 + XGBoost 双轨融合 · 8 张业务表 · 25 维医疗特征 · 19 条规则 · 447 个测试全绿
 > 基线：尚硅谷 AI_Risk 电商风控版（风控核心 9 张表 + 决策流水线复用，业务层全量重写）
 
 ---
@@ -147,7 +147,7 @@ python -m uvicorn scripts.main:app --host 0.0.0.0 --port 8000
 
 ```bash
 pytest tests/ -k "not scheduler"
-# 429 passed
+# 447 passed
 ```
 
 ## 10. 训练指标

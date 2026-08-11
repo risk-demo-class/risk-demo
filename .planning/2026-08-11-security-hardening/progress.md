@@ -19,6 +19,23 @@
   - `app/routers/{rule,blacklist,case,agent,alert}.py`、`app/api.py`、`scripts/main.py`、`static/app.js`、`templates/base.html`（鉴权）
   - `.dockerignore`、`app/config.py`、`scripts/init_db.py`、`docker/*`（密钥卫生）
 
+### Phase 2: P1 脱敏、审计、会话
+
+- **Status:** complete
+- **Started:** 2026-08-11（P0 收口后继续）
+- Actions taken:
+  - 2.1 日志脱敏：新建 `app/masking.py`（mask_value/mask_kwargs/mask_business_row/MaskQueryStringFilter）；`_safe_call` 参数掩码；uvicorn.access 查询串过滤
+  - 2.2 LLM 上下文脱敏：`_query_business_data_impl` 返回前按 `LLM_DATA_MASK=True` 过滤姓名/诊断/收件人/卡号
+  - 2.3 访问审计：新增 `risk_data_access_log` 表（ORM + create_all 补建），Agent 每次业务查询写审计行
+  - 2.4 会话外置：新增 `agent_session` 表，chat.py 从内存 dict 迁 MySQL（message_to_dict/messages_from_dict），`_cleanup_expired_sessions` TTL 清理，`clear_session` 异步化；SYSTEM_PROMPT 改医疗版 + 黑名单只读
+  - 2.5 验证：18 个新测试（masking 10 + agent_security 5 + session 3）；全量 pytest 447 passed；真实 app 冒烟通过
+- Files created/modified:
+  - `app/masking.py`、`tests/test_masking.py`、`tests/test_agent_security.py`（新建）
+  - `app/models_risk.py`（新增 RiskDataAccessLog/AgentSession）、`app/models.py`、`app/database.py`、`scripts/init_db.py`（表数 17→19）
+  - `app/agent/tools.py`、`app/agent/chat.py`、`app/routers/agent.py`、`app/logging_config.py`、`app/config.py`
+  - `tests/test_agent_session.py`（重写）、`tests/test_agent_session_lock.py`（删除）
+  - `README.md`、`sql/init_all.sql`（表数/测试数 447）
+
 ### Phase 0: 审查（已完成，非执行阶段）
 
 - **Status:** complete
@@ -42,6 +59,8 @@
 | 规则命中率（上轮） | 30 天 × 200 条评估 | 19 规则全命中 | 19/19 命中，0.6%~19.7% | ✓ |
 | 全量 pytest（P0 后） | `pytest tests/ -k "not scheduler"` | 429 passed | 429 passed, 1 skipped, 1 deselected | ✓ |
 | 真实应用冒烟 | TestClient 全 app | 登录流正常 | /login 200；无 Token 写接口 401；登录后 me 200 | ✓ |
+| 全量 pytest（P1 后） | `pytest tests/ -k "not scheduler"` | 447 passed | 447 passed, 1 skipped, 1 deselected | ✓ |
+| P1 真实冒烟 | TestClient 全 app | 新表/chat 模块/鉴权正常 | /login 200；login 200；带 Token agent chat 200 | ✓ |
 
 ## Error Log
 
@@ -51,6 +70,9 @@
 | 2026-08-11（上轮） | aiomysql 关闭连接报 "Event loop is closed" | 1 | 仅退出噪音，功能正常；可忽略 |
 | 2026-08-11（P0） | app.js fetch 包装在 Node 单测环境崩（window.fetch undefined） | 1 | 加 `typeof window !== 'undefined' && window.fetch` 防御 |
 | 2026-08-11（P0） | get_dependant 返回的依赖可调用对象在 `d.call` 而非 `d.dependency` | 1 | 测试 helper 同时检查 `.call`/`.dependency` |
+| 2026-08-11（P1） | 会话测试: 全局 async_engine 连接池跨 pytest 事件循环复用崩溃 | 1 | 每测试独立 engine/session, 用完 dispose |
+| 2026-08-11（P1） | async generator fixture 被 pytest-asyncio 原样返回 | 2 | 弃用 fixture, 测试内 `_new_session()` 建独立 engine |
+| 2026-08-11（P1） | 旧 test_agent_session_lock.py 断言内存锁, 已过时 | 1 | 删除, 架构断言并入 test_agent_session.py |
 
 ## 5-Question Reboot Check
 
