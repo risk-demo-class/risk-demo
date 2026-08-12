@@ -1,0 +1,33 @@
+-- ============================================
+-- 银行风控系统 - 数据库初始化指南
+-- ============================================
+--
+-- 本系统共需初始化 4 个 SQL 脚本，按以下顺序执行:
+--
+--   1. init_business_tables.sql  -- 8 张银行业务表 (DDL)
+--   2. init_business_data.sql    -- 银行业务测试数据
+--   3. init_risk_tables.sql      -- 9 张风控表 (DDL)
+--   4. init_risk_data.sql        -- 8 条银行风控规则 (R001/R002/R005/R008/R012/R018/R025/R030)
+--
+-- ============================================
+-- 使用方式
+-- ============================================
+--
+-- 方式1 (推荐): 一键 Python 脚本
+--   conda activate risk
+--   python scripts/init_db.py
+--
+-- 方式2: 手动按顺序执行
+--   mysql -u root -p123456 --default-character-set=utf8mb4 bank_risk < sql/init_business_tables.sql
+--   mysql -u root -p123456 --default-character-set=utf8mb4 bank_risk < sql/init_business_data.sql
+--   mysql -u root -p123456 --default-character-set=utf8mb4 bank_risk < sql/init_risk_tables.sql
+--   mysql -u root -p123456 --default-character-set=utf8mb4 bank_risk < sql/init_risk_data.sql
+--
+-- ============================================
+-- 注意事项
+-- ============================================
+-- - 数据库名: bank_risk (需提前创建)
+-- - 字符集: utf8mb4
+-- - 业务表按外键依赖排序，可安全顺序执行
+-- - 业务数据脚本已包含 SET FOREIGN_KEY_CHECKS = 0 处理
+-- - 风控表 9 张 (含 risk_action_log / risk_alert)
