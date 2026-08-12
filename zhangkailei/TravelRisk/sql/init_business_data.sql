@@ -1,0 +1,43 @@
+INSERT IGNORE INTO travel_user VALUES
+('TU_NORMAL_001','正常游客','phone_normal_001',1,1,'正常',DATE_SUB(NOW(),INTERVAL 800 DAY)),
+('TU_NEW_001','新注册游客','phone_new_001',1,0,'正常',DATE_SUB(NOW(),INTERVAL 2 DAY)),
+('TU_SCALPER_001','疑似黄牛','phone_scalper_001',0,0,'正常',DATE_SUB(NOW(),INTERVAL 40 DAY)),
+('TU_VISA_001','拒签高风险游客','phone_visa_001',1,0,'正常',DATE_SUB(NOW(),INTERVAL 120 DAY));
+
+INSERT IGNORE INTO travel_order VALUES
+('TO_NORMAL_001','TU_NORMAL_001','机票',3200,'中国',DATE_ADD(CURDATE(),INTERVAL 30 DAY),DATE_ADD(CURDATE(),INTERVAL 35 DAY),1,'已支付',NOW()),
+('TO_NEW_001','TU_NEW_001','酒店',18000,'日本',DATE_ADD(CURDATE(),INTERVAL 15 DAY),DATE_ADD(CURDATE(),INTERVAL 20 DAY),2,'已支付',NOW()),
+('TO_SCALPER_001','TU_SCALPER_001','机票',60000,'泰国',DATE_ADD(CURDATE(),INTERVAL 3 DAY),DATE_ADD(CURDATE(),INTERVAL 8 DAY),5,'已支付',NOW()),
+('TO_VISA_001','TU_VISA_001','签证',2200,'美国',DATE_ADD(CURDATE(),INTERVAL 60 DAY),DATE_ADD(CURDATE(),INTERVAL 75 DAY),1,'已支付',NOW());
+
+INSERT IGNORE INTO passenger_info VALUES
+('TP_NORMAL_001','TU_NORMAL_001','正常乘客','护照','passport_normal_001','中国','1990-01-01'),
+('TP_NEW_001','TU_NEW_001','新用户乘客','护照','passport_new_001','中国','1995-01-01'),
+('TP_SCALPER_001','TU_SCALPER_001','黄牛乘客','护照','passport_scalper_001','中国','1988-01-01'),
+('TP_VISA_001','TU_VISA_001','签证乘客','护照','passport_visa_001','中国','1992-01-01');
+
+INSERT IGNORE INTO order_passenger(order_id,passenger_id) VALUES
+('TO_NORMAL_001','TP_NORMAL_001'),('TO_NEW_001','TP_NEW_001'),
+('TO_SCALPER_001','TP_SCALPER_001'),('TO_VISA_001','TP_VISA_001');
+
+INSERT IGNORE INTO flight_booking VALUES
+('FB_NORMAL_001','TO_NORMAL_001','CA1001','PEK','SHA','经济舱',DATE_ADD(NOW(),INTERVAL 30 DAY),1),
+('FB_SCALPER_001','TO_SCALPER_001','TG6001','PVG','BKK','商务舱',DATE_ADD(NOW(),INTERVAL 3 DAY),5);
+
+INSERT IGNORE INTO hotel_booking VALUES
+('HB_NEW_001','TO_NEW_001','HOTEL_TYO_01','东京',DATE_ADD(CURDATE(),INTERVAL 15 DAY),DATE_ADD(CURDATE(),INTERVAL 20 DAY),1,0);
+
+INSERT IGNORE INTO visa_application VALUES
+('VA_OLD_001','TO_VISA_001','TU_VISA_001','美国','旅游','拒签','材料不完整',DATE_SUB(NOW(),INTERVAL 60 DAY)),
+('VA_OLD_002','TO_VISA_001','TU_VISA_001','加拿大','旅游','拒签','资金证明不足',DATE_SUB(NOW(),INTERVAL 20 DAY)),
+('VA_CURRENT_001','TO_VISA_001','TU_VISA_001','美国','旅游','待审核',NULL,NOW());
+
+INSERT IGNORE INTO payment_record VALUES
+('PAY_NORMAL_001','TO_NORMAL_001','TU_NORMAL_001','acct_normal',3200,'DEV_NORMAL','10.0.0.1','成功',NOW()),
+('PAY_NEW_001','TO_NEW_001','TU_NEW_001','acct_new',18000,'DEV_NEW','10.0.0.2','成功',NOW()),
+('PAY_SCALPER_001','TO_SCALPER_001','TU_SCALPER_001','acct_scalper',60000,'DEV_SCALPER','10.0.0.9','成功',NOW()),
+('PAY_VISA_001','TO_VISA_001','TU_VISA_001','acct_visa',2200,'DEV_VISA','10.0.0.4','成功',NOW());
+
+INSERT IGNORE INTO travel_blacklist_entry(entry_type,entry_value_hash,reason) VALUES
+('PASSPORT','passport_black_demo','证件欺诈演示样本'),
+('DEVICE','DEV_BLOCKED','群控设备'),('IP','10.0.0.99','高风险代理 IP');

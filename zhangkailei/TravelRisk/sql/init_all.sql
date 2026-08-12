@@ -1,0 +1,3 @@
+-- TravelRisk 初始化入口说明。
+-- 推荐执行：python scripts/init_db.py --reset --yes
+-- Docker 会按文件名顺序分别挂载并执行四个初始化 SQL。
