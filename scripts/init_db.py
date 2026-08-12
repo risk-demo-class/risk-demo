@@ -1,5 +1,5 @@
 """
-电商风控系统 - 一键数据库初始化脚本 (异步)
+物流风控系统 - 一键数据库初始化脚本 (异步)
 按顺序执行所有 SQL 脚本: 创建数据库 → 业务表 → 业务数据 → 风控表 → 风控规则
 
 总表数: 17 业务 + 9 风控 = 26 张 (2026-08-07 含 P4 2 张: risk_action_log + risk_alert)
@@ -23,7 +23,7 @@ SQL_FILES = [
     ("init_business_tables.sql", "创建 17 张业务表"),
     ("init_business_data.sql", "导入业务测试数据"),
     ("init_risk_tables.sql", "创建 9 张风控表 (7 原 + 2 P4 系统管理表)"),
-    ("init_risk_data.sql", "导入 30 条预置风控规则 (R001-R030)"),
+    ("init_risk_data.sql", "导入 8 条物流预置风控规则 (R001/R002/R005/R008/R012/R018/R025/R030)"),
 ]
 
 # 默认连接配置 (与 .env 一致)
@@ -267,7 +267,7 @@ async def main():
     if total_errors == 0:
         print("初始化完成! 所有脚本执行成功。")
         if args.reset:
-            print("数据库已重置: 26 张表重建 + 业务数据 + 30 条规则全部就绪")
+            print("数据库已重置: 26 张表重建 + 业务数据 + 8 条物流规则全部就绪")
     else:
         print(f"初始化完成，但有 {total_errors} 个错误，请检查上方输出。")
     print("=" * 60)

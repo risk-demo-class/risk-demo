@@ -142,11 +142,11 @@ if __name__ == "__main__":
         ("基础 >=",         {"field": "order_declared_value", "op": ">=", "value": 5000}, {"order_declared_value": 8000}, True),
         ("基础 ==",         {"field": "order_is_international", "op": "==", "value": 1},  {"order_is_international": 1},  True),
         ("基础 !=",         {"field": "user_real_name_verified", "op": "!=", "value": 0}, {"user_real_name_verified": 1}, True),
-        ("AND 嵌套 (R030)", {"and": [
+        ("AND 嵌套 (R008 风格)", {"and": [
+            {"field": "user_cod_overdue_count", "op": ">=", "value": 1},
+            {"field": "order_cod_amount", "op": ">=", "value": 1000},
             {"field": "user_blacklist_hit_count", "op": ">=", "value": 1},
-            {"field": "order_value_per_kg", "op": ">=", "value": 2000},
-            {"field": "user_distinct_receiver_count", "op": ">=", "value": 3},
-        ]}, {"user_blacklist_hit_count": 2, "order_value_per_kg": 3000, "user_distinct_receiver_count": 5}, True),
+        ]}, {"user_cod_overdue_count": 2, "order_cod_amount": 3000, "user_blacklist_hit_count": 1}, True),
         ("OR 嵌套",         {"or": [
             {"field": "user_total_parcel_count", "op": ">=", "value": 100},
             {"field": "user_total_parcel_count", "op": "<", "value": 1},
@@ -203,4 +203,4 @@ if __name__ == "__main__":
         print(f"    {h.rule_id:<6} | {h.risk_level:<4} | {h.risk_score} 分 | {h.action:<8} | {h.rule_name}")
 
     print("\n" + "=" * 60)
-    print("结论: 14 种 op + 递归 and/or, 复杂规则如 R030 (3 条件 AND) 也能正确求值")
+    print("结论: 14 种 op + 递归 and/or, 复杂规则如 R008/R018/R025 (多条件 AND) 也能正确求值")
