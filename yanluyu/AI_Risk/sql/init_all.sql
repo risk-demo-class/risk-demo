@@ -1,0 +1,35 @@
+-- ============================================
+-- 教育风控系统 - 数据库初始化指南
+-- 总表数: 7 教育业务 + 9 风控 = 16 张
+-- ============================================
+--
+-- 本系统共需初始化 5 个 SQL 脚本，按以下顺序执行:
+--
+--   1. init_edu_business_tables.sql  -- 7 张教育业务表 (DDL)
+--   2. init_edu_business_data.sql    -- 教育业务测试数据
+--   3. init_risk_tables.sql          -- 9 张风控表 (DDL, 含 P4 2 张)
+--   4. init_edu_risk_data.sql        -- 8 条预置教育风控规则
+--   5. migration_edu.sql             -- 扩展风险表 ENUM 到教育领域 + 同步黑名单
+--
+-- 8 条教育风控规则:
+--   极高(拒绝): R001 刷单式报名 / R008 假学员代理 / R030 黑学号拦截
+--   高(审核):   R002 0学时退费 / R005 大额连报
+--   中(标记):   R012 退费连环 / R018 直播打赏异常 / R025 学员身份不符
+--
+-- ============================================
+-- 使用方式
+-- ============================================
+--
+-- 方式1 (推荐): 一键 Python 脚本
+--   python scripts/init_db.py --reset --yes
+--   python scripts/gen_edu_data.py
+--
+-- 方式2: 手动按顺序执行
+--   mysql -u root -p < sql/init_edu_business_tables.sql
+--   mysql -u root -p < sql/init_edu_business_data.sql
+--   mysql -u root -p < sql/init_risk_tables.sql
+--   mysql -u root -p < sql/init_edu_risk_data.sql
+--   mysql -u root -p < sql/migration_edu.sql
+--
+-- 数据库: ecs | 字符集: utf8mb4
+-- ============================================

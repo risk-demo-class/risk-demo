@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(Get-ChildItem -Path \"E:\\\\python\\\\AI_Risk\" -Recurse -Depth 0 | ForEach-Object { \"{0,-10} {1}\" -f \\(\\(\"DIR\"+\"\"\\) , \\(\"FILE\"+\"\"\\)\\)[$_.PSIsContainer -eq $false], $_.Name })"
+    ]
+  }
+}
