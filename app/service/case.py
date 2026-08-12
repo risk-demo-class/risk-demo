@@ -40,10 +40,13 @@ logger = logging.getLogger(__name__)
 # ============================================================
 
 async def check_blacklist(db: AsyncSession, blacklist_type: str, value: str) -> bool:
+    # 【物流版修复】加 WHERE deleted_at IS NULL: 软删的黑名单不能再拦 (对齐 DDL 注释
+    # "撞黑检查/列表查都加 WHERE deleted_at IS NULL" 及 add_blacklist/get_blacklist 行为)
     bl = (await db.execute(
         select(RiskBlacklist).where(
             RiskBlacklist.blacklist_type == blacklist_type,
             RiskBlacklist.blacklist_value == value,
+            RiskBlacklist.deleted_at.is_(None),
         )
     )).scalar_one_or_none()
     if not bl:

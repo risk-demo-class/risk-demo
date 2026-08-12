@@ -1,6 +1,12 @@
 """
-业务实体校验器: 集中处理"用户/订单/售后"等业务实体的存在性、一致性校验.
+业务实体校验器: 集中处理"用户/包裹/危险品申报/COD结算"等业务实体的存在性、一致性校验.
 所有校验失败都抛 HTTPException, 由 FastAPI 统一返回 4xx 响应.
+
+物流 4 类事件 source_id 语义:
+  - parcel_pickup 揽收 / cross_border_ship 跨境发运: source_id = parcel_id
+  - dangerous_declare 危险品申报: source_id = decl_id
+  - cod_settlement COD 结算: source_id = cod_id
+电商旧事件 (下单/支付/售后申请/物流投诉) 增量兼容保留: 无对应业务表, 跳过 source 校验.
 """
 import asyncio
 import logging
@@ -11,9 +17,9 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import (
-    LogisticsComplaintsRecord,
-    OrderInfo,
-    Postsale,
+    CodTransaction,
+    DangerousDeclaration,
+    Parcel,
     UserInfo,
 )
 from app.schemas import RiskCheckRequest
@@ -57,35 +63,38 @@ async def ensure_user_exists(db: AsyncSession, user_id: str) -> None:
     await ensure_exists(db, UserInfo, "user_id", user_id, entity_label="用户")
 
 
-# 防"水平越权": 拿真订单+假用户绕过风控
-# 攻击场景: 攻击者拿自己的 user_id + 别人的真实 order_id 调风控
-# 后果: 别人的订单被风控/被拒, 业务投诉
-async def ensure_order_belongs_to_user(
+# 防"水平越权": 拿真包裹+假用户绕过风控
+# 攻击场景: 攻击者拿自己的 user_id + 别人的真实 parcel_id 调风控
+# 后果: 别人的包裹被风控/被拒, 业务投诉
+async def ensure_parcel_belongs_to_user(
     db: AsyncSession,
-    order_id: str,
+    parcel_id: str,
     user_id: str,
 ) -> None:
+    """包裹归属校验: parcel.user_id 必须等于请求 user_id."""
     owner = (await db.execute(
-        select(OrderInfo.user_id).where(OrderInfo.order_id == order_id).limit(1)
+        select(Parcel.user_id).where(Parcel.parcel_id == parcel_id).limit(1)
     )).scalar_one_or_none()
     if not owner:
-        raise HTTPException(status_code=404, detail=f"订单ID不存在: {order_id}")
+        raise HTTPException(status_code=404, detail=f"包裹ID不存在: {parcel_id}")
     if owner != user_id:
         logger.warning(
-            "安全告警: 订单归属不一致 order_id=%s, owner=%s, request_user=%s",
-            order_id, owner, user_id,
+            "安全告警: 包裹归属不一致 parcel_id=%s, owner=%s, request_user=%s",
+            parcel_id, owner, user_id,
         )
         raise HTTPException(
             status_code=403,
-            detail=f"订单 {order_id} 属于用户 {owner}, 与请求用户 {user_id} 不一致",
+            detail=f"包裹 {parcel_id} 属于用户 {owner}, 与请求用户 {user_id} 不一致",
         )
 
 
 # source_id 与 event_type 匹配的校验规则 (字典派发, 加新 event_type 只加 1 行)
+# model=None 表示该事件无 source 表 (电商旧事件兼容), 跳过 source 校验
 _EVENT_SOURCE_VALIDATORS = {
-    ("下单", "支付"): (OrderInfo, "order_id", None, "订单", 400),
-    ("售后申请",): (Postsale, "postsale_id", None, "售后单", 400),
-    ("物流投诉",): (LogisticsComplaintsRecord, "record_id", int, "投诉记录", 400),
+    ("parcel_pickup", "cross_border_ship"): (Parcel, "parcel_id", None, "包裹", 400),
+    ("dangerous_declare",): (DangerousDeclaration, "decl_id", None, "危险品申报", 400),
+    ("cod_settlement",): (CodTransaction, "cod_id", None, "COD结算", 400),
+    ("下单", "支付", "售后申请", "物流投诉"): (None, None, None, None, 400),
 }
 
 
@@ -96,6 +105,9 @@ async def ensure_source_matches_event_type(
     for event_types, (model, field, caster, label, status_code) in _EVENT_SOURCE_VALIDATORS.items():
         if request.event_type not in event_types:
             continue
+        if model is None:
+            # 电商旧事件兼容: 无对应业务表, 不校验 source_id
+            return
         await ensure_exists(
             db, model, field, request.source_id,
             entity_label=label,
@@ -126,10 +138,11 @@ if __name__ == "__main__":
 
     # 1. _EVENT_SOURCE_VALIDATORS 字典派发演示
     print("\n[1] 字典派发表 _EVENT_SOURCE_VALIDATORS:")
-    print(f"  {'event_type':<14} {'model':<16} {'field':<14} {'label':<6} {'status'}")
+    print(f"  {'event_type':<30} {'model':<22} {'field':<14} {'label':<8} {'status'}")
     for evt_types, (model, field, _, label, status) in _EVENT_SOURCE_VALIDATORS.items():
         evt_str = " | ".join(evt_types)
-        print(f"  {evt_str:<14} {model.__name__:<16} {field:<14} {label:<6} {status}")
+        model_name = model.__name__ if model else "(无表, 跳过)"
+        print(f"  {evt_str:<30} {model_name:<22} {field or '-':<14} {label or '-':<8} {status}")
 
     # 2. ensure_exists: 用户存在/不存在 的两种行为
     print("\n[2] ensure_exists 行为 (mock DB):")
@@ -164,10 +177,9 @@ if __name__ == "__main__":
 
     # 3. ensure_source_matches_event_type: event_type 不匹配 → 400
     print("\n[3] ensure_source_matches_event_type 行为:")
-    print("  event_type='下单' 但用 postsale_id 当 source_id → 报错 (派发错模型)")
+    print("  event_type='cod_settlement' 但用 parcel_id 当 source_id → 报错 (派发错模型)")
 
     async def demo_event_dispatch():
-        # mock: 同时支持 .scalar() (给 ensure_exists) 和 .scalar_one_or_none() (给 ensure_order_belongs_to_user)
         class _FlexDB:
             def __init__(self, count_n, row):
                 self.count_n = count_n
@@ -180,52 +192,59 @@ if __name__ == "__main__":
                 return _R(self.count_n, self.row)
 
         from app.schemas import RiskCheckRequest
-        req_ok = RiskCheckRequest(event_type="下单", source_id="ORD001", user_id="U001")
-        # count=1 (存在), row 也有 (单条订单)
+        req_ok = RiskCheckRequest(event_type="parcel_pickup", source_id="P000001", user_id="U0001")
         try:
-            await ensure_source_matches_event_type(_FlexDB(1, SimpleNamespace(order_id="ORD001")), req_ok)
-            print("  [OK]   event_type=下单 + source_id=ORD001 → OrderInfo 存在, 通过")
+            await ensure_source_matches_event_type(_FlexDB(1, SimpleNamespace(parcel_id="P000001")), req_ok)
+            print("  [OK]   event_type=parcel_pickup + source_id=P000001 → Parcel 存在, 通过")
         except HTTPException as e:
             print(f"  [FAIL] {e.detail}")
 
-        # 错误配对: 用 postsale_id 当 source_id 但 event_type=下单 → 走 OrderInfo 但查不到
-        req_bad = RiskCheckRequest(event_type="下单", source_id="PS001", user_id="U001")
+        # 错误配对: 用 cod_id 当 source_id 但 event_type=parcel_pickup → 走 Parcel 但查不到
+        req_bad = RiskCheckRequest(event_type="parcel_pickup", source_id="COD00001", user_id="U0001")
         try:
             await ensure_source_matches_event_type(_FlexDB(0, None), req_bad)
             print("  [FAIL] 不该到这里")
         except HTTPException as e:
-            print(f"  [400]  source_id='PS001' 在 OrderInfo 找不到 → {e.detail[:60]}...  (status={e.status_code})")
+            print(f"  [400]  source_id='COD00001' 在 Parcel 找不到 → {e.detail[:60]}...  (status={e.status_code})")
+
+        # 电商旧事件: 无表, 跳过校验
+        req_legacy = RiskCheckRequest(event_type="下单", source_id="whatever", user_id="U0001")
+        try:
+            await ensure_source_matches_event_type(_FlexDB(0, None), req_legacy)
+            print("  [OK]   电商旧事件(下单) 无 source 表 → 跳过校验, 通过")
+        except HTTPException as e:
+            print(f"  [FAIL] {e.detail}")
 
     asyncio.run(demo_event_dispatch())
 
-    # 4. ensure_order_belongs_to_user: 防越权
-    print("\n[4] ensure_order_belongs_to_user 防越权:")
-    print("  user_id='U001' 试图操作 order_id='ORD999' (属于 U002) → 403")
+    # 4. ensure_parcel_belongs_to_user: 防越权
+    print("\n[4] ensure_parcel_belongs_to_user 防越权:")
+    print("  user_id='U0001' 试图操作 parcel_id='P000004' (属于 U0002) → 403")
 
     async def demo_ownership():
-        # mock 直接返回字符串 (因为代码用 select(OrderInfo.user_id) → scalar_one_or_none 拿到的是字符串)
-        class _OrderOwnerU002:
+        # mock 直接返回字符串 (因为代码用 select(Parcel.user_id) → scalar_one_or_none 拿到的是字符串)
+        class _ParcelOwnerU0002:
             async def execute(self, stmt):
                 class _R:
                     def scalar(self): return 1
-                    def scalar_one_or_none(self): return "U002"   # 订单属于别人
+                    def scalar_one_or_none(self): return "U0002"   # 包裹属于别人
                 return _R()
         try:
-            await ensure_order_belongs_to_user(_OrderOwnerU002(), "ORD999", "U001")
+            await ensure_parcel_belongs_to_user(_ParcelOwnerU0002(), "P000004", "U0001")
             print("  [FAIL] 不该到这里")
         except HTTPException as e:
             print(f"  [403]  {e.detail[:60]}...  (status={e.status_code})")
 
-        # 订单属于本人 → 通过
-        class _OrderOwnerU001:
+        # 包裹属于本人 → 通过
+        class _ParcelOwnerU0001:
             async def execute(self, stmt):
                 class _R:
                     def scalar(self): return 1
-                    def scalar_one_or_none(self): return "U001"   # 订单属于本人
+                    def scalar_one_or_none(self): return "U0001"   # 包裹属于本人
                 return _R()
         try:
-            await ensure_order_belongs_to_user(_OrderOwnerU001(), "ORD001", "U001")
-            print("  [OK]   order_id='ORD001' 属于 U001 → 通过")
+            await ensure_parcel_belongs_to_user(_ParcelOwnerU0001(), "P000001", "U0001")
+            print("  [OK]   parcel_id='P000001' 属于 U0001 → 通过")
         except HTTPException as e:
             print(f"  [FAIL] {e.detail}")
 
@@ -246,8 +265,9 @@ async def validate_risk_check_request(
     # 2. source_id 与事件类型匹配
     await ensure_source_matches_event_type(db, request)
 
-    # 3. 下单/支付场景: 校验订单归属 (防绕过)
-    if request.event_type in ("下单", "支付"):
-        # order_id 优先用请求里传的, 没传就用 source_id (业务约定)
-        order_id = request.order_id or request.source_id
-        await ensure_order_belongs_to_user(db, order_id, request.user_id)
+    # 3. 揽收/跨境场景: 校验包裹归属 (防绕过)
+    #    危险品申报/COD结算的 source_id 是 decl_id/cod_id, 归属校验在 enrichment 之后做
+    if request.event_type in ("parcel_pickup", "cross_border_ship"):
+        # parcel_id 优先用请求里传的, 没传就用 source_id (业务约定)
+        parcel_id = request.parcel_id or request.source_id
+        await ensure_parcel_belongs_to_user(db, parcel_id, request.user_id)
