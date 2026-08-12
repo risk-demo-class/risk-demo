@@ -27,7 +27,7 @@ async function apiRequest(url, options = {}) {
 }
 
 /**
- * ML P(拒绝) → 0-100 风险分 (sigmoid 风格校准, 跟 Python 端 _ml_prob_to_risk_score 一致).
+ * ML PD违约概率 → 0-100 风险分 (sigmoid 风格校准, 跟 Python 端 _ml_prob_to_risk_score 一致).
  *
  * 【P4-L4 2026-08-08】前端显示统一: 0-100 风险分而不是 0-1 概率, 跟规则分语义一致.
  * 公式: risk_score = 100 * (1 - exp(-k * prob)), k=3
@@ -41,7 +41,7 @@ function mlProbToRiskScore(prob, k = 3) {
 }
 
 /**
- * 渲染 ML 评分 HTML 片段 (P(拒绝) + 风险分(sigmoid 校准) + ML 决策).
+ * 渲染 ML 评分 HTML 片段 (PD违约概率 + 风险分(sigmoid 校准) + ML 决策).
  * 用于风险检查/案件详情/评估历史 三个页面的统一展示.
  */
 function renderMLScoreBlock(mlScore, mlDecision) {
@@ -55,7 +55,7 @@ function renderMLScoreBlock(mlScore, mlDecision) {
         ? `<span class="badge bg-info">${mlDecision}</span>`
         : '<span class="text-muted">-</span>';
     return `
-        P(拒绝): <strong>${pct}%</strong> <small class="text-muted">(${raw})</small><br>
+        PD违约概率: <strong>${pct}%</strong> <small class="text-muted">(${raw})</small><br>
         风险分 (sigmoid 校准): <strong>${riskScore}</strong> <small class="text-muted">/ 100</small><br>
         ML 决策: ${decision}
     `;
