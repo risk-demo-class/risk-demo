@@ -197,4 +197,12 @@ if __name__ == "__main__":
     parser.add_argument("--dry-run", action="store_true", help="只统计不写入")
     args = parser.parse_args()
     rebuild_engine()
-    asyncio.run(gen_train_dataset(args.n_risk, args.n_normal, args.per_user, args.reset, args.dry_run))
+
+    async def _main():
+        try:
+            await gen_train_dataset(args.n_risk, args.n_normal, args.per_user, args.reset, args.dry_run)
+        finally:
+            from app.database import dispose_engine
+            await dispose_engine()
+
+    asyncio.run(_main())

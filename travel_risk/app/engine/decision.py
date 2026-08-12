@@ -221,7 +221,7 @@ def _calculate_decision(
     rules: list[RuleHitResult],
     features: dict,
     event_type: str = "通用",
-) -> tuple[int, str, str, float, str]:
+) -> tuple[int, str, str, float | None, str]:
     """步骤 6: 算评分 + 一票否决 + 双轨融合 + 映射."""
     rule_score = calculate_final_score(rules)
 
@@ -251,7 +251,8 @@ def _calculate_decision(
         risk_level = "极高"
         final_score = max(final_score, settings.RISK_VETO_MIN_SCORE)
 
-    return final_score, risk_level, decision, ml_result.score if ml_result else 0.0, ml_decision
+    # 模型未加载时 ml_score 返回 None (写库为 NULL), 避免"无模型"被误当成 0 分
+    return final_score, risk_level, decision, ml_result.score if ml_result else None, ml_decision
 
 
 # ============================================================
@@ -265,7 +266,7 @@ async def _save_assessment(
     final_score: int,
     risk_level: str,
     decision: str,
-    ml_score: float = 0.0,
+    ml_score: float | None = None,
     ml_decision: str = "通过",
 ) -> str:
     """步骤 7a: 写 risk_assessment, 返回 assessment_id."""
@@ -398,7 +399,7 @@ def _build_response(
     decision: str,
     event_id: str,
     assessment_id: str,
-    ml_score: float = 0.0,
+    ml_score: float | None = None,
     ml_decision: str = "通过",
 ) -> RiskCheckResponse:
     """步骤 7d: 包装成 API 响应."""

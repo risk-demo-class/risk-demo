@@ -158,8 +158,7 @@ python scripts/backfill_ml_score.py           # 3. 回填历史评估 ml_score
 ```
 
 决策融合：`final_score = 0.5 × 规则分 + 0.5 × ML分(sigmoid 校准)`，任何"极高"规则命中即一票否决，
-ML 无法推翻。教学场景可用合成数据快速体验：
-
+ML 无法推翻。
 ```bash
 python scripts/train_demo_model.py --n 2000   # 无需 DB, 6 高风险模式 + 正常模式
 ```

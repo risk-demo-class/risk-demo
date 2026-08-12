@@ -75,4 +75,11 @@ async def main():
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    async def _main():
+        try:
+            await main()
+        finally:
+            from app.database import dispose_engine
+            await dispose_engine()
+
+    asyncio.run(_main())

@@ -843,3 +843,140 @@ httpx.ConnectError: [Errno -5] No address associated with hostname
 2026-08-12 12:00:05 [INFO] uvicorn.error: Application shutdown complete.
 2026-08-12 12:00:05 [INFO] uvicorn.error: Finished server process [7]
 2026-08-12 12:00:05 [INFO] uvicorn.error: Finished server process [8]
+2026-08-12 13:56:04 [INFO] uvicorn.error: Started server process [7]
+2026-08-12 13:56:04 [INFO] uvicorn.error: Started server process [8]
+2026-08-12 13:56:04 [INFO] uvicorn.error: Waiting for application startup.
+2026-08-12 13:56:04 [INFO] uvicorn.error: Waiting for application startup.
+2026-08-12 13:56:04 [INFO] app.engine.ml_model: XGBoost 模型加载成功: /app/app/engine/xgb_model.json, features=28
+2026-08-12 13:56:04 [INFO] app.engine.ml_model: XGBoost 模型加载成功: /app/app/engine/xgb_model.json, features=28
+2026-08-12 13:56:04 [INFO] app.scheduler: 后台调度已启动, 间隔 15 分钟
+2026-08-12 13:56:04 [INFO] app.scheduler: 后台调度已启动, 间隔 15 分钟
+2026-08-12 13:56:04 [INFO] uvicorn.error: Application startup complete.
+2026-08-12 13:56:04 [INFO] uvicorn.error: Application startup complete.
+2026-08-12 13:56:04 [INFO] app.service.case: 自动关闭超时案件 3 个
+2026-08-12 13:56:04 [INFO] app.service.case: 自动关闭超时案件 3 个
+2026-08-12 13:56:04 [INFO] app.scheduler: 周期任务执行完成
+2026-08-12 13:56:04 [INFO] app.scheduler: 周期任务执行完成
+2026-08-12 14:03:28 [INFO] uvicorn.access: 172.18.0.1:32904 - "GET / HTTP/1.1" 200
+2026-08-12 14:03:29 [INFO] uvicorn.access: 172.18.0.1:32904 - "GET /risk-check HTTP/1.1" 200
+2026-08-12 14:03:29 [INFO] uvicorn.access: 172.18.0.1:32904 - "GET /static/app.js HTTP/1.1" 304
+2026-08-12 14:03:29 [INFO] uvicorn.access: 172.18.0.1:32904 - "GET /api/dashboard/stats HTTP/1.1" 200
+2026-08-12 14:03:29 [INFO] uvicorn.access: 172.18.0.1:32904 - "GET /favicon.ico HTTP/1.1" 404
+2026-08-12 14:08:14 [INFO] uvicorn.error: Shutting down
+2026-08-12 14:08:14 [INFO] uvicorn.error: Shutting down
+2026-08-12 14:08:14 [INFO] gunicorn.error: Error while closing socket [Errno 9] Bad file descriptor
+2026-08-12 14:08:14 [INFO] gunicorn.error: Error while closing socket [Errno 9] Bad file descriptor
+2026-08-12 14:08:14 [INFO] uvicorn.error: Waiting for application shutdown.
+2026-08-12 14:08:14 [INFO] uvicorn.error: Waiting for application shutdown.
+2026-08-12 14:08:14 [INFO] app.scheduler: 后台调度已停止
+2026-08-12 14:08:14 [INFO] app.scheduler: 后台调度已停止
+2026-08-12 14:08:14 [INFO] uvicorn.error: Application shutdown complete.
+2026-08-12 14:08:14 [INFO] uvicorn.error: Application shutdown complete.
+2026-08-12 14:08:14 [INFO] uvicorn.error: Finished server process [7]
+2026-08-12 14:08:14 [INFO] uvicorn.error: Finished server process [8]
+2026-08-12 14:24:06 [INFO] uvicorn.error: Started server process [7]
+2026-08-12 14:24:06 [INFO] uvicorn.error: Started server process [8]
+2026-08-12 14:24:06 [INFO] uvicorn.error: Waiting for application startup.
+2026-08-12 14:24:06 [INFO] uvicorn.error: Waiting for application startup.
+2026-08-12 14:24:06 [INFO] app.engine.ml_model: XGBoost 模型加载成功: /app/app/engine/xgb_model.json, features=28
+2026-08-12 14:24:06 [INFO] app.scheduler: 后台调度已启动, 间隔 15 分钟
+2026-08-12 14:24:06 [INFO] app.engine.ml_model: XGBoost 模型加载成功: /app/app/engine/xgb_model.json, features=28
+2026-08-12 14:24:06 [INFO] app.scheduler: 后台调度已启动, 间隔 15 分钟
+2026-08-12 14:24:06 [INFO] uvicorn.error: Application startup complete.
+2026-08-12 14:24:06 [INFO] uvicorn.error: Application startup complete.
+2026-08-12 14:24:06 [INFO] app.scheduler: 周期任务执行完成
+2026-08-12 14:24:06 [INFO] app.scheduler: 周期任务执行完成
+2026-08-12 14:27:08 [INFO] uvicorn.access: 172.18.0.1:41506 - "GET / HTTP/1.1" 200
+2026-08-12 14:27:08 [INFO] uvicorn.access: 172.18.0.1:41506 - "GET /static/app.js HTTP/1.1" 304
+2026-08-12 14:27:08 [INFO] uvicorn.access: 172.18.0.1:41506 - "GET /api/dashboard/stats HTTP/1.1" 200
+2026-08-12 14:27:08 [INFO] uvicorn.access: 172.18.0.1:41506 - "GET /favicon.ico HTTP/1.1" 404
+2026-08-12 14:27:16 [INFO] uvicorn.access: 172.18.0.1:41514 - "GET /risk-check HTTP/1.1" 200
+2026-08-12 14:27:18 [INFO] uvicorn.access: 172.18.0.1:40304 - "GET /rules HTTP/1.1" 200
+2026-08-12 14:27:18 [INFO] uvicorn.access: 172.18.0.1:40304 - "GET /api/rules?page=1&page_size=10&keyword=&category=&event_type= HTTP/1.1" 200
+2026-08-12 14:27:28 [INFO] uvicorn.access: 172.18.0.1:40314 - "GET /api/rules/R002 HTTP/1.1" 200
+2026-08-12 14:27:38 [INFO] uvicorn.access: 172.18.0.1:47458 - "GET /cases HTTP/1.1" 200
+2026-08-12 14:27:38 [INFO] uvicorn.access: 172.18.0.1:47458 - "GET /api/cases?page=1&page_size=10&status= HTTP/1.1" 200
+2026-08-12 14:27:40 [INFO] uvicorn.access: 172.18.0.1:47470 - "GET /api/cases/cas01kztachfv501fgmbnz459cjwq HTTP/1.1" 200
+2026-08-12 14:27:40 [INFO] uvicorn.access: 172.18.0.1:47470 - "GET /api/assessments/ast01kztachfs173hxm7tam78284z HTTP/1.1" 200
+2026-08-12 14:27:59 [INFO] uvicorn.access: 172.18.0.1:54346 - "GET /api/cases/cas01kztach2mjsrtja8rebnebtqy HTTP/1.1" 200
+2026-08-12 14:27:59 [INFO] uvicorn.access: 172.18.0.1:54346 - "GET /api/assessments/ast01kztach2jkycsx28cx9k96qnm HTTP/1.1" 200
+2026-08-12 14:28:26 [INFO] uvicorn.access: 172.18.0.1:55306 - "GET /api/cases/cas01kztach0w28qrnz7ky19k8b3n HTTP/1.1" 200
+2026-08-12 14:28:26 [INFO] uvicorn.access: 172.18.0.1:55306 - "GET /api/assessments/ast01kztach0tw4pfyck3kezzvnqw HTTP/1.1" 200
+2026-08-12 14:28:31 [INFO] uvicorn.access: 172.18.0.1:55320 - "GET /api/cases/cas01kztacgrcatckz0j4y5863nak HTTP/1.1" 200
+2026-08-12 14:28:31 [INFO] uvicorn.access: 172.18.0.1:55320 - "GET /api/assessments/ast01kztacgrbypree6pn46ckb5ax HTTP/1.1" 200
+2026-08-12 14:28:42 [INFO] uvicorn.access: 172.18.0.1:56028 - "GET /api/cases?page=2&page_size=10&status= HTTP/1.1" 200
+2026-08-12 14:28:42 [INFO] uvicorn.access: 172.18.0.1:56028 - "GET /api/cases?page=3&page_size=10&status= HTTP/1.1" 200
+2026-08-12 14:28:43 [INFO] uvicorn.access: 172.18.0.1:56028 - "GET /api/cases?page=4&page_size=10&status= HTTP/1.1" 200
+2026-08-12 14:28:43 [INFO] uvicorn.access: 172.18.0.1:56028 - "GET /api/cases?page=5&page_size=10&status= HTTP/1.1" 200
+2026-08-12 14:28:44 [INFO] uvicorn.access: 172.18.0.1:56028 - "GET /api/cases/cas01kztacmrrnnzvgfhgbyfp7ecd HTTP/1.1" 200
+2026-08-12 14:28:44 [INFO] uvicorn.access: 172.18.0.1:56028 - "GET /api/assessments/ast01kztacmrn7rtvcrvxejrdqebm HTTP/1.1" 200
+2026-08-12 14:29:16 [INFO] uvicorn.access: 172.18.0.1:37456 - "GET /cases HTTP/1.1" 200
+2026-08-12 14:29:16 [INFO] uvicorn.access: 172.18.0.1:37456 - "GET /api/cases?page=1&page_size=10&status= HTTP/1.1" 200
+2026-08-12 14:29:18 [INFO] uvicorn.access: 172.18.0.1:37456 - "GET /assessments HTTP/1.1" 200
+2026-08-12 14:29:18 [INFO] uvicorn.access: 172.18.0.1:37456 - "GET /api/assessments?page=1&page_size=10&decision= HTTP/1.1" 200
+2026-08-12 14:29:22 [INFO] uvicorn.access: 172.18.0.1:37458 - "GET /api/assessments?page=2&page_size=10&decision= HTTP/1.1" 200
+2026-08-12 14:29:23 [INFO] uvicorn.access: 172.18.0.1:37458 - "GET /api/assessments?page=3&page_size=10&decision= HTTP/1.1" 200
+2026-08-12 14:29:24 [INFO] uvicorn.access: 172.18.0.1:37458 - "GET /api/assessments?page=4&page_size=10&decision= HTTP/1.1" 200
+2026-08-12 14:29:24 [INFO] uvicorn.access: 172.18.0.1:37458 - "GET /api/assessments?page=5&page_size=10&decision= HTTP/1.1" 200
+2026-08-12 14:29:25 [INFO] uvicorn.access: 172.18.0.1:37458 - "GET /api/assessments?page=6&page_size=10&decision= HTTP/1.1" 200
+2026-08-12 14:29:25 [INFO] uvicorn.access: 172.18.0.1:37458 - "GET /api/assessments?page=7&page_size=10&decision= HTTP/1.1" 200
+2026-08-12 14:29:25 [INFO] uvicorn.access: 172.18.0.1:37458 - "GET /api/assessments?page=8&page_size=10&decision= HTTP/1.1" 200
+2026-08-12 14:29:26 [INFO] uvicorn.access: 172.18.0.1:37458 - "GET /api/assessments?page=9&page_size=10&decision= HTTP/1.1" 200
+2026-08-12 14:29:26 [INFO] uvicorn.access: 172.18.0.1:37458 - "GET /api/assessments?page=10&page_size=10&decision= HTTP/1.1" 200
+2026-08-12 14:29:27 [INFO] uvicorn.access: 172.18.0.1:37458 - "GET /api/assessments?page=11&page_size=10&decision= HTTP/1.1" 200
+2026-08-12 14:29:27 [INFO] uvicorn.access: 172.18.0.1:37458 - "GET /api/assessments?page=12&page_size=10&decision= HTTP/1.1" 200
+2026-08-12 14:29:27 [INFO] uvicorn.access: 172.18.0.1:37458 - "GET /api/assessments?page=13&page_size=10&decision= HTTP/1.1" 200
+2026-08-12 14:29:28 [INFO] uvicorn.access: 172.18.0.1:37458 - "GET /api/assessments?page=14&page_size=10&decision= HTTP/1.1" 200
+2026-08-12 14:29:28 [INFO] uvicorn.access: 172.18.0.1:37458 - "GET /api/assessments?page=15&page_size=10&decision= HTTP/1.1" 200
+2026-08-12 14:29:28 [INFO] uvicorn.access: 172.18.0.1:37458 - "GET /api/assessments?page=16&page_size=10&decision= HTTP/1.1" 200
+2026-08-12 14:29:29 [INFO] uvicorn.access: 172.18.0.1:37458 - "GET /api/assessments?page=17&page_size=10&decision= HTTP/1.1" 200
+2026-08-12 14:29:30 [INFO] uvicorn.access: 172.18.0.1:37458 - "GET /api/assessments?page=18&page_size=10&decision= HTTP/1.1" 200
+2026-08-12 14:29:30 [INFO] uvicorn.access: 172.18.0.1:37458 - "GET /api/assessments?page=19&page_size=10&decision= HTTP/1.1" 200
+2026-08-12 14:29:31 [INFO] uvicorn.access: 172.18.0.1:37458 - "GET /api/assessments?page=20&page_size=10&decision= HTTP/1.1" 200
+2026-08-12 14:29:31 [INFO] uvicorn.access: 172.18.0.1:37458 - "GET /api/assessments?page=21&page_size=10&decision= HTTP/1.1" 200
+2026-08-12 14:29:32 [INFO] uvicorn.access: 172.18.0.1:37458 - "GET /api/assessments?page=22&page_size=10&decision= HTTP/1.1" 200
+2026-08-12 14:29:33 [INFO] uvicorn.access: 172.18.0.1:37458 - "GET /api/assessments?page=23&page_size=10&decision= HTTP/1.1" 200
+2026-08-12 14:29:33 [INFO] uvicorn.access: 172.18.0.1:37458 - "GET /api/assessments?page=24&page_size=10&decision= HTTP/1.1" 200
+2026-08-12 14:29:33 [INFO] uvicorn.access: 172.18.0.1:37458 - "GET /api/assessments?page=25&page_size=10&decision= HTTP/1.1" 200
+2026-08-12 14:29:34 [INFO] uvicorn.access: 172.18.0.1:37458 - "GET /api/assessments?page=26&page_size=10&decision= HTTP/1.1" 200
+2026-08-12 14:29:34 [INFO] uvicorn.access: 172.18.0.1:37458 - "GET /api/assessments?page=27&page_size=10&decision= HTTP/1.1" 200
+2026-08-12 14:29:34 [INFO] uvicorn.access: 172.18.0.1:37458 - "GET /api/assessments?page=28&page_size=10&decision= HTTP/1.1" 200
+2026-08-12 14:29:34 [INFO] uvicorn.access: 172.18.0.1:37458 - "GET /api/assessments?page=29&page_size=10&decision= HTTP/1.1" 200
+2026-08-12 14:29:35 [INFO] uvicorn.access: 172.18.0.1:37458 - "GET /api/assessments?page=30&page_size=10&decision= HTTP/1.1" 200
+2026-08-12 14:29:36 [INFO] uvicorn.access: 172.18.0.1:37458 - "GET /api/assessments/ast01kztacznd36wv03c01wd6dzpq HTTP/1.1" 200
+2026-08-12 14:29:42 [INFO] uvicorn.access: 172.18.0.1:52702 - "GET /blacklist HTTP/1.1" 200
+2026-08-12 14:29:43 [INFO] uvicorn.access: 172.18.0.1:52702 - "GET /api/blacklists?page=1&page_size=10&blacklist_type= HTTP/1.1" 200
+2026-08-12 14:29:45 [INFO] uvicorn.access: 172.18.0.1:52718 - "GET /assessments HTTP/1.1" 200
+2026-08-12 14:29:45 [INFO] uvicorn.access: 172.18.0.1:52718 - "GET /api/assessments?page=1&page_size=10&decision= HTTP/1.1" 200
+2026-08-12 14:29:47 [INFO] uvicorn.access: 172.18.0.1:52718 - "GET /chat HTTP/1.1" 200
+2026-08-12 14:29:47 [INFO] uvicorn.access: 172.18.0.1:52718 - "GET /api/agent/health HTTP/1.1" 200
+2026-08-12 14:29:58 [INFO] httpx: HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+2026-08-12 14:30:01 [INFO] uvicorn.access: 172.18.0.1:52724 - "POST /api/agent/chat HTTP/1.1" 200
+2026-08-12 14:30:39 [INFO] uvicorn.access: 172.18.0.1:57990 - "GET /cases HTTP/1.1" 200
+2026-08-12 14:30:39 [INFO] uvicorn.access: 172.18.0.1:57990 - "GET /api/cases?page=1&page_size=10&status= HTTP/1.1" 200
+2026-08-12 14:30:42 [INFO] uvicorn.access: 172.18.0.1:58000 - "GET /api/cases/cas01kztachfv501fgmbnz459cjwq HTTP/1.1" 200
+2026-08-12 14:30:42 [INFO] uvicorn.access: 172.18.0.1:58000 - "GET /api/assessments/ast01kztachfs173hxm7tam78284z HTTP/1.1" 200
+2026-08-12 14:30:58 [INFO] uvicorn.access: 172.18.0.1:59460 - "GET /chat HTTP/1.1" 200
+2026-08-12 14:30:58 [INFO] uvicorn.access: 172.18.0.1:59460 - "GET /api/agent/health HTTP/1.1" 200
+2026-08-12 14:31:19 [INFO] httpx: HTTP Request: POST https://api.deepseek.com/chat/completions "HTTP/1.1 200 OK"
+2026-08-12 14:31:22 [INFO] uvicorn.access: 172.18.0.1:59470 - "POST /api/agent/chat HTTP/1.1" 200
+2026-08-12 14:31:49 [INFO] uvicorn.access: 172.18.0.1:38628 - "GET /cases HTTP/1.1" 200
+2026-08-12 14:31:49 [INFO] uvicorn.access: 172.18.0.1:38628 - "GET /api/cases?page=1&page_size=10&status= HTTP/1.1" 200
+2026-08-12 14:31:52 [INFO] uvicorn.access: 172.18.0.1:38638 - "GET /api/cases/cas01kztachhjrbqqvy9zxrpgk6c3 HTTP/1.1" 200
+2026-08-12 14:31:52 [INFO] uvicorn.access: 172.18.0.1:38638 - "GET /api/assessments/ast01kztachhh855gm1as30jadp5v HTTP/1.1" 200
+2026-08-12 14:32:57 [INFO] uvicorn.access: 172.18.0.1:43988 - "GET /api/cases/cas01kztach2mjsrtja8rebnebtqy HTTP/1.1" 200
+2026-08-12 14:32:57 [INFO] uvicorn.access: 172.18.0.1:43988 - "GET /api/assessments/ast01kztach2jkycsx28cx9k96qnm HTTP/1.1" 200
+2026-08-12 14:33:21 [INFO] uvicorn.access: 172.18.0.1:36672 - "GET /api/cases/cas01kztacgrcatckz0j4y5863nak HTTP/1.1" 200
+2026-08-12 14:33:21 [INFO] uvicorn.access: 172.18.0.1:36672 - "GET /api/assessments/ast01kztacgrbypree6pn46ckb5ax HTTP/1.1" 200
+2026-08-12 14:37:45 [INFO] uvicorn.error: Shutting down
+2026-08-12 14:37:45 [INFO] uvicorn.error: Shutting down
+2026-08-12 14:37:45 [INFO] gunicorn.error: Error while closing socket [Errno 9] Bad file descriptor
+2026-08-12 14:37:45 [INFO] gunicorn.error: Error while closing socket [Errno 9] Bad file descriptor
+2026-08-12 14:37:45 [INFO] uvicorn.error: Waiting for application shutdown.
+2026-08-12 14:37:45 [INFO] uvicorn.error: Waiting for application shutdown.
+2026-08-12 14:37:45 [INFO] app.scheduler: 后台调度已停止
+2026-08-12 14:37:45 [INFO] app.scheduler: 后台调度已停止
+2026-08-12 14:37:45 [INFO] uvicorn.error: Application shutdown complete.
+2026-08-12 14:37:45 [INFO] uvicorn.error: Application shutdown complete.
+2026-08-12 14:37:45 [INFO] uvicorn.error: Finished server process [8]
+2026-08-12 14:37:45 [INFO] uvicorn.error: Finished server process [7]

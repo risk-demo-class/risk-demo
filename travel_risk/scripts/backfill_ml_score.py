@@ -39,7 +39,7 @@ def main(limit: int = 5000):
         with conn.cursor() as cur:
             cur.execute("""
                 SELECT assessment_id, event_id FROM risk_assessment
-                WHERE ml_score IS NULL AND decision IN ('通过','标记','人工审核','拒绝')
+                WHERE (ml_score IS NULL OR ml_score = 0) AND decision IN ('通过','标记','人工审核','拒绝')
                 ORDER BY create_time DESC LIMIT %s
             """, (limit,))
             rows = cur.fetchall()

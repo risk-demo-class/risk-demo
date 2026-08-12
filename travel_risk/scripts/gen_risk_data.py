@@ -20,6 +20,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from sqlalchemy import text
 
 from app.database import AsyncSessionLocal, rebuild_engine
+from app.engine.ml_model import load_model
 from app.schemas import RiskCheckRequest
 from app.service.event import process_event
 
@@ -164,4 +165,13 @@ if __name__ == "__main__":
     parser.add_argument("--balance-pos", action="store_true", help="优先挑 RISK 高风险用户 (训练用)")
     args = parser.parse_args()
     rebuild_engine()
-    asyncio.run(gen_risk_data(args.count, args.balance_pos))
+    load_model()  # 加载模型, 否则评估的 ml_score 会是 0 兜底值
+
+    async def _main():
+        try:
+            await gen_risk_data(args.count, args.balance_pos)
+        finally:
+            from app.database import dispose_engine
+            await dispose_engine()
+
+    asyncio.run(_main())
