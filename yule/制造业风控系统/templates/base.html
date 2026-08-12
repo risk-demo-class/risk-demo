@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}制造业风控系统{% endblock %}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.2/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        /* ============================================
+           制造业风控系统 - 工业风主题 (深蓝钢灰 + 橙色点缀)
+           布局沿用原版: 左侧 fixed 侧边栏 + 右侧独立滚动
+           ============================================ */
+        :root {
+            --mfg-primary: #1d4ed8;
+            --mfg-primary-dark: #1e3a8a;
+            --mfg-accent: #f59e0b;
+            --mfg-accent-dark: #d97706;
+            --mfg-bg: #eef2f7;
+            --mfg-card-border: #e4e8ef;
+            --mfg-sidebar-top: #0f172a;
+            --mfg-sidebar-bottom: #1e3a5f;
+        }
+        html, body { height: 100%; margin: 0; }
+        body {
+            background: linear-gradient(160deg, #eef2f7 0%, #e2e8f0 100%);
+            overflow: hidden;
+            font-family: "Segoe UI", "Microsoft YaHei", -apple-system, sans-serif;
+        }
+        .container-fluid, .row { padding: 0 !important; margin: 0 !important; }
+
+        /* ---- 侧边栏: 深蓝渐变 + 橙色高亮 ---- */
+        .sidebar {
+            position: fixed;
+            top: 0; left: 0; bottom: 0;
+            width: 16.66667%;
+            background: linear-gradient(180deg, var(--mfg-sidebar-top) 0%, var(--mfg-sidebar-bottom) 100%);
+            overflow-y: auto;
+            z-index: 1000;
+            border-right: 1px solid rgba(255,255,255,.06);
+        }
+        .sidebar-brand {
+            color: #fff;
+            padding: 22px 20px 14px;
+            border-bottom: 1px solid rgba(255,255,255,.08);
+        }
+        .sidebar-brand .brand-icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 38px; height: 38px;
+            border-radius: 10px;
+            background: linear-gradient(135deg, var(--mfg-accent) 0%, var(--mfg-accent-dark) 100%);
+            color: #0f172a;
+            font-size: 20px;
+            margin-right: 10px;
+        }
+        .sidebar-brand .brand-name { font-size: 17px; font-weight: 800; letter-spacing: .5px; }
+        .sidebar-brand .brand-sub {
+            font-size: 11px; color: #7d93b2; margin-top: 2px; letter-spacing: 1px;
+        }
+        .sidebar-section {
+            color: #5b7290;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            padding: 18px 22px 6px;
+        }
+        .sidebar .nav-link {
+            position: relative;
+            color: #a9bcd4;
+            padding: 11px 20px 11px 22px;
+            margin: 2px 10px;
+            border-radius: 9px;
+            font-size: 14px;
+            transition: all .15s ease;
+        }
+        .sidebar .nav-link i { margin-right: 10px; width: 20px; text-align: center; }
+        .sidebar .nav-link:hover { color: #fff; background: rgba(255,255,255,.08); }
+        .sidebar .nav-link.active {
+            color: #fff;
+            background: linear-gradient(90deg, rgba(29,78,216,.55) 0%, rgba(29,78,216,.18) 100%);
+            box-shadow: inset 0 0 0 1px rgba(255,255,255,.06);
+        }
+        .sidebar .nav-link.active::before {
+            content: "";
+            position: absolute;
+            left: -10px; top: 8px; bottom: 8px;
+            width: 4px;
+            border-radius: 0 4px 4px 0;
+            background: var(--mfg-accent);
+        }
+        .sidebar-footer {
+            position: absolute;
+            left: 0; right: 0; bottom: 0;
+            padding: 14px 20px;
+            font-size: 11px;
+            color: #5b7290;
+            border-top: 1px solid rgba(255,255,255,.08);
+        }
+
+        /* ---- 主内容区 ---- */
+        .main-content {
+            margin-left: 16.66667%;
+            height: 100vh;
+            overflow-y: auto;
+            padding: 22px 26px;
+        }
+        .page-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 18px;
+            padding-bottom: 14px;
+            border-bottom: 1px solid rgba(15,23,42,.08);
+        }
+        .page-title { font-size: 20px; font-weight: 800; color: #0f172a; margin: 0; }
+        .page-sub { font-size: 12px; color: #64748b; margin-top: 2px; }
+        .env-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            background: #fff;
+            border: 1px solid var(--mfg-card-border);
+            color: #475569;
+            font-size: 12px;
+            font-weight: 600;
+            padding: 5px 11px;
+            border-radius: 20px;
+            box-shadow: 0 1px 2px rgba(15,23,42,.05);
+        }
+        .env-badge i { color: var(--mfg-primary); }
+
+        /* ---- 卡片: 顶部彩条 + 圆角 ---- */
+        .stat-card {
+            border: 1px solid var(--mfg-card-border);
+            border-top: 3px solid var(--mfg-primary);
+            border-radius: 14px;
+            box-shadow: 0 4px 14px rgba(15,23,42,.06);
+            background: #fff;
+        }
+        .stat-card .stat-value { font-size: 30px; font-weight: 800; }
+        .stat-card.accent-warning { border-top-color: var(--mfg-accent); }
+        .stat-card.accent-danger { border-top-color: #dc2626; }
+        .stat-card.accent-success { border-top-color: #16a34a; }
+        .icon-chip {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px; height: 40px;
+            border-radius: 11px;
+            font-size: 19px;
+            background: rgba(29,78,216,.1);
+            color: var(--mfg-primary);
+        }
+        .icon-chip.chip-warning { background: rgba(245,158,11,.12); color: var(--mfg-accent-dark); }
+        .icon-chip.chip-danger { background: rgba(220,38,38,.1); color: #dc2626; }
+        .icon-chip.chip-success { background: rgba(22,163,74,.1); color: #16a34a; }
+
+        /* ---- 表格 / 徽章 ---- */
+        .table thead th {
+            background: #f8fafc;
+            color: #475569;
+            font-size: 13px;
+            border-bottom: 2px solid var(--mfg-primary);
+            white-space: nowrap;
+        }
+        .badge-risk-low { background: #dcfce7; color: #166534; }
+        .badge-risk-mid { background: #fef9c3; color: #854d0e; }
+        .badge-risk-high { background: #fed7aa; color: #9a3412; }
+        .badge-risk-critical { background: #fecaca; color: #991b1b; }
+
+        /* ---- 分页栏 (沿用原版交互, 换成主题色) ---- */
+        .pagination-bottom {
+            position: sticky;
+            bottom: 0;
+            background: #ffffff;
+            padding: 6px 12px;
+            margin: 12px 0 0 0;
+            border-top: 1px solid #e5e7eb;
+            box-shadow: 0 -2px 6px rgba(0, 0, 0, 0.04);
+            z-index: 100;
+            min-height: 38px;
+        }
+        .pagination-bottom .pagination {
+            margin: 0;
+            display: flex;
+            list-style: none;
+            gap: 3px;
+            justify-content: center;
+            align-items: center;
+        }
+        .pagination-bottom .page-item .page-link {
+            color: var(--mfg-primary);
+            background: #ffffff;
+            border: 1px solid #dee2e6;
+            padding: 4px 10px;
+            font-size: 13px;
+            line-height: 1.4;
+            min-width: 32px;
+            height: 28px;
+            text-align: center;
+            border-radius: 3px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .pagination-bottom .page-item.active .page-link {
+            color: #ffffff;
+            background: var(--mfg-primary);
+            border-color: var(--mfg-primary);
+            font-weight: 600;
+        }
+        .pagination-bottom .page-item.disabled .page-link {
+            color: #adb5bd;
+            background: #f8f9fa;
+            cursor: not-allowed;
+        }
+        .pagination-bottom .page-item .page-link:hover:not(.disabled) {
+            background: #e7f1ff;
+            border-color: var(--mfg-primary);
+        }
+
+        /* ---- 聊天 / 其它组件 ---- */
+        .chat-messages { height: calc(100vh - 320px); min-height: 300px; max-height: calc(100vh - 160px); overflow-y: auto; }
+        .chat-bubble { max-width: 80%; padding: 10px 14px; border-radius: 12px; margin-bottom: 8px; }
+        .chat-bubble.user { background: linear-gradient(135deg, #1d4ed8, #2563eb); color: #fff; margin-left: auto; }
+        .chat-bubble.ai { background: #f1f5f9; color: #1e293b; }
+        .btn-close-risk {
+            background: transparent;
+            border: 2px solid #dc2626;
+            border-radius: 6px;
+            color: #dc2626;
+            width: 32px;
+            height: 32px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            font-weight: 900;
+            line-height: 1;
+            padding: 0;
+            transition: all 0.15s ease;
+        }
+        .btn-close-risk:hover { background: #dc2626; color: #fff; }
+        .btn-close-risk:focus { box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.25); outline: none; }
+        .btn-primary {
+            background: linear-gradient(135deg, #1d4ed8, #2563eb);
+            border: none;
+        }
+        .btn-primary:hover { background: linear-gradient(135deg, #1e3a8a, #1d4ed8); }
+
+        /* 响应式: 窄屏恢复流式布局 */
+        @media (max-width: 767.98px) {
+            body { overflow: auto; }
+            .sidebar {
+                position: relative;
+                width: 100%;
+                height: auto;
+                overflow-y: visible;
+            }
+            .sidebar-footer { position: static; }
+            .main-content {
+                margin-left: 0;
+                height: auto;
+                overflow-y: visible;
+            }
+        }
+    </style>
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+<div class="container-fluid">
+    <div class="row">
+        <!-- 侧边栏 -->
+        <div class="col-md-2 sidebar px-0">
+            <div class="sidebar-brand d-flex align-items-center">
+                <span class="brand-icon"><i class="bi bi-gear-wide-connected"></i></span>
+                <div>
+                    <div class="brand-name">制造业风控中心</div>
+                    <div class="brand-sub">MFG RISK CONTROL</div>
+                </div>
+            </div>
+            <nav class="nav flex-column">
+                <div class="sidebar-section">总览</div>
+                <a class="nav-link {% if request.url.path == '/' %}active{% endif %}" href="/">
+                    <i class="bi bi-speedometer2"></i> 仪表盘
+                </a>
+                <div class="sidebar-section">风控运营</div>
+                <a class="nav-link {% if request.url.path == '/rules' %}active{% endif %}" href="/rules">
+                    <i class="bi bi-list-check"></i> 规则管理
+                </a>
+                <a class="nav-link {% if request.url.path == '/cases' %}active{% endif %}" href="/cases">
+                    <i class="bi bi-folder2-open"></i> 案件管理
+                </a>
+                <a class="nav-link {% if request.url.path == '/assessments' %}active{% endif %}" href="/assessments">
+                    <i class="bi bi-clipboard-data"></i> 评估历史
+                </a>
+                <div class="sidebar-section">分析工具</div>
+                <a class="nav-link {% if request.url.path == '/risk-check' %}active{% endif %}" href="/risk-check">
+                    <i class="bi bi-search"></i> 风险检查
+                </a>
+                <a class="nav-link {% if request.url.path == '/chat' %}active{% endif %}" href="/chat">
+                    <i class="bi bi-robot"></i> AI 助手
+                </a>
+                <a class="nav-link {% if request.url.path == '/blacklist' %}active{% endif %}" href="/blacklist">
+                    <i class="bi bi-shield-x"></i> 黑名单
+                </a>
+            </nav>
+            <div class="sidebar-footer">
+                <i class="bi bi-cpu"></i> 规则引擎 + XGBoost 双轨
+            </div>
+        </div>
+        <!-- 主内容区 -->
+        <div class="col-md-10 main-content">
+            <div class="page-header">
+                <div>
+                    <div class="page-title">制造业风控系统</div>
+                    <div class="page-sub">经销商渠道实时风控 · 订货 / 保修 / 串货</div>
+                </div>
+                <div class="d-flex gap-2">
+                    <span class="env-badge"><i class="bi bi-database"></i> mfg_risk</span>
+                    <span class="env-badge"><i class="bi bi-shield-check"></i> 规则 + ML</span>
+                </div>
+            </div>
+            {% block content %}{% endblock %}
+        </div>
+    </div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<!-- 2026-08-11v1: 制造业工业风主题改版 (布局/JS 钩子不变) -->
+<script src="/static/app.js?v=20260808v4"></script>
+{% block extra_js %}{% endblock %}
+</body>
+</html>
