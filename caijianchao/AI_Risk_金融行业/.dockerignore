@@ -1,0 +1,36 @@
+# Docker 构建上下文排除项 (上下文根 = 项目根)
+# 注意: 大体积虚拟环境必须排除, 否则镜像构建极慢 (共 ~1GB)
+.venv/
+uv/.venv/
+
+# Git / IDE / 工具元数据
+.git/
+.gitignore
+.idea/
+.vscode/
+.aionrs/
+.pytest_cache/
+.mypy_cache/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+
+# 日志
+logs/
+*.log
+
+# 测试与文档 (运行时不需要)
+tests/
+docs/
+
+# 构建产物
+build/
+dist/
+*.egg
+
+# 备份 / 临时
+*.bak
+*.tmp
+Thumbs.db
+.DS_Store
