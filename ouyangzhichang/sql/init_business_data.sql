@@ -1,0 +1,2 @@
+-- 业务数据由 scripts/gen_business_data.py 可重复生成。
+-- init_db 创建表和规则后执行：python scripts/gen_business_data.py --count 200 --seed 42
