@@ -47,3 +47,35 @@ def test_rules_bank_categories():
         assert f'value="{cat}"' in html or cat in html, f"缺少银行分类 {cat}"
     for w in ["订单欺诈", "支付风险", "售后滥用"]:
         assert f'value="{w}"' not in html, f"不应残留电商分类 {w}"
+
+
+def test_cases_bank_copy():
+    """cases.html: 客户语义 + 银行事件, 无电商订单画像字段."""
+    html = _read("cases.html")
+    assert "客户ID" in html or "客户画像" in html, "案件页应有客户语义"
+    assert "贷款申请" in html or "事件" in html, "案件页应有银行事件"
+    assert "total_orders" not in html and "refund_rate" not in html, "不应残留电商画像字段"
+
+
+def test_blacklist_4_types():
+    """blacklist.html: 4 类黑名单 (客户/手机号/地址/设备)."""
+    html = _read("blacklist.html")
+    for t in ["客户", "设备"]:
+        assert f'value="{t}"' in html or t in html, f"黑名单页缺少类型 {t}"
+    assert "用户" not in html.replace("客户", ""), "不应残留'用户'黑名单类型"
+
+
+def test_assessments_bank_events():
+    """assessments.html: 4 个银行事件筛选."""
+    html = _read("assessments.html")
+    for ev in BANK_EVENTS:
+        assert f'value="{ev}"' in html or ev in html, f"评估页缺少事件 {ev}"
+    for w in ["下单", "售后申请", "物流投诉"]:
+        assert f'value="{w}"' not in html, f"不应残留电商事件 {w}"
+
+
+def test_chat_bank_copy():
+    """chat.html: Agent 提示词银行化 (客户/贷款申请)."""
+    html = _read("chat.html")
+    assert "客户" in html or "贷款申请" in html or "逾期" in html, "Agent 页应有银行语义"
+    assert "对用户/订单" not in html, "不应残留'对用户/订单'提示词"
