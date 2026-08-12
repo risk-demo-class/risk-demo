@@ -17,7 +17,7 @@ class TestGenRiskyUsersCLI:
     """scripts/gen_risky_users.py 的 CLI 参数 + 模式设计."""
 
     def test_script_accepts_count_argument(self):
-        """必须接受 --count 参数 (默认 5)."""
+        """必须接受 --count 参数 (物流版默认 24, 验收区间 20-30)."""
         import subprocess
         result = subprocess.run(
             [sys.executable, str(SCRIPT_PATH), "--help"],
@@ -26,7 +26,9 @@ class TestGenRiskyUsersCLI:
         # GBK 环境解码中文会失败, 用 errors='replace' 兜底
         stdout = result.stdout.decode("utf-8", errors="replace")
         assert "--count" in stdout, f"--help 应含 --count, 实际: {stdout[:500]}"
-        assert "default 5" in stdout.lower() or "default=5" in stdout or "5" in stdout
+        assert "默认 24" in stdout, (
+            f"物流版默认 24 个 RISK 用户, 实际 help: {stdout[:300]}"
+        )
 
     def test_script_accepts_reset_argument(self):
         """必须接受 --reset 参数 (先删旧数据)."""
@@ -56,21 +58,21 @@ class TestGenRiskyUsersCLI:
 class TestGenRiskyUsersLogic:
     """gen_risky_users 函数逻辑 (不连真实 DB, 测函数 + 模式轮换)."""
 
-    def test_five_risk_modes_defined(self):
-        """5 种风险模式必须定义: 高退款率/高频下单/高退款金额/多地址/有投诉."""
+    def test_seven_risk_modes_defined(self):
+        """7 种物流风险模式必须定义: 未实名/危险品瞒报/跨境/COD卷款/改派/大额低报/黑地址."""
         sys.path.insert(0, str(ROOT))
         from scripts import gen_risky_users
-        # 模式名 (5 个, 对应 RISK_MODES 列表)
-        assert len(gen_risky_users.RISK_MODES) == 5, (
-            f"应 5 种风险模式, 实际 {len(gen_risky_users.RISK_MODES)}"
+        # 模式名 (7 个, 对应 8 条物流规则 R001/R002/R005/R008/R018/R025/R030)
+        assert len(gen_risky_users.RISK_MODES) == 7, (
+            f"应 7 种物流风险模式, 实际 {len(gen_risky_users.RISK_MODES)}"
         )
-        expected = ["高退款率", "高频下单", "高退款金额", "多地址", "有投诉"]
+        expected = ["未实名寄件", "危险品瞒报", "跨境违禁品", "COD卷款", "改派异常", "大额低报", "黑地址寄件"]
         assert gen_risky_users.RISK_MODES == expected, (
             f"模式名变化会破坏向后兼容, 当前 {gen_risky_users.RISK_MODES}"
         )
-        # 模式生成器 (5 个, 跟 RISK_MODES 一一对应)
-        assert len(gen_risky_users.MODE_GENERATORS) == 5, (
-            f"应 5 个模式生成器, 实际 {len(gen_risky_users.MODE_GENERATORS)}"
+        # 模式生成器 (7 个, 跟 RISK_MODES 一一对应)
+        assert len(gen_risky_users.MODE_GENERATORS) == 7, (
+            f"应 7 个模式生成器, 实际 {len(gen_risky_users.MODE_GENERATORS)}"
         )
 
     def test_user_id_generation_pattern(self):
@@ -88,28 +90,28 @@ class TestGenRiskyUsersLogic:
         assert actual[-1] == f"RISK{count:03d}"
 
     def test_mode_rotation_pattern(self):
-        """模式轮换: idx % 5, 30 个用户 = 6 套各 5 模式."""
-        count = 30
-        mode_indices = [i % 5 for i in range(count)]
-        # 每种模式出现 6 次
+        """模式轮换: idx % 7, 28 个用户 = 4 套各 7 模式."""
+        count = 28
+        mode_indices = [i % 7 for i in range(count)]
+        # 每种模式出现 4 次
         from collections import Counter
         cnt = Counter(mode_indices)
-        assert all(v == 6 for v in cnt.values()), f"30 个用户应 6 套 × 5 模式 = 每模式 6 次, 实际 {cnt}"
-        # 0-4 顺序
-        assert mode_indices == [0, 1, 2, 3, 4] * 6
+        assert all(v == 4 for v in cnt.values()), f"28 个用户应 4 套 × 7 模式 = 每模式 4 次, 实际 {cnt}"
+        # 0-6 顺序
+        assert mode_indices == [0, 1, 2, 3, 4, 5, 6] * 4
 
     def test_count_1_generates_only_first_mode(self):
-        """--count 1 只生成 1 个用户 (模式 0: 高退款率, RISK001)."""
+        """--count 1 只生成 1 个用户 (模式 0: 未实名寄件, RISK001)."""
         count = 1
         user_ids = [f"RISK{i:03d}" for i in range(1, count + 1)]
-        mode_idx = (count - 1) % 5
+        mode_idx = (count - 1) % 7
         assert user_ids == ["RISK001"]
-        assert mode_idx == 0  # 高退款率模式
+        assert mode_idx == 0  # 未实名寄件模式
 
-    def test_count_5_generates_one_set(self):
-        """--count 5 (默认) 生成 1 套 (RISK001-005 各 5 模式)."""
-        count = 5
+    def test_count_7_generates_one_set(self):
+        """--count 7 生成 1 套 (RISK001-007 各 7 模式)."""
+        count = 7
         user_ids = [f"RISK{i:03d}" for i in range(1, count + 1)]
-        modes = [i % 5 for i in range(count)]
-        assert user_ids == ["RISK001", "RISK002", "RISK003", "RISK004", "RISK005"]
-        assert modes == [0, 1, 2, 3, 4]
+        modes = [i % 7 for i in range(count)]
+        assert user_ids == ["RISK001", "RISK002", "RISK003", "RISK004", "RISK005", "RISK006", "RISK007"]
+        assert modes == [0, 1, 2, 3, 4, 5, 6]

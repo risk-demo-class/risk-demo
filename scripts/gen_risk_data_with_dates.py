@@ -470,7 +470,7 @@ if __name__ == "__main__":
     parser.add_argument("--clean", action="store_true", help="先清空风控表")
     parser.add_argument("--live", action="store_true",
                         help="不回写 create_time (数据 create_time=now), 适合 demo (仪表盘/趋势图能看到)")
-    parser.add_argument("--balance-pos", action="store_true", help="80% 概率挑 RISK 高风险用户, 拉高正例比例")
+    parser.add_argument("--balance-pos", action="store_true", help="80%% 概率挑 RISK 高风险用户, 拉高正例比例")
     parser.add_argument("--target-pos-ratio", type=float, default=None,
                         help="目标正例比例 (0.0-1.0), 配合 --balance-pos 循环造数到达标")
     parser.add_argument("--force-pos-ratio", type=float, default=None,

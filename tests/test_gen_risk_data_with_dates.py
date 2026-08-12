@@ -79,12 +79,13 @@ class TestGenRiskDataForcedPosLogic:
     """--force-pos-ratio 配套函数 + 逻辑验证."""
 
     def test_force_pos_pickers_defined(self):
-        """3 个高风险 picker 必须存在: 售后 / 物流投诉 / 高额订单."""
+        """4 个高风险 picker 必须存在 (物流版): 危险品申报 / COD / 国际件 / 风险包裹."""
         script = SCRIPT_PATH.read_text(encoding="utf-8")
-        # 3 个 _pick_forced_* 函数
-        assert "_pick_forced_postsale" in script, "必须有 _pick_forced_postsale (RISK 售后)"
-        assert "_pick_forced_logistics_complaint" in script, "必须有 _pick_forced_logistics_complaint (物流投诉)"
-        assert "_pick_forced_order_for_high_amount" in script, "必须有 _pick_forced_order_for_high_amount (高额订单)"
+        # 4 个 _pick_forced_* 函数
+        assert "_pick_forced_declaration" in script, "必须有 _pick_forced_declaration (RISK 危险品申报)"
+        assert "_pick_forced_cod" in script, "必须有 _pick_forced_cod (RISK COD)"
+        assert "_pick_forced_international" in script, "必须有 _pick_forced_international (国际件)"
+        assert "_pick_forced_risky_parcel" in script, "必须有 _pick_forced_risky_parcel (风险包裹)"
 
     def test_force_pos_retry_logic(self):
         """--force-pos-ratio 必须有 retry 机制 (max_tries > 1, 决策没触发就换 picker)."""
@@ -93,9 +94,9 @@ class TestGenRiskDataForcedPosLogic:
         assert "max_tries" in script, "必须用 max_tries 控制 retry 次数"
         # max_tries = 3 if use_force_pos else 1
         assert "3 if use_force_pos else 1" in script, "force 模式 max_tries=3, 普通模式 max_tries=1"
-        # pickers 列表 3 个高风险
-        assert "_pick_forced_postsale" in script and "_pick_forced_logistics_complaint" in script, (
-            "force 模式 picker 列表应包含 3 个高风险 picker"
+        # FORCE_PICKERS 列表含 4 个物流高风险 picker
+        assert "_pick_forced_declaration" in script and "_pick_forced_cod" in script, (
+            "force 模式 picker 列表应包含 4 个物流高风险 picker"
         )
 
     def test_stdout_reconfigure_for_emoji(self):
@@ -138,9 +139,10 @@ class TestGenRiskDataWithDatesLogic:
         assert 'RISKY_USER_PREFIX = "RISK"' in script or "RISKY_USER_PREFIX='RISK'" in script, (
             "必须定义 RISKY_USER_PREFIX 常量 (跟 gen_risk_data.py 对齐)"
         )
-        # _pick_order_for_balance / _pick_postsale_for_balance 函数必须存在
-        assert "_pick_order_for_balance" in script, "必须有 _pick_order_for_balance 函数"
-        assert "_pick_postsale_for_balance" in script, "必须有 _pick_postsale_for_balance 函数"
+        # 物流版 balance picker 函数必须存在 (挑包裹/危险品申报/COD, balance_pos 参数控比例)
+        assert "_pick_parcel" in script, "必须有 _pick_parcel 函数"
+        assert "_pick_declaration" in script, "必须有 _pick_declaration 函数"
+        assert "_pick_cod" in script, "必须有 _pick_cod 函数"
         # 必须用 LIKE 'RISK%' 查 RISK 用户
         assert "user_id LIKE :prefix" in script, "必须用 LIKE :prefix 查 RISK 用户"
 

@@ -21,10 +21,10 @@ class TestTrainDemoModelStructure:
         assert SCRIPT.exists()
 
     def test_has_7_pattern_generators(self):
-        """必须有 6 种正例模式 + 1 种正常模式 = 7 个生成器."""
+        """必须有 6 种物流正例模式 + 1 种正常模式 = 7 个生成器."""
         src = SCRIPT.read_text(encoding="utf-8")
-        for name in ["_gen_high_refund_rate", "_gen_high_complaint", "_gen_high_amount",
-                     "_gen_multi_address", "_gen_night_high_freq", "_gen_mixed_high_risk",
+        for name in ["_gen_unverified_user", "_gen_dangerous_hide", "_gen_cross_border",
+                     "_gen_cod_runaway", "_gen_underdeclare", "_gen_change_dispatch",
                      "_gen_normal_user"]:
             assert f"def {name}(" in src, f"缺模式: {name}"
 
@@ -79,28 +79,31 @@ class TestSyntheticDatasetGeneration:
     def test_gen_synthetic_dataset_feature_order_matches_columns(self):
         """合成数据的特征顺序必须跟 FEATURE_COLUMNS 一致, 否则训练/推理错位.
 
-        注: 只测单种模式 (高退款率) 的特征范围, 6 种模式轮换时整体范围更大.
+        注: 只测单种模式 (COD 卷款) 的特征范围, 6 种物流模式轮换时整体范围更大.
+        物流 25 维: idx8=user_cod_overdue_count, idx16=order_has_cod, idx17=order_cod_amount.
         """
         import sys
         for p in [str(ROOT)]:
             if p not in sys.path:
                 sys.path.insert(0, p)
-        from scripts.train_demo_model import _gen_high_refund_rate
+        from scripts.train_demo_model import _gen_cod_runaway
         import random
         rng = random.Random(42)
-        # 拿 10 个高退款率样本
-        X = np.array([_gen_high_refund_rate(rng) for _ in range(10)])
-        # 第 1 列 (idx=0) 应该是 user_total_orders (uniform 5-30)
-        assert (X[:, 0] >= 5).all() and (X[:, 0] <= 30).all(), (
-            f"user_total_orders 应该是 5-30, 实际范围: {X[:, 0].min()}-{X[:, 0].max()}"
+        # 拿 10 个 COD 卷款样本
+        X = np.array([_gen_cod_runaway(rng) for _ in range(10)])
+        # 第 8 列 (idx=8) 应该是 user_cod_overdue_count (randint 1-5)
+        assert (X[:, 8] >= 1).all() and (X[:, 8] <= 5).all(), (
+            f"user_cod_overdue_count 应该是 1-5, 实际范围: {X[:, 8].min()}-{X[:, 8].max()}"
         )
-        # 第 8 列 (idx=8) 应该是 user_refund_rate (uniform 0.3-0.8)
-        assert (X[:, 8] >= 0.3).all() and (X[:, 8] <= 0.8).all(), (
-            f"user_refund_rate 应该是 0.3-0.8, 实际: {X[:, 8].min()}-{X[:, 8].max()}"
+        # 第 16 列 (idx=16) 应该是 order_has_cod (恒 1)
+        assert (X[:, 16] == 1).all(), f"order_has_cod 应该恒 1, 实际: {X[:, 16]}"
+        # 第 17 列 (idx=17) 应该是 order_cod_amount (uniform 1000-8000)
+        assert (X[:, 17] >= 1000).all() and (X[:, 17] <= 8000).all(), (
+            f"order_cod_amount 应该是 1000-8000, 实际: {X[:, 17].min()}-{X[:, 17].max()}"
         )
 
     def test_normal_user_low_risk_features(self):
-        """正常用户模式: 退款率/投诉数/大额订单 都应偏低."""
+        """正常用户模式: 已实名 / 无 COD 逾期 / 申报价值偏低."""
         import sys
         for p in [str(ROOT)]:
             if p not in sys.path:
@@ -109,12 +112,12 @@ class TestSyntheticDatasetGeneration:
         import random
         rng = random.Random(42)
         X = np.array([_gen_normal_user(rng) for _ in range(100)])
-        # 负例: user_refund_rate (col 8) <= 0.05
-        assert (X[:, 8] <= 0.05).all(), f"正常用户 refund_rate 应 <= 0.05, 实际最大: {X[:, 8].max()}"
-        # 负例: user_complaint_count (col 12) <= 1
-        assert (X[:, 12] <= 1).all(), f"正常用户 complaint_count 应 <= 1, 实际最大: {X[:, 12].max()}"
-        # 负例: user_max_order_amount (col 5) <= 3000
-        assert (X[:, 5] <= 3000).all(), f"正常用户 max_order 应 <= 3000, 实际最大: {X[:, 5].max()}"
+        # 负例: user_real_name_verified (col 1) == 1 (已实名)
+        assert (X[:, 1] == 1).all(), f"正常用户 real_name_verified 应 == 1, 实际最大: {X[:, 1].max()}"
+        # 负例: user_cod_overdue_count (col 8) == 0 (无 COD 逾期)
+        assert (X[:, 8] == 0).all(), f"正常用户 cod_overdue_count 应 == 0, 实际最大: {X[:, 8].max()}"
+        # 负例: order_declared_value (col 11) <= 1200 (申报价值偏低)
+        assert (X[:, 11] <= 1200).all(), f"正常用户 declared_value 应 <= 1200, 实际最大: {X[:, 11].max()}"
 
 
 class TestTrainedModelQuality:
@@ -163,12 +166,12 @@ class TestTrainedModelQuality:
                 _s.path.insert(0, p)
         booster = xgb.Booster()
         booster.load_model(str(model_path))
-        # 推理 1 个样本 (正常用户)
-        from scripts.train_demo_model import _gen_normal_user, _gen_high_refund_rate
+        # 推理 2 个样本 (正常用户 + COD 卷款用户)
+        from scripts.train_demo_model import _gen_normal_user, _gen_cod_runaway
         import random
         rng = random.Random(123)
         X_normal = _gen_normal_user(rng).reshape(1, -1)
-        X_risk = _gen_high_refund_rate(rng).reshape(1, -1)
+        X_risk = _gen_cod_runaway(rng).reshape(1, -1)
         from app.engine.ml_model import FEATURE_COLUMNS
         dmat_normal = xgb.DMatrix(X_normal, feature_names=FEATURE_COLUMNS)
         dmat_risk = xgb.DMatrix(X_risk, feature_names=FEATURE_COLUMNS)

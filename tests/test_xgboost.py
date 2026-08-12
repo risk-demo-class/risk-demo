@@ -186,16 +186,35 @@ class TestPredict:
 
     def test_predict_normal_user(self):
         """Normal user (low 25-dim features) -> reject probability low -> decision 'pass'"""
-        result = ml_model.predict({
-            "user_total_parcel_count": 5,
-            "user_total_parcel_count_7d": 0,
-            "order_declared_value": 100,
+        from app.engine.ml_model import FEATURE_COLUMNS
+        # \u7269\u6d41\u7248: \u5fc5\u987b\u586b\u6ee1 25 \u7ef4. \u4e4b\u524d\u53ea\u586b 3 \u7ef4 (\u5176\u4f59 0 \u586b\u5145), 0 \u586b\u5145\u4f1a\u8ba9
+        # user_account_age_days=0 (\u65b0\u8d26\u53f7) + user_real_name_verified=0 (\u672a\u5b9e\u540d)
+        # \u88ab\u6a21\u578b\u5f53\u6210"\u65b0\u6ce8\u518c\u672a\u5b9e\u540d\u9ad8\u98ce\u9669\u5bc4\u4ef6\u4eba" \u2192 \u8bef\u5224"\u62d2\u7edd".
+        normal = {col: 0.0 for col in FEATURE_COLUMNS}
+        normal.update({
+            # \u7528\u6237\u7ef4\u5ea6 (\u4f4e\u98ce\u9669: \u8001\u8d26\u53f7/\u5df2\u5b9e\u540d/\u5c11\u5305\u88f9/\u65e0\u903e\u671f/\u65e0\u9ed1\u540d\u5355)
+            "user_account_age_days": 500.0, "user_real_name_verified": 1.0,
+            "user_is_enterprise": 0.0, "user_total_parcel_count": 5,
+            "user_total_parcel_count_30d": 1, "user_total_parcel_count_7d": 0,
+            "user_avg_declared_value": 300.0, "user_distinct_receiver_count": 3,
+            "user_cod_overdue_count": 0, "user_blacklist_hit_count": 0,
+            # \u5305\u88f9\u7ef4\u5ea6 (\u4f4e\u98ce\u9669: \u6b63\u5e38\u4ef6/\u4f4e\u4ef7\u503c/\u975e\u56fd\u9645/\u975e\u5371\u9669\u54c1/\u65e0 COD)
+            "order_weight_kg": 2.0, "order_declared_value": 100,
+            "order_value_per_kg": 50.0, "order_piece_count": 1,
+            "order_is_international": 0.0, "order_is_dangerous_declared": 0.0,
+            "order_has_cod": 0.0, "order_cod_amount": 0.0,
+            # \u5730\u5740\u7ef4\u5ea6 (\u4f4e\u98ce\u9669: \u4e0d\u540c\u7701\u4efd/\u975e\u9ed1\u540d\u5355/\u975e\u4ee3\u6536)
+            "addr_sender_province": 11.0, "addr_receiver_province": 19.0,
+            "addr_is_cross_province": 1.0, "addr_same_address_sender_count_24h": 1.0,
+            "addr_address_blacklist_hit": 0.0, "addr_is_proxy_received": 0.0,
+            "addr_sender_is_blacklisted": 0.0,
         })
+        result = ml_model.predict(normal)
         assert 0.0 <= result.score <= 1.0
-        # Normal user should be decided as "pass"
-        # Note: missing 22-dim features keep model stable, but the sample's features
-        # are all low, so should not be "reject"
-        assert result.decision in ("\u901a\u8fc7", "\u6807\u8bb0")  # "pass" or "mark"
+        # Normal user should be decided as "pass" or "mark" (not reject)
+        assert result.decision in ("\u901a\u8fc7", "\u6807\u8bb0"), (  # "pass" or "mark"
+            f"\u6b63\u5e38\u7528\u6237 25 \u7ef4\u4f4e\u98ce\u9669\u7279\u5f81\u4e0d\u5e94\u5224'\u62d2\u7edd', \u5b9e\u9645: decision={result.decision}, score={result.score}"
+        )
 
     def test_predict_risky_user(self):
         """【P4-L3 2026-08-08 第二轮】高风险用户: 25 维完整特征, 跟训练数据分布对齐.

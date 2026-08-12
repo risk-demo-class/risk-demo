@@ -3,7 +3,8 @@
 
 【目的】
   造一份**严格标注**的 XGBoost 训练数据集, 满足:
-    1. 数量: 默认 (24 RISK × 25) + (8 普通 × 25) ≈ 800 条
+    1. 数量: 目标 (30 RISK × 25) + (30 普通 × 25) = 1500 条 (argparse 默认);
+             现有 RISK 用户不足自动截断 — 默认 gen_risky_users 造 24 个 → 实际 ≈ 800 条
     2. 标签: 真实由 8 条物流规则跑出 (decision 字段), 不是随机
     3. 特征: 25 维物流特征真实从 DB 查 (feature.py compute_all_features), 不是捏造
     4. ml_score 字段: 强制 NULL (写库后 UPDATE), 不存"未训练的垃圾模型"推理值

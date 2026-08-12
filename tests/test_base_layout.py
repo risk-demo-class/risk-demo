@@ -185,8 +185,8 @@ class TestBaseLayout:
         assert nav_block, "找不到侧边栏 <nav>"
         nav_html = nav_block.group(1)
         # 7 个 nav-link
-        assert nav_html.count('class="nav-link') == 7, \
-            f"侧边栏应有 7 个 nav-link, 实际 {nav_html.count('class=\"nav-link')}"
+        nav_count = nav_html.count('class="nav-link')
+        assert nav_count == 7, f"侧边栏应有 7 个 nav-link, 实际 {nav_count}"
         # 关键页面
         for path in ["/", "/rules", "/cases", "/assessments", "/risk-check", "/chat", "/blacklist"]:
             assert f'href="{path}"' in nav_html, f"侧边栏应含 {path} 链接"
