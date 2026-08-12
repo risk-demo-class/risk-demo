@@ -39,12 +39,12 @@ class RiskRule(Base):
     rule_id: Mapped[str] = mapped_column(String(50), primary_key=True, comment="规则ID")
     rule_name: Mapped[str] = mapped_column(String(100), nullable=False, comment="规则名称")
     rule_category: Mapped[str] = mapped_column(
-        Enum("订单欺诈", "支付风险", "账户风险", "售后滥用", "地址风险", "物流风险",
+        Enum("欺诈风险", "信用风险", "反洗钱", "账户风险", "贷后风险", "合规风险",
              name="rule_category_enum"),
         nullable=False, comment="风险场景分类",
     )
     event_type: Mapped[str] = mapped_column(
-        Enum("下单", "支付", "售后申请", "物流投诉", "通用", name="rule_event_type_enum"),
+        Enum("贷款申请", "放款", "还款", "客户投诉", "通用", name="rule_event_type_enum"),
         nullable=False, server_default="通用", comment="适用事件类型",
     )
     rule_condition: Mapped[str] = mapped_column(Text, nullable=False, comment="条件表达式(JSON)")
@@ -90,7 +90,7 @@ class RiskEvent(Base):
 
     event_id: Mapped[str] = mapped_column(String(50), primary_key=True, comment="事件ID")
     event_type: Mapped[str] = mapped_column(
-        Enum("下单", "支付", "售后申请", "物流投诉", name="event_type_enum"),
+        Enum("贷款申请", "放款", "还款", "客户投诉", name="event_type_enum"),
         nullable=False, comment="事件类型",
     )
     event_source_id: Mapped[str] = mapped_column(String(50), nullable=False, comment="关联业务ID")
@@ -112,7 +112,7 @@ class RiskFeature(Base):
     feature_id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True, comment="特征ID")
     event_id: Mapped[str] = mapped_column(String(50), nullable=False, comment="关联事件ID")
     entity_type: Mapped[str] = mapped_column(
-        Enum("用户", "订单", "地址", name="feature_entity_type_enum"),
+        Enum("客户", "申请", "设备", name="feature_entity_type_enum"),
         nullable=False, comment="实体类型",
     )
     entity_id: Mapped[str] = mapped_column(String(50), nullable=False, comment="实体ID")
@@ -187,7 +187,7 @@ class RiskCase(Base):
     # --- 业务回溯字段 (重做检查时使用) ---
     source_id: Mapped[Optional[str]] = mapped_column(String(50), comment="原始业务ID(订单/售后/投诉ID)")
     event_type: Mapped[Optional[str]] = mapped_column(
-        Enum("下单", "支付", "售后申请", "物流投诉", name="case_event_type_enum"),
+        Enum("贷款申请", "放款", "还款", "客户投诉", name="case_event_type_enum"),
         comment="触发案件的事件类型",
     )
     create_time: Mapped[Optional[datetime]] = mapped_column(
@@ -212,7 +212,7 @@ class RiskBlacklist(Base):
 
     blacklist_id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True, comment="黑名单ID")
     blacklist_type: Mapped[str] = mapped_column(
-        Enum("用户", "地址", "手机号", name="blacklist_type_enum"),
+        Enum("客户", "手机号", "地址", "设备", name="blacklist_type_enum"),
         nullable=False, comment="黑名单类型",
     )
     blacklist_value: Mapped[str] = mapped_column(String(200), nullable=False, comment="黑名单值")
@@ -242,11 +242,11 @@ class RiskUserProfile(Base):
         Enum("低", "中", "高", "极高", name="profile_risk_level_enum"),
         default="低", comment="风险等级",
     )
-    total_orders: Mapped[int] = mapped_column(Integer, default=0, comment="总订单数")
-    total_refunds: Mapped[int] = mapped_column(Integer, default=0, comment="退款次数")
-    refund_rate: Mapped[Decimal] = mapped_column(Numeric(5, 4), default=0, comment="退款率")
-    avg_order_amount: Mapped[Decimal] = mapped_column(Numeric(10, 2), default=0, comment="平均订单金额")
-    address_count: Mapped[int] = mapped_column(Integer, default=0, comment="地址数量")
+    total_loans: Mapped[int] = mapped_column(Integer, default=0, comment="总申请数")
+    overdue_count: Mapped[int] = mapped_column(Integer, default=0, comment="逾期次数")
+    overdue_rate: Mapped[Decimal] = mapped_column(Numeric(5, 4), default=0, comment="逾期率")
+    avg_loan_amount: Mapped[Decimal] = mapped_column(Numeric(10, 2), default=0, comment="平均申请金额")
+    contact_count: Mapped[int] = mapped_column(Integer, default=0, comment="联系信息数")
     complaint_count: Mapped[int] = mapped_column(Integer, default=0, comment="投诉次数")
     assessment_count: Mapped[int] = mapped_column(Integer, default=0, comment="评估次数")
     last_assessment_time: Mapped[Optional[datetime]] = mapped_column(DateTime, comment="最近评估时间")

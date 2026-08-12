@@ -10,11 +10,11 @@ from fastapi import HTTPException
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models import (
-    LogisticsComplaintsRecord,
-    OrderInfo,
-    Postsale,
-    UserInfo,
+from app.models_business import (
+    ComplaintRecord,
+    CustomerInfo,
+    LoanApplication,
+    RepaymentRecord,
 )
 from app.schemas import RiskCheckRequest
 
@@ -54,38 +54,40 @@ async def ensure_exists(
 
 
 async def ensure_user_exists(db: AsyncSession, user_id: str) -> None:
-    await ensure_exists(db, UserInfo, "user_id", user_id, entity_label="用户")
+    await ensure_exists(db, CustomerInfo, "customer_id", user_id, entity_label="客户")
 
 
-# 防"水平越权": 拿真订单+假用户绕过风控
-# 攻击场景: 攻击者拿自己的 user_id + 别人的真实 order_id 调风控
-# 后果: 别人的订单被风控/被拒, 业务投诉
+# 防"水平越权": 拿真申请+假客户绕过风控
+# 攻击场景: 攻击者拿自己的 user_id + 别人的真实 loan_id 调风控
+# 后果: 别人的贷款申请被风控/被拒, 业务投诉
 async def ensure_order_belongs_to_user(
     db: AsyncSession,
     order_id: str,
     user_id: str,
 ) -> None:
+    """校验贷款申请归属 (字段名 order_id 保留 = D5 契约, 语义为 loan_id)."""
     owner = (await db.execute(
-        select(OrderInfo.user_id).where(OrderInfo.order_id == order_id).limit(1)
+        select(LoanApplication.customer_id).where(LoanApplication.loan_id == order_id).limit(1)
     )).scalar_one_or_none()
     if not owner:
-        raise HTTPException(status_code=404, detail=f"订单ID不存在: {order_id}")
+        raise HTTPException(status_code=404, detail=f"贷款申请ID不存在: {order_id}")
     if owner != user_id:
         logger.warning(
-            "安全告警: 订单归属不一致 order_id=%s, owner=%s, request_user=%s",
+            "安全告警: 申请归属不一致 loan_id=%s, owner=%s, request_user=%s",
             order_id, owner, user_id,
         )
         raise HTTPException(
             status_code=403,
-            detail=f"订单 {order_id} 属于用户 {owner}, 与请求用户 {user_id} 不一致",
+            detail=f"贷款申请 {order_id} 属于客户 {owner}, 与请求用户 {user_id} 不一致",
         )
 
 
 # source_id 与 event_type 匹配的校验规则 (字典派发, 加新 event_type 只加 1 行)
+# 银行事件: 贷款申请/放款 → loan_id; 还款 → repayment_id; 客户投诉 → record_id
 _EVENT_SOURCE_VALIDATORS = {
-    ("下单", "支付"): (OrderInfo, "order_id", None, "订单", 400),
-    ("售后申请",): (Postsale, "postsale_id", None, "售后单", 400),
-    ("物流投诉",): (LogisticsComplaintsRecord, "record_id", int, "投诉记录", 400),
+    ("贷款申请", "放款"): (LoanApplication, "loan_id", None, "贷款申请", 400),
+    ("还款",): (RepaymentRecord, "repayment_id", None, "还款记录", 400),
+    ("客户投诉",): (ComplaintRecord, "record_id", int, "投诉记录", 400),
 }
 
 
@@ -246,8 +248,8 @@ async def validate_risk_check_request(
     # 2. source_id 与事件类型匹配
     await ensure_source_matches_event_type(db, request)
 
-    # 3. 下单/支付场景: 校验订单归属 (防绕过)
-    if request.event_type in ("下单", "支付"):
+    # 3. 贷款申请/放款场景: 校验申请归属 (防绕过)
+    if request.event_type in ("贷款申请", "放款"):
         # order_id 优先用请求里传的, 没传就用 source_id (业务约定)
         order_id = request.order_id or request.source_id
         await ensure_order_belongs_to_user(db, order_id, request.user_id)

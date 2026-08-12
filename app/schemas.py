@@ -10,9 +10,12 @@ from pydantic import BaseModel, Field
 # ============================================================
 
 class RiskCheckRequest(BaseModel):
-    """风险检查请求"""
-    event_type: Literal["下单", "支付", "售后申请", "物流投诉"]
-    source_id: str = Field(description="关联业务ID (order_id / postsale_id 等)")
+    """风险检查请求, event_type 为银行 4 事件.
+
+    字段名 order_id/receive_id 保留 (D5 契约): 语义换为 loan_id/contact_id.
+    """
+    event_type: Literal["贷款申请", "放款", "还款", "客户投诉"]
+    source_id: str = Field(description="关联业务ID (loan_id / repayment_id / overdue_id 等)")
     user_id: str
     order_id: Optional[str] = None
     receive_id: Optional[str] = None
@@ -58,8 +61,8 @@ class RuleCreate(BaseModel):
     """创建规则请求"""
     rule_id: str = Field(max_length=50)
     rule_name: str = Field(max_length=100)
-    rule_category: Literal["订单欺诈", "支付风险", "账户风险", "售后滥用", "地址风险", "物流风险"]
-    event_type: Literal["下单", "支付", "售后申请", "物流投诉", "通用"] = "通用"
+    rule_category: Literal["欺诈风险", "信用风险", "反洗钱", "账户风险", "贷后风险", "合规风险"]
+    event_type: Literal["贷款申请", "放款", "还款", "客户投诉", "通用"] = "通用"
     rule_condition: dict
     risk_level: Literal["低", "中", "高", "极高"]
     risk_score: int = Field(ge=0, le=100)
@@ -71,8 +74,8 @@ class RuleCreate(BaseModel):
 class RuleUpdate(BaseModel):
     """更新规则请求 (所有字段可选)"""
     rule_name: Optional[str] = None
-    rule_category: Optional[Literal["订单欺诈", "支付风险", "账户风险", "售后滥用", "地址风险", "物流风险"]] = None
-    event_type: Optional[Literal["下单", "支付", "售后申请", "物流投诉", "通用"]] = None
+    rule_category: Optional[Literal["欺诈风险", "信用风险", "反洗钱", "账户风险", "贷后风险", "合规风险"]] = None
+    event_type: Optional[Literal["贷款申请", "放款", "还款", "客户投诉", "通用"]] = None
     rule_condition: Optional[dict] = None
     risk_level: Optional[Literal["低", "中", "高", "极高"]] = None
     risk_score: Optional[int] = Field(default=None, ge=0, le=100)
@@ -158,8 +161,8 @@ class AssessmentDetailResponse(BaseModel):
 # 黑名单
 # ============================================================
 class BlacklistCreate(BaseModel):
-    """添加黑名单请求"""
-    blacklist_type: Literal["用户", "地址", "手机号"]
+    """添加黑名单请求 (客户/手机号/地址/设备 4 类)"""
+    blacklist_type: Literal["客户", "手机号", "地址", "设备"]
     blacklist_value: str
     reason: Optional[str] = None
     expire_time: Optional[datetime] = None
@@ -263,15 +266,15 @@ class CaseStatistics(BaseModel):
 # ============================================================
 
 class UserProfileResponse(BaseModel):
-    """用户风险画像响应"""
+    """客户风险画像响应"""
     user_id: str
     risk_score: int = 0
     risk_level: str = "低"
-    total_orders: int = 0
-    total_refunds: int = 0
-    refund_rate: float = 0
-    avg_order_amount: float = 0
-    address_count: int = 0
+    total_loans: int = 0
+    overdue_count: int = 0
+    overdue_rate: float = 0
+    avg_loan_amount: float = 0
+    contact_count: int = 0
     complaint_count: int = 0
     assessment_count: int = 0
     last_assessment_time: Optional[datetime] = None

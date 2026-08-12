@@ -30,8 +30,9 @@ from app.engine.feature import compute_all_features
 from app.engine.ml_model import is_model_loaded, predict
 from app.engine.rule import RuleHitResult, load_enabled_rules, match_rules
 from app.models import (
-    OrderInfo, RiskAssessment, RiskCase, RiskEvent, RiskFeature, RiskUserProfile,
+    RiskAssessment, RiskCase, RiskEvent, RiskFeature, RiskUserProfile,
 )
+from app.models_business import LoanApplication
 from app.schemas import RiskCheckRequest, RiskCheckResponse, RuleHitInfo
 
 logger = logging.getLogger(__name__)
@@ -117,15 +118,15 @@ class _RiskCheckContext:
 
 
 def _build_context(request: RiskCheckRequest) -> _RiskCheckContext:
-    """步骤 1b: 请求 → Context, 顺便补全 order_id.
+    """步骤 1b: 请求 → Context, 顺便补全 order_id (语义 loan_id, 字段名保留 D5).
 
     业务规则:
-      - "下单" / "支付" 事件: source_id 就是 order_id
-      - "售后申请" 事件: source_id 是 postsale_id, order_id 要从 request 传
-      - "物流投诉" 事件: source_id 是 complaints_id
+      - "贷款申请" / "放款" 事件: source_id 就是 loan_id
+      - "还款" 事件: source_id 是 repayment_id, loan_id 在步骤 1c 补全
+      - "客户投诉" 事件: source_id 是投诉 record_id
     """
     order_id = request.order_id
-    if not order_id and request.event_type in ("下单", "支付"):
+    if not order_id and request.event_type in ("贷款申请", "放款"):
         order_id = request.source_id
     return _RiskCheckContext(
         request=request,
@@ -136,17 +137,17 @@ def _build_context(request: RiskCheckRequest) -> _RiskCheckContext:
 
 
 async def _enrich_receive_id(db: AsyncSession, ctx: _RiskCheckContext) -> None:
-    """步骤 1c: 从订单里补全 receive_id (地址 ID).
+    """步骤 1c: 从贷款申请里补全 receive_id (联系信息 ID, 语义 contact_id).
 
-    退出条件 (任一满足就不补): 已有 receive_id / 没有 order_id (售后/物流投诉场景).
+    退出条件 (任一满足就不补): 已有 receive_id / 没有 order_id (还款/投诉场景).
     """
     if ctx.receive_id or not ctx.order_id:
         return
     row = (await db.execute(
-        select(OrderInfo.receive_id).where(OrderInfo.order_id == ctx.order_id)
+        select(LoanApplication.contact_id).where(LoanApplication.loan_id == ctx.order_id)
     )).first()
     if row:
-        ctx.receive_id = row.receive_id
+        ctx.receive_id = row.contact_id
 
 
 # ============================================================
@@ -173,22 +174,23 @@ def _create_event_record(db: AsyncSession, ctx: _RiskCheckContext) -> str:
 # ============================================================
 
 async def _compute_features(db: AsyncSession, ctx: _RiskCheckContext) -> dict:
-    """步骤 3: 调 feature.py 计算 25 个风控特征 (用户/订单/地址 3 类)"""
+    """步骤 3: 调 feature.py 计算 25 个风控特征 (客户/申请/设备 3 类)."""
     return await compute_all_features(
         db,
-        user_id=ctx.user_id,
-        order_id=ctx.order_id,        # 可能 None (售后场景只算用户+地址)
-        receive_id=ctx.receive_id,
+        customer_id=ctx.user_id,
+        loan_id=ctx.order_id,        # 可能 None (投诉场景只算客户+设备)
     )
 
 
 def _classify_feature_entity(feature_name: str) -> tuple[str, str]:
-    """特征名前缀 → 实体类型. user_* → 用户, order_* → 订单, 其他 → 地址"""
-    if feature_name.startswith("user_"):
-        return "用户", feature_name
-    if feature_name.startswith("order_"):
-        return "订单", feature_name
-    return "地址", feature_name
+    """特征名前缀 → 实体类型. cust_* → 客户, loan_* → 申请, dev_* → 设备, 其他 → 客户"""
+    if feature_name.startswith("cust_"):
+        return "客户", feature_name
+    if feature_name.startswith("loan_"):
+        return "申请", feature_name
+    if feature_name.startswith("dev_"):
+        return "设备", feature_name
+    return "客户", feature_name
 
 
 def _save_feature_snapshot(
@@ -199,18 +201,18 @@ def _save_feature_snapshot(
     """步骤 4: 把 25 个特征落库到 risk_feature (审计回溯).
 
     entity_id 填充规则 (按 entity_type):
-      - 用户特征 → ctx.user_id
-      - 订单特征 → ctx.order_id (缺失用 source_id 顶替)
-      - 地址特征 → ctx.receive_id (缺失用 user_id 顶替)
+      - 客户特征 → ctx.user_id
+      - 申请特征 → ctx.order_id (缺失用 source_id 顶替)
+      - 设备特征 → ctx.order_id (缺失用 user_id 顶替)
     """
     for fname, fval in features.items():
         entity_type, _ = _classify_feature_entity(fname)
-        if entity_type == "用户":
+        if entity_type == "客户":
             entity_id = ctx.user_id
-        elif entity_type == "订单":
+        elif entity_type == "申请":
             entity_id = ctx.order_id or ctx.request.source_id
-        else:  # 地址
-            entity_id = ctx.receive_id or ctx.user_id
+        else:  # 设备
+            entity_id = ctx.order_id or ctx.user_id
         db.add(RiskFeature(
             event_id=ctx.event_id,
             entity_type=entity_type,
@@ -467,17 +469,17 @@ async def _update_user_profile(
 
     profile.risk_score = final_score
     profile.risk_level = risk_level
-    profile.total_orders = int(features.get("user_total_orders", 0))
-    profile.total_refunds = int(features.get("user_refund_count", 0))
-    # 退款率 = 退款次数 / 总订单数, 防 0 除
-    total_orders = features.get("user_total_orders", 0)
-    profile.refund_rate = (
-        round(features.get("user_refund_count", 0) / total_orders, 4)
-        if total_orders > 0 else 0
+    profile.total_loans = int(features.get("cust_total_loans", 0))
+    profile.overdue_count = int(features.get("cust_overdue_count", 0))
+    # 逾期率 = 逾期次数 / 总申请数, 防 0 除
+    total_loans = features.get("cust_total_loans", 0)
+    profile.overdue_rate = (
+        round(features.get("cust_overdue_count", 0) / total_loans, 4)
+        if total_loans > 0 else 0
     )
-    profile.avg_order_amount = features.get("user_avg_order_amount", 0)
-    profile.address_count = int(features.get("user_address_count", 0))
-    profile.complaint_count = int(features.get("user_complaint_count", 0))
+    profile.avg_loan_amount = features.get("cust_avg_loan_amount", 0)
+    profile.contact_count = int(features.get("cust_contact_count", 0))
+    profile.complaint_count = int(features.get("cust_complaint_count", 0))
     # 累计评估次数 +1 (or 0 兜底, 防止新建时 None)
     profile.assessment_count = (profile.assessment_count or 0) + 1
     profile.last_assessment_time = datetime.now()
