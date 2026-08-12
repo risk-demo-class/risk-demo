@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block subtitle %}MySQL 中的版本化规则主数据与执行条件{% endblock %}
+{% block content %}
+  <section class="filter-bar" aria-label="规则筛选">
+    <div><label for="rule-search">规则检索</label><input id="rule-search" class="form-control" type="search" placeholder="编号、名称或欺诈场景"></div>
+    <div><label for="stage-filter">决策阶段</label><select id="stage-filter" class="form-select"><option value="">全部阶段</option></select></div>
+    <div><label for="severity-filter">风险等级</label><select id="severity-filter" class="form-select"><option value="">全部等级</option><option>CRITICAL</option><option>HIGH</option><option>MEDIUM</option></select></div>
+    <div class="filter-summary"><strong id="rule-count">0</strong><span>条启用规则</span></div>
+  </section>
+  <section class="data-panel">
+    <div class="table-responsive">
+      <table class="table risk-table align-middle mb-0">
+        <thead><tr><th>规则</th><th>阶段</th><th>风险类型</th><th>场景说明</th><th>分值</th><th>动作</th><th>条件</th></tr></thead>
+        <tbody id="rule-body"><tr><td colspan="7"><div class="table-skeleton"><span></span><span></span></div></td></tr></tbody>
+      </table>
+    </div>
+    <div id="rule-empty" class="empty-state d-none"><i class="ph ph-funnel"></i><h3>没有匹配的规则</h3><p>清除筛选条件后重试。</p></div>
+  </section>
+{% endblock %}

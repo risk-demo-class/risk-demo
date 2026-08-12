@@ -1,0 +1,16 @@
+.env
+.env.*
+!.env.example
+.venv/
+node_modules/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.playwright-cli/
+.impeccable/
+output/
+.vercel/
+.DS_Store
+*.log
+.vercel
+.env*

@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block subtitle %}时间切分验证、阈值校准与特征贡献{% endblock %}
+{% block content %}
+  <div class="model-disclaimer"><i class="ph ph-info"></i><p><strong>演示模型。</strong> 标签来自合成入账结果，是弱监督结果，不代表生产欺诈认定或真实业务效果。</p></div>
+  <section class="metric-strip model-metrics" id="model-metrics">
+    {% for _ in range(5) %}<div class="metric skeleton"><span></span><strong></strong><small></small></div>{% endfor %}
+  </section>
+  <section class="workspace-grid model-grid">
+    <div class="data-panel"><div class="panel-heading"><div><h2>验证集混淆矩阵</h2><p>阈值在独立校准集选择，验证集保持未触碰</p></div></div><div id="confusion-matrix" class="confusion-grid loading-surface"></div></div>
+    <div class="data-panel"><div class="panel-heading"><div><h2>数据切分</h2><p>严格按入账时间排序</p></div></div><div id="split-detail" class="definition-list loading-surface"></div></div>
+  </section>
+  <section class="data-panel feature-panel"><div class="panel-heading"><div><h2>主要特征贡献</h2><p>XGBoost gain 归一化重要性，仅用于模型诊断</p></div></div><div id="feature-importance" class="feature-list loading-surface"></div></section>
+{% endblock %}

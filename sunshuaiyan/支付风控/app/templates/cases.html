@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block subtitle %}按优先级、主体和调查结论组织的人工审核任务{% endblock %}
+{% block content %}
+  <section class="data-panel">
+    <div class="panel-heading"><div><h2>调查队列</h2><p>合成案件仅用于验证状态与信息结构</p></div><span class="data-note">P0 和 P1 优先</span></div>
+    <div class="table-responsive">
+      <table class="table risk-table align-middle mb-0">
+        <thead><tr><th>案件</th><th>优先级</th><th>类型</th><th>商户</th><th>状态</th><th>负责人</th><th>时限</th></tr></thead>
+        <tbody id="case-body"><tr><td colspan="7"><div class="table-skeleton"><span></span><span></span></div></td></tr></tbody>
+      </table>
+    </div>
+    <div id="case-empty" class="empty-state d-none"><i class="ph ph-check-circle"></i><h3>当前没有案件</h3><p>新的人工审核任务会出现在这里。</p></div>
+  </section>
+{% endblock %}

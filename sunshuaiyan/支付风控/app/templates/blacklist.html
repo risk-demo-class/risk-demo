@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block subtitle %}管理跨境商户、付款人、银行账户、VA 与设备等高风险主体{% endblock %}
+{% block content %}
+  <section class="blacklist-layout">
+    <form class="data-panel task-form blacklist-form" id="blacklist-form">
+      <div class="panel-heading"><div><h2>新增或重新启用</h2><p>同类型、同标识将幂等更新</p></div><i class="ph ph-shield-plus task-heading-icon"></i></div>
+      <div class="form-stack">
+        <div><label for="blacklist-type">主体类型</label><select class="form-select" id="blacklist-type" required>
+          <option value="CUSTOMER">跨境商户</option><option value="COUNTERPARTY">付款人 / 买方</option><option value="BANK_ACCOUNT">银行账户</option><option value="VIRTUAL_ACCOUNT">虚拟收款账户</option><option value="DEVICE">设备</option><option value="DOCUMENT_HASH">贸易单据哈希</option><option value="COUNTRY">国家 / 地区</option>
+        </select></div>
+        <div><label for="blacklist-value">业务标识</label><input class="form-control mono" id="blacklist-value" placeholder="例如 CP_00000042" maxlength="255" required><small class="field-help">使用 client_id、counterparty_ref、account_ref 或 va_id，不输入明文账号。</small></div>
+        <div><label for="blacklist-name">显示名称</label><input class="form-control" id="blacklist-name" maxlength="255" placeholder="可选，用于审查识别"></div>
+        <div class="form-row"><div><label for="blacklist-reason">原因码</label><select class="form-select" id="blacklist-reason"><option value="MULE_OR_FRAUD_SIGNAL">MULE_OR_FRAUD_SIGNAL</option><option value="CASE_CONFIRMED_RISK">CASE_CONFIRMED_RISK</option><option value="SANCTIONS_MATCH">SANCTIONS_MATCH</option><option value="HIGH_RISK_BENEFICIARY">HIGH_RISK_BENEFICIARY</option><option value="VA_MISUSE_SIGNAL">VA_MISUSE_SIGNAL</option><option value="DEVICE_FRAUD_CLUSTER">DEVICE_FRAUD_CLUSTER</option><option value="DOCUMENT_FRAUD">DOCUMENT_FRAUD</option></select></div><div><label for="blacklist-severity">严重性</label><select class="form-select" id="blacklist-severity"><option value="HIGH">HIGH</option><option value="CRITICAL">CRITICAL</option><option value="MEDIUM">MEDIUM</option></select></div></div>
+        <div><label for="blacklist-detail">加入依据</label><textarea class="form-control" id="blacklist-detail" rows="3" maxlength="512" placeholder="记录案件结论、筛查命中或外部来源"></textarea></div>
+        <div><label for="blacklist-expiry">到期时间</label><input class="form-control" type="datetime-local" id="blacklist-expiry"><small class="field-help">留空表示长期有效。</small></div>
+        <button class="btn btn-primary" type="submit" id="save-blacklist"><i class="ph ph-plus"></i>写入黑名单</button>
+      </div>
+    </form>
+
+    <div class="data-panel blacklist-catalog">
+      <div class="blacklist-toolbar">
+        <div><h2>名单目录</h2><p>有效记录在风险检查中优先拦截</p></div>
+        <div class="filter-controls"><input class="form-control form-control-sm" type="search" id="blacklist-search" placeholder="标识、名称或原因"><select class="form-select form-select-sm" id="blacklist-filter-type"><option value="">全部类型</option><option value="CUSTOMER">商户</option><option value="COUNTERPARTY">付款人</option><option value="BANK_ACCOUNT">银行账户</option><option value="VIRTUAL_ACCOUNT">VA</option><option value="DEVICE">设备</option><option value="DOCUMENT_HASH">单据</option><option value="COUNTRY">国家</option></select><select class="form-select form-select-sm" id="blacklist-filter-status"><option value="ACTIVE">有效</option><option value="EXPIRED">已过期</option><option value="REMOVED">已移除</option><option value="ALL">全部</option></select></div>
+      </div>
+      <div class="blacklist-summary" id="blacklist-summary"><span>加载名单</span></div>
+      <div class="table-responsive">
+        <table class="table risk-table align-middle mb-0">
+          <thead><tr><th>主体</th><th>标识</th><th>原因</th><th>级别</th><th>来源</th><th>命中</th><th>状态</th><th class="text-end">操作</th></tr></thead>
+          <tbody id="blacklist-body"><tr><td colspan="8"><div class="table-skeleton"><span></span><span></span><span></span></div></td></tr></tbody>
+        </table>
+      </div>
+      <div id="blacklist-empty" class="empty-state d-none"><i class="ph ph-shield-check"></i><h3>当前筛选无记录</h3><p>调整类型、状态或搜索词。</p></div>
+    </div>
+  </section>
+{% endblock %}

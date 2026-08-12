@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block subtitle %}按跨境入账或出款业务号执行黑名单、规则与模型联合决策{% endblock %}
+{% block content %}
+  <section class="operation-grid risk-check-grid">
+    <form class="data-panel task-form" id="risk-check-form">
+      <div class="panel-heading"><div><h2>发起检查</h2><p>使用业务号或数据库 ID</p></div><i class="ph ph-scan task-heading-icon"></i></div>
+      <div class="form-stack">
+        <div>
+          <label for="risk-event-type">事件类型</label>
+          <select class="form-select" id="risk-event-type" required>
+            <option value="INBOUND">跨境入账</option>
+            <option value="PAYOUT">提现 / 供应商付款</option>
+          </select>
+        </div>
+        <div>
+          <label for="risk-business-id">业务号</label>
+          <input class="form-control mono" id="risk-business-id" list="risk-subject-options" placeholder="例如 IN_00000726" autocomplete="off" required>
+          <datalist id="risk-subject-options"></datalist>
+          <small class="field-help" id="risk-id-help">支持入账 transaction_id 或内部数字 ID</small>
+        </div>
+        <label class="audit-switch" for="risk-persist">
+          <input class="form-check-input" type="checkbox" id="risk-persist" checked>
+          <span><strong>写入风控审计</strong><small>保留特征快照、命中规则和决策标识</small></span>
+        </label>
+        <button class="btn btn-primary" type="submit" id="run-risk-check"><i class="ph ph-magnifying-glass"></i>执行检查</button>
+      </div>
+    </form>
+
+    <div class="data-panel result-stage" id="risk-check-result" aria-live="polite">
+      <div class="result-empty">
+        <i class="ph ph-shield-check"></i>
+        <h2>等待风险检查</h2>
+        <p>在左侧选择事件并输入业务号。黑名单命中会优先拒绝，其余交易进入规则与模型联合评估。</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="data-panel subject-panel">
+    <div class="panel-heading"><div><h2>可检查业务</h2><p>点击一条记录自动填充表单</p></div><span class="data-note" id="risk-subject-count">加载中</span></div>
+    <div class="table-responsive">
+      <table class="table risk-table align-middle mb-0">
+        <thead id="risk-subject-head"></thead>
+        <tbody id="risk-subject-body"><tr><td><div class="table-skeleton"><span></span><span></span></div></td></tr></tbody>
+      </table>
+    </div>
+  </section>
+{% endblock %}

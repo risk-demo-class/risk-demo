@@ -1,0 +1,11 @@
+{
+  "name": "pingpong-cross-border-risk-console",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Frontend vendor dependencies for the FastAPI risk console",
+  "dependencies": {
+    "@phosphor-icons/web": "2.1.2",
+    "bootstrap": "5.3.7",
+    "chart.js": "4.5.0"
+  }
+}

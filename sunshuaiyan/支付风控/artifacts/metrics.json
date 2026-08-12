@@ -1,0 +1,134 @@
+{
+  "model_type": "XGBoost binary classifier",
+  "model_version": "pingpong-inbound-xgb-1.0.0",
+  "label_definition": "1=REJECTED/REFUNDED, 0=APPROVED; synthetic weak-supervision outcome label",
+  "split_strategy": "70% train, 15% threshold calibration, 15% untouched temporal validation",
+  "feature_count": 41,
+  "dataset_rows": 669,
+  "train_rows": 468,
+  "calibration_rows": 100,
+  "validation_rows": 101,
+  "positive_rate": 0.133034,
+  "scale_pos_weight": 6.932203,
+  "threshold": 0.375,
+  "calibration_f1": 0.416667,
+  "val_auc": 0.773092,
+  "val_f1": 0.533333,
+  "val_precision": 0.666667,
+  "val_recall": 0.444444,
+  "confusion_matrix": {
+    "tn": 79,
+    "fp": 4,
+    "fn": 10,
+    "tp": 8
+  },
+  "top_features": [
+    {
+      "name": "is_third_party_payment",
+      "importance": 0.119491
+    },
+    {
+      "name": "failed_doc_count",
+      "importance": 0.078584
+    },
+    {
+      "name": "shared_device_customer_count",
+      "importance": 0.064675
+    },
+    {
+      "name": "payer_external_risk_flag",
+      "importance": 0.050377
+    },
+    {
+      "name": "recent_new_device_count_30d",
+      "importance": 0.037187
+    },
+    {
+      "name": "payer_prior_customer_count",
+      "importance": 0.036232
+    },
+    {
+      "name": "payer_risk_score",
+      "importance": 0.033117
+    },
+    {
+      "name": "duplicate_doc_hash_count",
+      "importance": 0.03126
+    },
+    {
+      "name": "declaration_customer_count",
+      "importance": 0.031002
+    },
+    {
+      "name": "allocation_amount_ratio",
+      "importance": 0.028661
+    },
+    {
+      "name": "order_risk_score",
+      "importance": 0.02864
+    },
+    {
+      "name": "payer_name_match_score",
+      "importance": 0.026947
+    },
+    {
+      "name": "purpose_mismatch",
+      "importance": 0.026635
+    },
+    {
+      "name": "rail_local_flag",
+      "importance": 0.026214
+    },
+    {
+      "name": "amount_usd",
+      "importance": 0.025959
+    }
+  ],
+  "feature_columns": [
+    "amount_usd",
+    "amount_log",
+    "expected_volume_ratio",
+    "customer_age_days",
+    "customer_risk_tier",
+    "partner_risk_tier",
+    "payer_risk_score",
+    "payer_external_risk_flag",
+    "payer_sanctions_flag",
+    "payer_name_match_score",
+    "order_risk_score",
+    "order_is_new_buyer",
+    "is_third_party_payment",
+    "is_first_payer",
+    "payer_buyer_country_mismatch",
+    "payer_buyer_identity_mismatch",
+    "origin_buyer_country_mismatch",
+    "purpose_mismatch",
+    "currency_unexpected",
+    "allocation_amount_ratio",
+    "max_doc_tamper_score",
+    "failed_doc_count",
+    "duplicate_doc_hash_count",
+    "recent_auth_risk_max_7d",
+    "recent_auth_failed_count_7d",
+    "recent_new_device_count_30d",
+    "prior_inbound_count_24h",
+    "prior_inbound_amount_usd_24h",
+    "prior_distinct_payers_30d",
+    "prior_rejected_count_30d",
+    "payer_prior_customer_count",
+    "shared_device_customer_count",
+    "store_auth_failed",
+    "shared_store_credential_count",
+    "store_va_link_missing",
+    "declaration_customer_count",
+    "business_ecommerce_flag",
+    "business_b2b_flag",
+    "business_service_flag",
+    "rail_swift_flag",
+    "rail_local_flag"
+  ],
+  "validation_window": {
+    "from": "2026-07-18 23:47:14",
+    "to": "2026-08-11 04:11:46"
+  }
+}

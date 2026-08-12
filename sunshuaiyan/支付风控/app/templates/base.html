@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>{{ title }} | PingPong 跨境收款风控</title>
+  <link rel="stylesheet" href="/static/vendor/bootstrap/bootstrap.min.css">
+  <link rel="stylesheet" href="/static/vendor/phosphor/style.css">
+  <link rel="stylesheet" href="/static/css/app.css">
+</head>
+<body data-page="{{ page }}">
+<!--
+THESIS: 跨境支付走廊控制账本，把风险证据放进交易路径，不采用营销式卡片墙。
+OWN-WORLD: 冷灰纸面、深墨文本、青绿色单一操作色、细线分区、等宽交易数字。
+STORY: 分析师先看组合风险，再定位交易、规则和案件，最后执行审核。
+FIRST VIEWPORT: 左侧稳定导航，顶部状态栏，中部趋势与队列，下部交易明细，详情从右侧展开。
+FORM: 支付走廊控制账本，grounded candidate 5，seed 373ea736。
+FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, and DESIGN.md
+-->
+  <a class="skip-link" href="#main-content">跳到主要内容</a>
+  <aside class="app-sidebar" aria-label="主导航">
+    <a class="brand" href="/" aria-label="PingPong 风控首页">
+      <span class="brand-mark">PP</span>
+      <span><strong>Risk Ledger</strong><small>跨境收款风控</small></span>
+    </a>
+    <nav class="side-nav">
+      <a href="/" class="{{ 'active' if page == 'dashboard' else '' }}"><i class="ph ph-squares-four"></i><span>风险总览</span></a>
+      <a href="/rules" class="{{ 'active' if page == 'rules' else '' }}"><i class="ph ph-tree-structure"></i><span>规则策略</span></a>
+      <a href="/cases" class="{{ 'active' if page == 'cases' else '' }}"><i class="ph ph-briefcase"></i><span>案件队列</span></a>
+      <a href="/model" class="{{ 'active' if page == 'model' else '' }}"><i class="ph ph-chart-scatter"></i><span>模型评估</span></a>
+      <a href="/risk-check" class="{{ 'active' if page == 'risk-check' else '' }}"><i class="ph ph-magnifying-glass"></i><span>风险检查</span></a>
+      <a href="/assistant" class="{{ 'active' if page == 'assistant' else '' }}"><i class="ph ph-robot"></i><span>AI 助手</span></a>
+      <a href="/blacklist" class="{{ 'active' if page == 'blacklist' else '' }}"><i class="ph ph-shield-slash"></i><span>黑名单</span></a>
+    </nav>
+    <div class="sidebar-foot">
+      <span class="status-line"><i class="ph-fill ph-circle"></i> 本地演示环境</span>
+      <small>数据均为合成样本</small>
+    </div>
+  </aside>
+
+  <header class="mobile-header">
+    <a class="brand" href="/"><span class="brand-mark">PP</span><strong>Risk Ledger</strong></a>
+    <button class="icon-button" type="button" data-bs-toggle="offcanvas" data-bs-target="#mobileNav" aria-label="打开导航"><i class="ph ph-list"></i></button>
+  </header>
+  <div class="offcanvas offcanvas-start mobile-nav" tabindex="-1" id="mobileNav" aria-labelledby="mobileNavTitle">
+    <div class="offcanvas-header"><h2 id="mobileNavTitle">功能导航</h2><button class="btn-close" type="button" data-bs-dismiss="offcanvas" aria-label="关闭"></button></div>
+    <div class="offcanvas-body side-nav">
+      <a href="/"><i class="ph ph-squares-four"></i>风险总览</a>
+      <a href="/rules"><i class="ph ph-tree-structure"></i>规则策略</a>
+      <a href="/cases"><i class="ph ph-briefcase"></i>案件队列</a>
+      <a href="/model"><i class="ph ph-chart-scatter"></i>模型评估</a>
+      <a href="/risk-check"><i class="ph ph-magnifying-glass"></i>风险检查</a>
+      <a href="/assistant"><i class="ph ph-robot"></i>AI 助手</a>
+      <a href="/blacklist"><i class="ph ph-shield-slash"></i>黑名单</a>
+    </div>
+  </div>
+
+  <main id="main-content" class="app-main" tabindex="-1">
+    <header class="page-header">
+      <div>
+        <h1>{{ title }}</h1>
+        <p>{% block subtitle %}{% endblock %}</p>
+      </div>
+      <div class="header-actions">
+        <span id="system-health" class="system-health loading"><i class="ph ph-database"></i><span>检查系统状态</span></span>
+        {% block header_actions %}{% endblock %}
+      </div>
+    </header>
+    {% block content %}{% endblock %}
+  </main>
+
+  <div class="toast-container position-fixed bottom-0 end-0 p-3">
+    <div id="app-toast" class="toast" role="status" aria-live="polite" aria-atomic="true">
+      <div class="toast-body"></div>
+    </div>
+  </div>
+  <script src="/static/vendor/bootstrap/bootstrap.min.js"></script>
+  <script src="/static/vendor/chart/chart.umd.min.js"></script>
+  <script src="/static/js/app.js"></script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

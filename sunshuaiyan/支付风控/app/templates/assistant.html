@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block subtitle %}本地检索交易、规则、案件与黑名单，由 DeepSeek 生成结构化风险总结{% endblock %}
+{% block header_actions %}<span class="system-health" id="assistant-mode"><i class="ph ph-cpu"></i><span>检查助手模式</span></span>{% endblock %}
+{% block content %}
+  <section class="assistant-shell data-panel">
+    <aside class="assistant-guide">
+      <div>
+        <h2>可以这样问</h2>
+        <p>本地服务先查询可核验证据，DeepSeek 只负责总结和组织回答。</p>
+      </div>
+      <div class="prompt-list" id="assistant-prompts">
+        <button type="button" data-prompt="总结当前跨境收款风险概况"><i class="ph ph-chart-line"></i><span><strong>风险概况</strong><small>入账、案件、名单和模型</small></span></button>
+        <button type="button" data-prompt="解释 PP-R021 规则的决策逻辑"><i class="ph ph-tree-structure"></i><span><strong>规则解释</strong><small>条件、分数与动作</small></span></button>
+        <button type="button" data-prompt="当前黑名单有哪些类型"><i class="ph ph-shield-slash"></i><span><strong>名单分布</strong><small>主体类型与最近记录</small></span></button>
+        <button type="button" data-prompt="未结案件和 P0/P1 案件有多少"><i class="ph ph-briefcase"></i><span><strong>案件压力</strong><small>未结和高优先级队列</small></span></button>
+      </div>
+      <div class="assistant-boundary"><i class="ph ph-info"></i><span>DeepSeek 不直接访问 MySQL，也不执行名单变更。外部接口异常时自动回退到本地分析。</span></div>
+    </aside>
+
+    <div class="chat-workspace">
+      <div class="chat-toolbar"><div><strong>对话记录</strong><span id="assistant-session-label">新会话</span></div><button class="btn-table" type="button" id="clear-assistant"><i class="ph ph-eraser"></i>清空</button></div>
+      <div class="chat-messages" id="chat-messages" aria-live="polite">
+        <article class="chat-message assistant-message"><div class="message-avatar"><i class="ph ph-robot"></i></div><div><strong>DeepSeek Risk Copilot</strong><div class="message-content"><p>我会先读取本地风控证据，再由 DeepSeek 总结结论、关键证据、风险判断和建议动作。</p><p>尝试输入“检查 IN_00000726”或使用左侧快捷问题。</p></div></div></article>
+      </div>
+      <form class="chat-composer" id="assistant-form">
+        <label class="visually-hidden" for="assistant-input">向 AI 风控助手提问</label>
+        <textarea class="form-control" id="assistant-input" rows="2" maxlength="2000" placeholder="输入交易号、规则 ID 或风险问题" required></textarea>
+        <button class="btn btn-primary" type="submit" id="send-assistant"><i class="ph ph-paper-plane-tilt"></i>发送</button>
+      </form>
+    </div>
+  </section>
+{% endblock %}

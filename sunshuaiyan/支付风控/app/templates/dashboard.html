@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block subtitle %}跨商户、付款人、贸易材料与资金路径的组合风险监控{% endblock %}
+{% block header_actions %}<button class="btn btn-primary btn-sm" id="refresh-dashboard"><i class="ph ph-arrows-clockwise"></i>刷新数据</button>{% endblock %}
+{% block content %}
+  <section class="metric-strip" aria-label="核心指标" id="metric-strip">
+    {% for _ in range(6) %}<div class="metric skeleton"><span></span><strong></strong><small></small></div>{% endfor %}
+  </section>
+
+  <section class="workspace-grid">
+    <div class="data-panel trend-panel">
+      <div class="panel-heading"><div><h2>近 30 日入账风险</h2><p>按入账日期统计高风险结果与美元金额</p></div><span class="legend"><i></i>高风险笔数</span></div>
+      <div class="chart-wrap loading-surface" id="trend-wrap"><canvas id="risk-trend" aria-label="近30日风险趋势图" role="img"></canvas></div>
+    </div>
+    <div class="data-panel queue-panel">
+      <div class="panel-heading"><div><h2>优先案件</h2><p>先处理高优先级未结案件</p></div><a href="/cases">查看全部</a></div>
+      <div id="case-preview" class="compact-list loading-surface"><div class="skeleton-row"></div><div class="skeleton-row"></div><div class="skeleton-row"></div></div>
+    </div>
+  </section>
+
+  <section class="data-panel transaction-panel">
+    <div class="panel-heading">
+      <div><h2>最近入账</h2><p>点击一笔交易执行规则与模型联合评估</p></div>
+      <div class="table-tools"><label for="transaction-search">筛选</label><input id="transaction-search" type="search" class="form-control form-control-sm" placeholder="交易号或商户名称"></div>
+    </div>
+    <div class="table-responsive">
+      <table class="table risk-table align-middle mb-0">
+        <thead><tr><th>交易</th><th>商户</th><th>付款人</th><th>金额</th><th>走廊</th><th>结果</th><th class="text-end">操作</th></tr></thead>
+        <tbody id="transaction-body"><tr><td colspan="7"><div class="table-skeleton"><span></span><span></span><span></span></div></td></tr></tbody>
+      </table>
+    </div>
+    <div id="transaction-empty" class="empty-state d-none"><i class="ph ph-magnifying-glass"></i><h3>没有匹配的入账</h3><p>调整筛选词后重试。</p></div>
+  </section>
+
+  <div class="offcanvas offcanvas-end evidence-drawer" tabindex="-1" id="evidenceDrawer" aria-labelledby="evidenceTitle">
+    <div class="offcanvas-header"><div><h2 id="evidenceTitle">风险评估</h2><p id="evidence-subtitle">正在加载交易证据</p></div><button class="btn-close" type="button" data-bs-dismiss="offcanvas" aria-label="关闭"></button></div>
+    <div class="offcanvas-body" id="evidence-body"><div class="drawer-skeleton"><span></span><span></span><span></span></div></div>
+  </div>
+{% endblock %}
