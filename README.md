@@ -1,8 +1,9 @@
-# 📊 Insight Demo 课程演示仓库
+# 📊 Risk Demo 课程演示仓库
 
 本仓库用于课程各小组的**演示成果提交与展示**。每位同学在**对应行业方向**下建立**自己的名字分支**，把代码 / 演示成果推送到自己的分支上。
 
-- 仓库地址：https://github.com/wyxaxx02419/insight_demo
+- 仓库地址：https://github.com/risk-demo-class/risk-demo
+- 所属组织：**risk-demo-class**（GitHub Organization）
 - 仓库为**公开**仓库：任何人都可以查看，但**只有被老师邀请的同学才能推送**。
 
 ---
@@ -11,17 +12,17 @@
 
 | 分支名 | 行业方向 | 保护状态 |
 |---|---|---|
-| `main` | 主分支 | 🔒 受保护，禁止直接推送 |
-| `tourism` | 旅游 | 🔒 受保护，禁止直接推送 |
-| `banking` | 银行 | 🔒 受保护，禁止直接推送 |
-| `education` | 教育 | 🔒 受保护，禁止直接推送 |
-| `manufacturing` | 制造业 | 🔒 受保护，禁止直接推送 |
-| `logistics` | 物流 | 🔒 受保护，禁止直接推送 |
-| `medical` | 医疗 | 🔒 受保护，禁止直接推送 |
-| `telecom` | 电信 | 🔒 受保护，禁止直接推送 |
-| `sharing-economy` | 共享经济 | 🔒 受保护，禁止直接推送 |
+| `main` | 主分支 | 🔒 受保护，仅组织所有者可推送 |
+| `tourism` | 旅游 | 🔒 受保护，仅组织所有者可推送 |
+| `banking` | 银行 | 🔒 受保护，仅组织所有者可推送 |
+| `education` | 教育 | 🔒 受保护，仅组织所有者可推送 |
+| `manufacturing` | 制造业 | 🔒 受保护，仅组织所有者可推送 |
+| `logistics` | 物流 | 🔒 受保护，仅组织所有者可推送 |
+| `medical` | 医疗 | 🔒 受保护，仅组织所有者可推送 |
+| `telecom` | 电信 | 🔒 受保护，仅组织所有者可推送 |
+| `sharing-economy` | 共享经济 | 🔒 受保护，仅组织所有者可推送 |
 
-> 🔒 受保护 = 不能直接推送（会被 GitHub 拒绝），改动需通过 Pull Request 由老师审查合并。这保证了行业分支和主分支**保持干净**。
+> 🔒 受保护 = 不能直接推送（会被 GitHub 拒绝）。这保证了行业分支和主分支**保持干净**。
 >
 > 同学们**不需要也不应该**直接推送到上面这些分支——你们推送的是**自己名字的分支**（见下文）。
 
@@ -32,7 +33,7 @@
 1. ✅ **每位同学只能往自己的分支推送**，分支用自己的名字命名（如 `zhangsan`、`li-xiaoming`）
 2. ✅ 自己的分支**从对应行业分支派生**（例如旅游组的同学从 `tourism` 派生），保证内容和行业主题一致
 3. 🚫 **禁止向 `main` 和 8 个行业分支直接推送**（已开启保护，推送会被拒绝）
-4. 🚫 **禁止修改、覆盖其他同学的分支**（请自觉遵守，尊重他人成果）
+4. 🚫 **禁止修改、覆盖其他同学的分支**
 5. 📁 建议在自己的分支里先建一个**自己名字的文件夹**放成果，便于查看
 
 ---
@@ -42,7 +43,7 @@
 ### 第 0 步：准备工作
 
 1. **注册 GitHub 账号**：https://github.com/join （已有账号跳过）
-2. **把你的 GitHub 用户名发给老师**——老师把你加为仓库协作者后，你才有推送权限（邀请链接会发到你的 GitHub 通知里，点 **Accept** 接受）
+2. **把你的 GitHub 用户名发给老师**——老师把你加入对应行业团队后，你才有推送权限
 3. **安装 Git**：https://git-scm.com/download/win 一路 Next 安装
 
 ### 第 1 步：克隆仓库到本地
@@ -50,8 +51,8 @@
 打开命令行（Windows 按 `Win+R` 输入 `cmd` 回车；或右键桌面 →「在终端中打开」），执行：
 
 ```bash
-git clone https://github.com/wyxaxx02419/insight_demo.git
-cd insight_demo
+git clone https://github.com/risk-demo-class/risk-demo.git
+cd risk-demo
 ```
 
 ### 第 2 步：从你的行业分支派生自己的分支（用自己的名字）
@@ -87,7 +88,7 @@ git push -u origin zhangsan
 
 ### 第 5 步：确认成果
 
-打开 https://github.com/wyxaxx02419/insight_demo ，点击左上角的 **Branch 下拉框**，选择你的分支名 `zhangsan`，即可看到你的文件。
+打开 https://github.com/risk-demo-class/risk-demo ，点击左上角的 **Branch 下拉框**，选择你的分支名 `zhangsan`，即可看到你的文件。
 
 ---
 
@@ -107,7 +108,7 @@ git push
 
 | 问题 | 原因与解决办法 |
 |---|---|
-| `Permission to ... denied` | 老师还没邀请你，或邀请没点接受。把 GitHub 用户名发给老师 |
+| `Permission to ... denied` | 老师还没把你加入团队，或邀请没接受。把 GitHub 用户名发给老师 |
 | `protected branch ... declined` / `Updates were rejected` | 你试图推送到受保护的分支（main 或行业分支）。改用自己名字的分支：`git checkout -b 你的名字 origin/你的行业分支` |
 | `master has no upstream branch` | 说明你在 `main` 上，先执行第 2 步建立自己的分支 |
 | 推送超时 / 网络错误 | GitHub 网络不稳定，可以开代理，或改用 SSH 方式（见下节） |
@@ -123,8 +124,8 @@ git push
 4. 之后用 SSH 地址克隆：
 
 ```bash
-git clone git@github.com:wyxaxx02419/insight_demo.git
-cd insight_demo
+git clone git@github.com:risk-demo-class/risk-demo.git
+cd risk-demo
 git checkout -b zhangsan origin/tourism
 # ... 后面的提交推送步骤一样
 ```
@@ -133,22 +134,41 @@ git checkout -b zhangsan origin/tourism
 
 ## 六、老师（管理员）操作备忘
 
-### 1. 添加学生为协作者（学生有推送权限的前提）
+组织下已建好 **8 个行业团队**（`tourism-team`、`banking-team`、`education-team`、`manufacturing-team`、`logistics-team`、`medical-team`、`telecom-team`、`sharing-economy-team`），都已对该仓库有 **push 权限**。学生加入团队后即可推送自己的分支。
+
+### 1. 把学生加入对应行业团队（推荐方式）
 
 ```bash
-gh repo add-collaborator wyxaxx02419/insight_demo <学生GitHub用户名> --permission push
+# 把 zhangsan 加入旅游组
+gh api -X PUT orgs/risk-demo-class/teams/tourism-team/memberships/zhangsan -f role=member
 ```
 
-或网页操作：仓库页面 → **Settings → Collaborators → Add people** → 输入学生用户名 → 选择 **Write** 权限 → 发送邀请。
+或网页操作：组织主页 → **Teams** → 进入 `tourism-team` → **Add member** → 输入学生用户名。
 
-### 2. 查看各分支的推送情况
+### 2. 严格锁定：每个学生分支只允许本人推送（组织仓库已支持 ✅）
+
+收集齐学生用户名后，对每个学生的分支设置「仅该学生可推送」（这样别人想推也推不上去）：
 
 ```bash
-gh api repos/wyxaxx02419/insight_demo/branches --jq '.[].name'   # 列出所有分支
-gh api "repos/wyxaxx02419/insight_demo/branches?per_page=100" --jq '.[] | select(.name != "main" and .name != "tourism" and .name != "banking" and .name != "education" and .name != "manufacturing" and .name != "logistics" and .name != "medical" and .name != "telecom" and .name != "sharing-economy") | .name'  # 只看学生的个人分支
+# 示例：锁定 zhangsan 的分支，只允许 zhangsan（和老师）推送
+gh api -X PUT repos/risk-demo-class/risk-demo/branches/zhangsan/protection \
+  -H "Accept: application/vnd.github+json" \
+  --input - <<'EOF'
+{"required_status_checks":null,"enforce_admins":false,
+ "required_pull_request_reviews":null,
+ "restrictions":{"users":["zhangsan"],"teams":[],"apps":[]}}
+EOF
 ```
 
-### 3. 合并学生成果到行业分支（可选：汇总演示）
+> 有多少个学生就执行多少次（分支名、用户名替换一下即可）。也可以把学生名单整理好发给我，我一次性帮你全部配置好。
+
+### 3. 查看各分支的推送情况
+
+```bash
+gh api "repos/risk-demo-class/risk-demo/branches?per_page=100" --jq '.[] | select(.name != "main" and .name != "tourism" and .name != "banking" and .name != "education" and .name != "manufacturing" and .name != "logistics" and .name != "medical" and .name != "telecom" and .name != "sharing-economy") | .name'   # 只看学生的个人分支
+```
+
+### 4. 合并学生成果到行业分支（可选：汇总演示）
 
 ```bash
 # 本地操作示例：把 zhangsan 的成果合并进 tourism
@@ -159,16 +179,7 @@ git merge origin/zhangsan
 git push
 ```
 
-或直接在网页上：zhangsan 分支 → **Contribute → Open pull request** → 目标选 `tourism` → 你自己审查并 Merge。
-
-### 4. 关于「严格限制每人只能推自己的分支」
-
-GitHub **个人账号**的仓库无法设置「只允许指定用户推送」（该功能仅**组织 Organization** 仓库可用）。当前仓库的防护是：
-
-- `main` 和 8 个行业分支：**禁止直接推送**（需 PR，由老师审查）✅
-- 学生个人分支：靠规则约定 + 老师监督（学生互相不推送对方分支）
-
-如果希望实现**绝对严格**的每人分支隔离，可以免费创建一个 **GitHub Organization**（https://github.com/organizations/new ），把仓库转移到组织下，即可对每个学生分支设置「仅该学生可推送」。需要的话可以找我帮忙配置。
+或直接在网页上：打开 zhangsan 分支 → **Contribute → Open pull request** → 目标选 `tourism` → 你自己审查并 Merge。
 
 ---
 
