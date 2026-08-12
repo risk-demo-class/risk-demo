@@ -1,0 +1,494 @@
+{% extends "base.html" %}
+{% block title %}教育业务 - 风控中心{% endblock %}
+{% block extra_css %}
+<style>
+    .student-link {
+        border: 0;
+        background: transparent;
+        color: #111827;
+        font-weight: 700;
+        padding: 0;
+        text-align: left;
+    }
+    .student-link:hover {
+        color: #0d6efd;
+        text-decoration: underline;
+    }
+    .student-row {
+        cursor: pointer;
+    }
+    .student-row:hover > td {
+        background: #f8fbff;
+    }
+    .student-detail-tile {
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        padding: 12px;
+        background: #fff;
+        height: 100%;
+    }
+    .student-detail-label {
+        color: #6b7280;
+        font-size: 12px;
+        margin-bottom: 4px;
+    }
+    .student-detail-value {
+        font-weight: 700;
+        font-size: 18px;
+    }
+</style>
+{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h4 class="mb-1">教育业务数据</h4>
+        <div class="text-muted small">课程报名、预收费、学习履约、退费与合规风险</div>
+    </div>
+    <div class="d-flex gap-2">
+        <span class="badge bg-success d-inline-flex align-items-center px-3" id="auto-risk-status">
+            <i class="bi bi-shield-check me-1"></i> 自动评估已开启
+        </span>
+        <button class="btn btn-outline-primary btn-sm" onclick="loadEducationPage(1)">
+            <i class="bi bi-arrow-clockwise"></i> 刷新
+        </button>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="card stat-card p-3">
+            <div class="text-muted small">学员/家长/教师</div>
+            <div class="stat-value text-primary" id="edu-users">-</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card p-3">
+            <div class="text-muted small">课程数</div>
+            <div class="stat-value text-success" id="edu-courses">-</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card p-3">
+            <div class="text-muted small">报名单</div>
+            <div class="stat-value text-info" id="edu-enrollments">-</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card p-3">
+            <div class="text-muted small">支付单</div>
+            <div class="stat-value text-secondary" id="edu-payments">-</div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-2">
+        <div class="card stat-card p-3">
+            <div class="text-muted small">预收费超限</div>
+            <div class="fs-3 fw-bold text-danger" id="edu-risky-prepay">-</div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card stat-card p-3">
+            <div class="text-muted small">非监管/培训贷</div>
+            <div class="fs-3 fw-bold text-warning" id="edu-bad-payments">-</div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card stat-card p-3">
+            <div class="text-muted small">低学时退款</div>
+            <div class="fs-3 fw-bold text-danger" id="edu-low-refunds">-</div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card stat-card p-3">
+            <div class="text-muted small">共享设备</div>
+            <div class="fs-3 fw-bold text-warning" id="edu-shared-devices">-</div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card stat-card p-3">
+            <div class="text-muted small">7日活跃</div>
+            <div class="fs-3 fw-bold text-success" id="edu-active-7d">-</div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card stat-card p-3">
+            <div class="text-muted small">投诉</div>
+            <div class="fs-3 fw-bold text-secondary" id="edu-complaints">-</div>
+        </div>
+    </div>
+</div>
+
+<div class="card stat-card">
+    <div class="card-header bg-white">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h6 class="mb-0">最近报名单</h6>
+            <span class="text-muted small" id="edu-total-text">-</span>
+        </div>
+        <div class="d-flex gap-2 align-items-center flex-wrap">
+            <select class="form-select form-select-sm w-auto" id="filterRiskFlag" onchange="loadEducationPage(1)">
+                <option value="">全部风险信号</option>
+                <option value="正常">正常</option>
+                <option value="预收费超限">预收费超限</option>
+                <option value="非监管账户">非监管账户</option>
+                <option value="培训贷">培训贷</option>
+                <option value="未成年人同意缺失">未成年人同意缺失</option>
+                <option value="机构合规异常">机构合规异常</option>
+            </select>
+            <select class="form-select form-select-sm w-auto" id="filterEnrollStatus" onchange="loadEducationPage(1)">
+                <option value="">全部状态</option>
+                <option value="ACTIVE">ACTIVE</option>
+                <option value="COMPLETED">COMPLETED</option>
+                <option value="REFUNDING">REFUNDING</option>
+                <option value="CANCELLED">CANCELLED</option>
+            </select>
+            <select class="form-select form-select-sm w-auto" id="filterSubjectType" onchange="loadEducationPage(1)">
+                <option value="">全部课程类型</option>
+                <option value="SUBJECT">SUBJECT</option>
+                <option value="NON_SUBJECT">NON_SUBJECT</option>
+            </select>
+            <select class="form-select form-select-sm w-auto" id="filterInstitutionStatus" onchange="loadEducationPage(1)">
+                <option value="">全部机构</option>
+                <option value="normal">机构正常</option>
+                <option value="abnormal">机构合规异常</option>
+            </select>
+            <input type="text" class="form-control form-control-sm w-auto" id="filterKeyword"
+                   placeholder="报名ID/学员ID/课程/机构"
+                   onkeydown="if(event.key==='Enter') loadEducationPage(1)">
+            <button class="btn btn-outline-primary btn-sm" onclick="loadEducationPage(1)">查询</button>
+            <button class="btn btn-outline-secondary btn-sm" onclick="resetEducationFilters()">重置</button>
+        </div>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>报名ID</th>
+                    <th>学员</th>
+                    <th>课程</th>
+                    <th>机构</th>
+                    <th>预收费</th>
+                    <th>金额</th>
+                    <th>状态</th>
+                    <th>风险信号</th>
+                    <th>报名时间</th>
+                </tr>
+            </thead>
+            <tbody id="edu-enrollment-body">
+                <tr><td colspan="9" class="text-muted text-center py-4">加载中...</td></tr>
+            </tbody>
+        </table>
+    </div>
+    <div class="pagination-bottom">
+        <ul class="pagination" id="edu-pagination"></ul>
+    </div>
+</div>
+
+<div class="modal fade" id="studentDetailModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div>
+                    <h5 class="modal-title" id="student-detail-title">学生详情</h5>
+                    <div class="text-muted small" id="student-detail-subtitle">-</div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="关闭"></button>
+            </div>
+            <div class="modal-body" id="student-detail-body">
+                <div class="text-muted py-4 text-center">加载中...</div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let eduCurrentPage = 1;
+
+function badgeForFlag(flag) {
+    const cls = flag.includes('超限') || flag.includes('培训贷') || flag.includes('异常')
+        ? 'bg-danger'
+        : 'bg-warning text-dark';
+    return `<span class="badge ${cls} me-1 mb-1">${flag}</span>`;
+}
+
+function escapeHtml(value) {
+    return String(value ?? '-')
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#39;');
+}
+
+function money(value) {
+    return `¥${Number(value || 0).toFixed(2)}`;
+}
+
+function percent(value) {
+    return `${(Number(value || 0) * 100).toFixed(1)}%`;
+}
+
+function riskLevelBadge(level) {
+    const cls = level === '极高' ? 'bg-danger' : (level === '高' ? 'bg-warning text-dark' : (level === '中' ? 'bg-info text-dark' : 'bg-success'));
+    return `<span class="badge ${cls}">${escapeHtml(level || '未评估')}</span>`;
+}
+
+async function loadEducationOverview() {
+    const data = await apiRequest('/api/education/overview');
+    document.getElementById('edu-users').textContent = data.total_users || 0;
+    document.getElementById('edu-courses').textContent = data.total_courses || 0;
+    document.getElementById('edu-enrollments').textContent = data.total_enrollments || 0;
+    document.getElementById('edu-payments').textContent = data.total_payments || 0;
+    document.getElementById('edu-risky-prepay').textContent = data.risky_prepay || 0;
+    document.getElementById('edu-bad-payments').textContent = data.non_supervised_payments || 0;
+    document.getElementById('edu-low-refunds').textContent = data.low_study_refunds || 0;
+    document.getElementById('edu-shared-devices').textContent = data.shared_devices || 0;
+    document.getElementById('edu-active-7d').textContent = data.active_7d || 0;
+    document.getElementById('edu-complaints').textContent = data.complaints || 0;
+    const autoStatus = document.getElementById('auto-risk-status');
+    const created = data.auto_assess_created || 0;
+    autoStatus.innerHTML = created > 0
+        ? `<i class="bi bi-shield-check me-1"></i> 自动评估已处理 ${created} 条`
+        : '<i class="bi bi-shield-check me-1"></i> 自动评估已开启';
+}
+
+async function loadEducationPage(page = 1) {
+    eduCurrentPage = page;
+    await loadEducationOverview();
+    const params = new URLSearchParams({page, page_size: 20});
+    const filters = {
+        risk_flag: document.getElementById('filterRiskFlag')?.value || '',
+        status: document.getElementById('filterEnrollStatus')?.value || '',
+        subject_type: document.getElementById('filterSubjectType')?.value || '',
+        institution_status: document.getElementById('filterInstitutionStatus')?.value || '',
+        keyword: document.getElementById('filterKeyword')?.value.trim() || '',
+    };
+    Object.entries(filters).forEach(([key, value]) => {
+        if (value) params.set(key, value);
+    });
+    const data = await apiRequest(`/api/education/enrollments?${params.toString()}`);
+    document.getElementById('edu-total-text').textContent = `共 ${data.total || 0} 条`;
+    const body = document.getElementById('edu-enrollment-body');
+    if (!data.items || data.items.length === 0) {
+        body.innerHTML = '<tr><td colspan="9" class="text-muted text-center py-4">暂无教育业务数据</td></tr>';
+    } else {
+        body.innerHTML = data.items.map(item => {
+            const flags = item.risk_flags && item.risk_flags.length
+                ? item.risk_flags.map(badgeForFlag).join('')
+                : '<span class="badge bg-success">正常</span>';
+            return `
+                <tr class="student-row" onclick="openStudentDetail('${item.user_id}')">
+                    <td><code>${item.enrollment_id}</code></td>
+                    <td>
+                        <button type="button" class="student-link" title="${item.user_id}">
+                            ${escapeHtml(item.student_name)}
+                        </button>
+                        <div class="text-muted small">${item.grade || '-'} / ${item.age || '-'}岁</div>
+                    </td>
+                    <td>
+                        <div>${item.course_name}</div>
+                        <div class="text-muted small">${item.subject_type} / ${item.total_hours}课时</div>
+                    </td>
+                    <td>${item.institution_name}</td>
+                    <td>${item.prepaid_months}个月 / ${item.prepaid_hours}课时</td>
+                    <td>¥${Number(item.pay_amount || 0).toFixed(2)}</td>
+                    <td><span class="badge bg-light text-dark">${item.enrollment_status}</span></td>
+                    <td>${flags}</td>
+                    <td class="text-muted small">${item.enrolled_at || '-'}</td>
+                </tr>
+            `;
+        }).join('');
+    }
+    document.getElementById('edu-pagination').innerHTML = buildPaginationHtml(
+        data.page || 1, data.total_pages || 1, data.page_size || 20, 'loadEducationPage', 'edu-pagination'
+    );
+}
+
+function renderStudentDetail(data) {
+    const s = data.student || {};
+    const summary = data.summary || {};
+    const flags = summary.risk_flags && summary.risk_flags.length
+        ? summary.risk_flags.map(badgeForFlag).join('')
+        : '<span class="badge bg-success">正常</span>';
+
+    document.getElementById('student-detail-title').textContent = `${s.student_name || '-'} 的学生详情`;
+    document.getElementById('student-detail-subtitle').textContent = `${s.user_id || '-'} / ${s.grade || '-'} / ${s.age || '-'}岁`;
+
+    const enrollmentRows = (data.enrollments || []).map(item => `
+        <tr>
+            <td><code>${escapeHtml(item.enrollment_id)}</code></td>
+            <td>
+                <div>${escapeHtml(item.course_name)}</div>
+                <div class="text-muted small">${escapeHtml(item.subject_type)} / ${escapeHtml(item.total_hours)}课时</div>
+            </td>
+            <td>${escapeHtml(item.institution_name)}</td>
+            <td>${escapeHtml(item.prepaid_months)}个月 / ${escapeHtml(item.prepaid_hours)}课时</td>
+            <td>${money(item.pay_amount)}</td>
+            <td><span class="badge bg-light text-dark">${escapeHtml(item.enrollment_status)}</span></td>
+        </tr>
+    `).join('') || '<tr><td colspan="6" class="text-muted text-center py-3">暂无报名记录</td></tr>';
+
+    const refundRows = (data.refunds || []).map(item => `
+        <tr>
+            <td><code>${escapeHtml(item.refund_id)}</code></td>
+            <td>${escapeHtml(item.refund_reason)}</td>
+            <td>${escapeHtml(item.study_minutes_before_refund)} 分钟</td>
+            <td>${money(item.refund_amount)}</td>
+            <td><span class="badge bg-light text-dark">${escapeHtml(item.refund_status)}</span></td>
+            <td class="text-muted small">${escapeHtml(item.applied_at)}</td>
+        </tr>
+    `).join('') || '<tr><td colspan="6" class="text-muted text-center py-3">暂无退费记录</td></tr>';
+
+    const assessmentRows = (data.assessments || []).map(item => `
+        <tr>
+            <td>${escapeHtml(item.event_type)}</td>
+            <td><code>${escapeHtml(item.event_source_id)}</code></td>
+            <td class="fw-bold">${escapeHtml(item.final_score)}</td>
+            <td>${riskLevelBadge(item.risk_level)}</td>
+            <td><span class="badge bg-light text-dark">${escapeHtml(item.decision)}</span></td>
+            <td>${escapeHtml(item.rule_count)}</td>
+            <td class="text-muted small">${escapeHtml(item.create_time)}</td>
+        </tr>
+    `).join('') || '<tr><td colspan="7" class="text-muted text-center py-3">暂无评估记录</td></tr>';
+
+    const complaintItems = (data.complaints || []).map(item => `
+        <div class="d-flex justify-content-between border-bottom py-2">
+            <span>${escapeHtml(item.complaint_type)} / ${escapeHtml(item.complaint_status)}</span>
+            <span class="text-muted small">${escapeHtml(item.created_at)}</span>
+        </div>
+    `).join('') || '<div class="text-muted py-2">暂无投诉</div>';
+
+    const certItems = (data.certifications || []).map(item => `
+        <div class="d-flex justify-content-between border-bottom py-2">
+            <span>${escapeHtml(item.cert_type)} / ${escapeHtml(item.cert_verify_source)}</span>
+            <span class="badge bg-light text-dark">${escapeHtml(item.verify_result)}</span>
+        </div>
+    `).join('') || '<div class="text-muted py-2">暂无核验记录</div>';
+
+    document.getElementById('student-detail-body').innerHTML = `
+        <div class="row g-3 mb-3">
+            <div class="col-md-3">
+                <div class="student-detail-tile">
+                    <div class="student-detail-label">最新风险</div>
+                    <div class="student-detail-value">${riskLevelBadge(summary.latest_risk_level)}</div>
+                    <div class="text-muted small mt-2">决策: ${escapeHtml(summary.latest_decision)} / 分数: ${escapeHtml(summary.latest_score ?? '-')}</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="student-detail-tile">
+                    <div class="student-detail-label">报名与支付</div>
+                    <div class="student-detail-value">${escapeHtml(summary.enrollment_count)} 单</div>
+                    <div class="text-muted small mt-2">${escapeHtml(summary.payment_count)} 笔 / ${money(summary.payment_amount)}</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="student-detail-tile">
+                    <div class="student-detail-label">学习履约</div>
+                    <div class="student-detail-value">${escapeHtml(summary.watch_minutes)} 分钟</div>
+                    <div class="text-muted small mt-2">平均完成率 ${percent(summary.avg_completion)}</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="student-detail-tile">
+                    <div class="student-detail-label">退费</div>
+                    <div class="student-detail-value">${escapeHtml(summary.refund_count)} 次</div>
+                    <div class="text-muted small mt-2">${money(summary.refund_amount)}</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-3 mb-3">
+            <div class="col-md-7">
+                <div class="border rounded p-3 h-100">
+                    <h6>基础画像</h6>
+                    <div class="row small gy-2">
+                        <div class="col-md-6">学员ID: <code>${escapeHtml(s.user_id)}</code></div>
+                        <div class="col-md-6">平台学员号: <code>${escapeHtml(s.student_id)}</code></div>
+                        <div class="col-md-6">实名状态: ${escapeHtml(s.real_name_status)}</div>
+                        <div class="col-md-6">监护同意: ${escapeHtml(s.guardian_consent_status)}</div>
+                        <div class="col-md-6">注册地区: ${escapeHtml(s.ip_region)}</div>
+                        <div class="col-md-6">注册时间: ${escapeHtml(s.register_at)}</div>
+                        <div class="col-md-6">同设备账号数: ${escapeHtml(s.same_device_users)}</div>
+                        <div class="col-md-6">最近学习: ${escapeHtml(summary.last_active_at)}</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-5">
+                <div class="border rounded p-3 h-100">
+                    <h6>风险信号</h6>
+                    <div>${flags}</div>
+                </div>
+            </div>
+        </div>
+
+        <h6>报名课程</h6>
+        <div class="table-responsive mb-3">
+            <table class="table table-sm align-middle">
+                <thead class="table-light"><tr><th>报名ID</th><th>课程</th><th>机构</th><th>预收费</th><th>金额</th><th>状态</th></tr></thead>
+                <tbody>${enrollmentRows}</tbody>
+            </table>
+        </div>
+
+        <div class="row g-3 mb-3">
+            <div class="col-md-7">
+                <h6>退费记录</h6>
+                <div class="table-responsive">
+                    <table class="table table-sm align-middle">
+                        <thead class="table-light"><tr><th>退费ID</th><th>原因</th><th>退款前学习</th><th>金额</th><th>状态</th><th>申请时间</th></tr></thead>
+                        <tbody>${refundRows}</tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="col-md-5">
+                <h6>投诉与核验</h6>
+                <div class="border rounded p-3 mb-2">${complaintItems}</div>
+                <div class="border rounded p-3">${certItems}</div>
+            </div>
+        </div>
+
+        <h6>最近评估</h6>
+        <div class="table-responsive">
+            <table class="table table-sm align-middle">
+                <thead class="table-light"><tr><th>事件</th><th>业务ID</th><th>分数</th><th>等级</th><th>决策</th><th>命中</th><th>时间</th></tr></thead>
+                <tbody>${assessmentRows}</tbody>
+            </table>
+        </div>
+    `;
+}
+
+async function openStudentDetail(userId) {
+    const modalEl = document.getElementById('studentDetailModal');
+    const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+    document.getElementById('student-detail-title').textContent = '学生详情';
+    document.getElementById('student-detail-subtitle').textContent = userId;
+    document.getElementById('student-detail-body').innerHTML =
+        '<div class="text-muted py-4 text-center">加载中...</div>';
+    modal.show();
+    try {
+        const data = await apiRequest(`/api/education/students/${encodeURIComponent(userId)}`);
+        renderStudentDetail(data);
+    } catch (err) {
+        document.getElementById('student-detail-body').innerHTML =
+            `<div class="alert alert-danger mb-0">加载失败: ${escapeHtml(err.message)}</div>`;
+    }
+}
+
+function resetEducationFilters() {
+    document.getElementById('filterRiskFlag').value = '';
+    document.getElementById('filterEnrollStatus').value = '';
+    document.getElementById('filterSubjectType').value = '';
+    document.getElementById('filterInstitutionStatus').value = '';
+    document.getElementById('filterKeyword').value = '';
+    loadEducationPage(1);
+}
+
+loadEducationPage(1).catch(err => {
+    console.error(err);
+    document.getElementById('edu-enrollment-body').innerHTML =
+        `<tr><td colspan="9" class="text-danger text-center py-4">${err.message}</td></tr>`;
+});
+</script>
+{% endblock %}

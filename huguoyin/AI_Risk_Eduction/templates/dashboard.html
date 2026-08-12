@@ -1,0 +1,361 @@
+{% extends "base.html" %}
+{% block title %}监控大屏 - 教育风控系统{% endblock %}
+{% block extra_css %}
+<style>
+    body { background: #111827; }
+    .main-content {
+        background: radial-gradient(circle at 20% 0%, rgba(14, 165, 233, .14), transparent 30%),
+                    radial-gradient(circle at 100% 20%, rgba(34, 197, 94, .12), transparent 28%),
+                    #111827;
+        color: #e5e7eb;
+    }
+    .screen-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 18px;
+    }
+    .screen-title {
+        font-size: 26px;
+        font-weight: 800;
+        letter-spacing: 0;
+        margin: 0;
+    }
+    .screen-subtitle { color: #94a3b8; font-size: 13px; }
+    .screen-clock {
+        color: #bfdbfe;
+        font-family: Consolas, monospace;
+        font-size: 14px;
+    }
+    .monitor-panel {
+        background: rgba(17, 24, 39, .82);
+        border: 1px solid rgba(148, 163, 184, .22);
+        border-radius: 8px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, .22);
+    }
+    .metric-grid {
+        display: grid;
+        grid-template-columns: repeat(6, minmax(0, 1fr));
+        gap: 12px;
+        margin-bottom: 14px;
+    }
+    .metric-card {
+        padding: 14px;
+        min-height: 96px;
+    }
+    .metric-label {
+        color: #94a3b8;
+        font-size: 13px;
+        margin-bottom: 8px;
+    }
+    .metric-value {
+        font-size: 30px;
+        line-height: 1;
+        font-weight: 800;
+        color: #f8fafc;
+    }
+    .metric-foot {
+        color: #64748b;
+        font-size: 12px;
+        margin-top: 8px;
+    }
+    .text-cyan { color: #22d3ee; }
+    .text-lime { color: #84cc16; }
+    .text-amber { color: #fbbf24; }
+    .text-red { color: #fb7185; }
+    .text-violet { color: #a78bfa; }
+    .screen-layout {
+        display: grid;
+        grid-template-columns: 1.7fr 1fr;
+        gap: 14px;
+    }
+    .panel-title {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 12px 14px 0;
+        font-weight: 700;
+        color: #f8fafc;
+    }
+    .panel-title small { color: #64748b; font-weight: 400; }
+    .chart-box { padding: 10px 14px 14px; height: 330px; }
+    .side-stack { display: grid; gap: 14px; }
+    .rank-list, .case-list { padding: 8px 14px 14px; }
+    .rank-row, .case-row {
+        display: grid;
+        align-items: center;
+        gap: 10px;
+        padding: 9px 0;
+        border-bottom: 1px solid rgba(148, 163, 184, .16);
+    }
+    .rank-row { grid-template-columns: 1fr auto; }
+    .case-row { grid-template-columns: 90px 1fr auto; }
+    .rank-row:last-child, .case-row:last-child { border-bottom: 0; }
+    .rank-name, .case-main { color: #e5e7eb; font-size: 13px; }
+    .case-sub { color: #94a3b8; font-size: 12px; margin-top: 2px; }
+    .pill {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 34px;
+        height: 24px;
+        padding: 0 8px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 700;
+        background: rgba(59, 130, 246, .2);
+        color: #93c5fd;
+    }
+    .pill-red { background: rgba(244, 63, 94, .18); color: #fb7185; }
+    .pill-amber { background: rgba(245, 158, 11, .18); color: #fbbf24; }
+    .pill-green { background: rgba(34, 197, 94, .16); color: #86efac; }
+    .sub-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 14px;
+        margin-top: 14px;
+    }
+    @media (max-width: 1200px) {
+        .metric-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+        .screen-layout { grid-template-columns: 1fr; }
+    }
+</style>
+{% endblock %}
+{% block content %}
+<div class="screen-header">
+    <div>
+        <h4 class="screen-title">教育风控监控大屏</h4>
+        <div class="screen-subtitle">报名交易、预收费合规、资金账户、未成年人保护与案件处置态势</div>
+    </div>
+    <div class="text-end">
+        <div class="screen-clock" id="screen-clock">-</div>
+        <button class="btn btn-outline-info btn-sm mt-2" onclick="loadDashboard()">
+            <i class="bi bi-arrow-clockwise"></i> 刷新
+        </button>
+    </div>
+</div>
+
+<div class="metric-grid">
+    <div class="monitor-panel metric-card">
+        <div class="metric-label">评估总量</div>
+        <div class="metric-value text-cyan" id="m-total">-</div>
+        <div class="metric-foot">已进入评估历史</div>
+    </div>
+    <div class="monitor-panel metric-card">
+        <div class="metric-label">高风险/极高</div>
+        <div class="metric-value text-red" id="m-risk">-</div>
+        <div class="metric-foot" id="m-risk-rate">风险占比 -</div>
+    </div>
+    <div class="monitor-panel metric-card">
+        <div class="metric-label">待审案件</div>
+        <div class="metric-value text-amber" id="m-pending">-</div>
+        <div class="metric-foot">人工复核队列</div>
+    </div>
+    <div class="monitor-panel metric-card">
+        <div class="metric-label">自动拒绝</div>
+        <div class="metric-value text-red" id="m-rejected">-</div>
+        <div class="metric-foot" id="m-reject-rate">拒绝率 -</div>
+    </div>
+    <div class="monitor-panel metric-card">
+        <div class="metric-label">预收费风险</div>
+        <div class="metric-value text-violet" id="m-prepay">-</div>
+        <div class="metric-foot">超3个月或60课时</div>
+    </div>
+    <div class="monitor-panel metric-card">
+        <div class="metric-label">资金合规风险</div>
+        <div class="metric-value text-amber" id="m-funding">-</div>
+        <div class="metric-foot">非监管账户/培训贷</div>
+    </div>
+</div>
+
+<div class="screen-layout">
+    <div>
+        <div class="monitor-panel">
+            <div class="panel-title">
+                <span>风险评估趋势</span>
+                <small>按数据窗口统计</small>
+            </div>
+            <div class="chart-box">
+                <canvas id="trendChart"></canvas>
+            </div>
+        </div>
+        <div class="sub-grid">
+            <div class="monitor-panel">
+                <div class="panel-title"><span>决策分布</span><small>通过 / 审核 / 拒绝</small></div>
+                <div class="chart-box" style="height:260px"><canvas id="decisionChart"></canvas></div>
+            </div>
+            <div class="monitor-panel">
+                <div class="panel-title"><span>风险类型分布</span><small>案件分类</small></div>
+                <div class="chart-box" style="height:260px"><canvas id="categoryChart"></canvas></div>
+            </div>
+        </div>
+    </div>
+    <div class="side-stack">
+        <div class="monitor-panel">
+            <div class="panel-title"><span>规则命中排行</span><small>Top 6</small></div>
+            <div class="rank-list" id="top-rules"></div>
+        </div>
+        <div class="monitor-panel">
+            <div class="panel-title"><span>最新案件</span><small>处置队列</small></div>
+            <div class="case-list" id="latest-cases"></div>
+        </div>
+        <div class="monitor-panel">
+            <div class="panel-title"><span>教育业务信号</span><small>原始业务表</small></div>
+            <div class="rank-list">
+                <div class="rank-row"><span class="rank-name">课程报名单</span><span class="pill" id="m-enrollments">-</span></div>
+                <div class="rank-row"><span class="rank-name">低学时退款</span><span class="pill pill-red" id="m-low-refund">-</span></div>
+                <div class="rank-row"><span class="rank-name">人工审核率</span><span class="pill pill-amber" id="m-review-rate">-</span></div>
+                <div class="rank-row"><span class="rank-name">通过率</span><span class="pill pill-green" id="m-pass-rate">-</span></div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let trendChart, decisionChart, categoryChart;
+
+function updateClock() {
+    const now = new Date();
+    document.getElementById('screen-clock').textContent = now.toLocaleString('zh-CN');
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+function setText(id, value) {
+    document.getElementById(id).textContent = value;
+}
+
+function statusPill(status) {
+    if (status === '已拒绝') return 'pill pill-red';
+    if (status === '待审核') return 'pill pill-amber';
+    if (status === '已通过') return 'pill pill-green';
+    return 'pill';
+}
+
+function destroyChart(chart) {
+    if (chart) chart.destroy();
+}
+
+async function loadDashboard() {
+    const data = await apiRequest('/api/dashboard/overview');
+    const total = data.total_assessments || 0;
+    setText('m-total', total);
+    setText('m-risk', data.risk_total || 0);
+    setText('m-pending', data.pending_cases || 0);
+    setText('m-rejected', data.auto_rejected || 0);
+    setText('m-prepay', data.risky_prepay || 0);
+    setText('m-funding', data.funding_risk || 0);
+    setText('m-enrollments', data.total_enrollments || 0);
+    setText('m-low-refund', data.low_study_refunds || 0);
+    setText('m-pass-rate', `${data.pass_rate || 0}%`);
+    setText('m-review-rate', `${data.review_rate || 0}%`);
+    setText('m-reject-rate', `拒绝率 ${data.reject_rate || 0}%`);
+    const riskRate = total ? (((data.risk_total || 0) / total) * 100).toFixed(1) : 0;
+    setText('m-risk-rate', `风险占比 ${riskRate}%`);
+
+    const trend = data.trend_14d || [];
+    destroyChart(trendChart);
+    trendChart = new Chart(document.getElementById('trendChart'), {
+        type: 'line',
+        data: {
+            labels: trend.map(t => t.date.slice(5)),
+            datasets: [
+                { label: '评估总量', data: trend.map(t => t.count), borderColor: '#22d3ee', backgroundColor: 'rgba(34,211,238,.12)', tension: .35, fill: true },
+                { label: '高风险', data: trend.map(t => t.high_risk_count), borderColor: '#fb7185', backgroundColor: 'rgba(251,113,133,.08)', tension: .35, fill: true },
+                { label: '拒绝', data: trend.map(t => t.reject_count), borderColor: '#fbbf24', tension: .35 }
+            ]
+        },
+        options: chartOptions()
+    });
+
+    destroyChart(decisionChart);
+    decisionChart = new Chart(document.getElementById('decisionChart'), {
+        type: 'doughnut',
+        data: {
+            labels: ['通过', '人工审核', '拒绝'],
+            datasets: [{
+                data: [data.passed || 0, data.manual_review || 0, data.auto_rejected || 0],
+                backgroundColor: ['#22c55e', '#f59e0b', '#f43f5e']
+            }]
+        },
+        options: doughnutOptions()
+    });
+
+    const categories = data.risk_categories || [];
+    destroyChart(categoryChart);
+    categoryChart = new Chart(document.getElementById('categoryChart'), {
+        type: 'bar',
+        data: {
+            labels: categories.map(c => c.name),
+            datasets: [{ label: '案件数', data: categories.map(c => c.count), backgroundColor: '#38bdf8' }]
+        },
+        options: chartOptions(false)
+    });
+
+    renderTopRules(data.top_rules || []);
+    renderLatestCases(data.latest_cases || []);
+}
+
+function chartOptions(showLegend = true) {
+    return {
+        maintainAspectRatio: false,
+        responsive: true,
+        plugins: {
+            legend: { display: showLegend, labels: { color: '#cbd5e1' } }
+        },
+        scales: {
+            x: { ticks: { color: '#94a3b8' }, grid: { color: 'rgba(148,163,184,.14)' } },
+            y: { ticks: { color: '#94a3b8' }, grid: { color: 'rgba(148,163,184,.14)' }, beginAtZero: true }
+        }
+    };
+}
+
+function doughnutOptions() {
+    return {
+        maintainAspectRatio: false,
+        responsive: true,
+        plugins: { legend: { position: 'bottom', labels: { color: '#cbd5e1' } } }
+    };
+}
+
+function renderTopRules(rules) {
+    const el = document.getElementById('top-rules');
+    if (!rules.length) {
+        el.innerHTML = '<div class="text-muted small py-3">暂无命中规则</div>';
+        return;
+    }
+    el.innerHTML = rules.map(r => `
+        <div class="rank-row">
+            <div>
+                <div class="rank-name">${r.rule_name}</div>
+                <div class="case-sub">${r.rule_id}</div>
+            </div>
+            <span class="pill">${r.hit_count}</span>
+        </div>
+    `).join('');
+}
+
+function renderLatestCases(cases) {
+    const el = document.getElementById('latest-cases');
+    if (!cases.length) {
+        el.innerHTML = '<div class="text-muted small py-3">暂无案件</div>';
+        return;
+    }
+    el.innerHTML = cases.map(c => `
+        <div class="case-row">
+            <span class="${statusPill(c.case_status)}">${c.case_status}</span>
+            <div>
+                <div class="case-main">${c.case_category || '未知'} · ${c.final_score}</div>
+                <div class="case-sub">${c.user_id} / ${c.source_id || '-'}</div>
+            </div>
+            <span class="pill ${c.risk_level === '极高' ? 'pill-red' : 'pill-amber'}">${c.risk_level}</span>
+        </div>
+    `).join('');
+}
+
+loadDashboard().catch(err => console.error('监控大屏加载失败:', err));
+setInterval(loadDashboard, 30000);
+</script>
+{% endblock %}
