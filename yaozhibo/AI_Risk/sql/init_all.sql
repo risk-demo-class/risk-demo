@@ -1,0 +1,16 @@
+-- 在线教育风控数据库初始化说明
+-- 推荐执行：python scripts/init_db.py --reset --yes
+--
+-- 手工初始化顺序：
+-- 1. init_business_tables.sql  6张教育业务表
+-- 2. init_business_data.sql    教育种子数据
+-- 3. init_risk_tables.sql      9张通用风控表
+-- 4. init_risk_data.sql        7条教育风控规则
+--
+-- 示例：
+-- mysql -u root -p --default-character-set=utf8mb4 ecs < sql/init_business_tables.sql
+-- mysql -u root -p --default-character-set=utf8mb4 ecs < sql/init_business_data.sql
+-- mysql -u root -p --default-character-set=utf8mb4 ecs < sql/init_risk_tables.sql
+-- mysql -u root -p --default-character-set=utf8mb4 ecs < sql/init_risk_data.sql
+--
+-- 警告：--reset 会清空当前 DB_NAME 中的已有表和数据。
