@@ -1,0 +1,195 @@
+{% extends "base.html" %}
+{% block title %}AI 助手 - 银行风控系统{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1><i class="bi bi-robot"></i> AI 风控助手</h1>
+    <div class="breadcrumb-nav">基于大模型的风控智能问答</div>
+</div>
+
+<div class="card-fresh" style="max-width:900px;margin:0 auto;">
+    <div class="card-header-fresh">
+        <span><i class="bi bi-cpu me-2" style="color:var(--primary-teal);"></i>智能对话</span>
+        <button class="btn btn-sm btn-teal-outline" onclick="clearChat()">
+            <i class="bi bi-arrow-repeat"></i> 清空对话
+        </button>
+    </div>
+
+    <div class="card-body-fresh p-0">
+        <!-- 聊天消息区 -->
+        <div class="chat-container" style="height:calc(100vh - 280px);">
+            <div class="chat-messages" id="chat-messages">
+                <!-- AI 欢迎消息 -->
+                <div class="chat-bubble ai">
+                    <div style="font-weight:600;margin-bottom:6px;color:var(--primary-teal-dark);">
+                        <i class="bi bi-robot"></i> AI 风控助手
+                    </div>
+                    <p style="margin:0;">您好! 我是银行风控 AI 助手, 可以帮助您:</p>
+                    <ul style="margin:8px 0 0;padding-left:18px;">
+                        <li>📊 查询风控数据统计和趋势</li>
+                        <li>🔍 分析用户风险画像</li>
+                        <li>📋 查看和解释风控规则</li>
+                        <li>💡 提供风控策略建议</li>
+                        <li>⚠️ 解读风险事件详情</li>
+                        <li>📝 生成风控报告摘要</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- 快捷指令 -->
+            <div class="chat-quick-btns" style="padding:0 16px;">
+                <button class="btn btn-sm btn-teal-outline" onclick="sendQuick('查询今日风控统计数据')">
+                    📊 今日统计
+                </button>
+                <button class="btn btn-sm btn-teal-outline" onclick="sendQuick('帮我分析一下最近的高风险事件')">
+                    ⚠️ 高风险事件
+                </button>
+                <button class="btn btn-sm btn-teal-outline" onclick="sendQuick('查看某个用户的风险画像, 用户ID是USR00005')">
+                    👤 用户画像
+                </button>
+                <button class="btn btn-sm btn-teal-outline" onclick="sendQuick('当前有哪些风控规则命中率最高?')">
+                    📋 规则分析
+                </button>
+                <button class="btn btn-sm btn-teal-outline" onclick="sendQuick('最近一周的风控趋势如何?')">
+                    📈 趋势分析
+                </button>
+            </div>
+
+            <!-- 输入区 -->
+            <div class="chat-input-area" style="padding:12px 16px 16px;">
+                <input type="text" class="form-control form-control-fresh" id="chat-input"
+                       placeholder="输入您的问题..." style="flex:1;"
+                       onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMessage();}">
+                <button class="btn btn-teal" onclick="sendMessage()" id="send-btn">
+                    <i class="bi bi-send-fill"></i> 发送
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let sessionId = 'session_' + Date.now();
+let isSending = false;
+
+// 发送快捷指令
+function sendQuick(text) {
+    document.getElementById('chat-input').value = text;
+    sendMessage();
+}
+
+// 清空对话
+function clearChat() {
+    const container = document.getElementById('chat-messages');
+    container.innerHTML = `
+        <div class="chat-bubble ai">
+            <div style="font-weight:600;margin-bottom:6px;color:var(--primary-teal-dark);">
+                <i class="bi bi-robot"></i> AI 风控助手
+            </div>
+            <p style="margin:0;">对话已清空, 有什么可以帮您的?</p>
+        </div>`;
+    sessionId = 'session_' + Date.now();
+}
+
+// 发送消息
+async function sendMessage() {
+    const input = document.getElementById('chat-input');
+    const text = input.value.trim();
+    if (!text || isSending) return;
+
+    isSending = true;
+    input.value = '';
+    document.getElementById('send-btn').disabled = true;
+
+    // 添加用户消息
+    appendMessage('user', text);
+
+    // 添加加载占位
+    const loadingId = 'loading-' + Date.now();
+    appendMessage('ai', '<span class="spinner-border spinner-border-sm" style="color:var(--primary-teal);"></span> 思考中...', loadingId);
+
+    try {
+        let data;
+        try {
+            data = await apiRequest('/api/agent/chat', {
+                method: 'POST',
+                body: JSON.stringify({
+                    message: text,
+                    session_id: sessionId,
+                }),
+            });
+        } catch (e) {
+            // fallback: 模拟回复
+            data = {
+                reply: _generateFallbackReply(text),
+                session_id: sessionId,
+            };
+        }
+
+        // 移除加载占位
+        removeMessage(loadingId);
+
+        // 格式化并展示回复
+        const formatted = _formatReply(data.reply || data.response || '抱歉, 暂时无法处理您的请求。');
+        appendMessage('ai', formatted);
+
+    } catch (err) {
+        removeMessage(loadingId);
+        appendMessage('ai', '❌ 请求失败: ' + err.message + '<br><small style="color:var(--text-muted);">请确认 AI 服务已配置并启动</small>');
+    } finally {
+        isSending = false;
+        document.getElementById('send-btn').disabled = false;
+    }
+}
+
+function appendMessage(role, content, id) {
+    const container = document.getElementById('chat-messages');
+    const div = document.createElement('div');
+    div.className = 'chat-bubble ' + role;
+    if (id) div.id = id;
+    div.innerHTML = role === 'ai'
+        ? `<div style="font-weight:600;margin-bottom:4px;color:var(--primary-teal-dark);font-size:12px;">
+            <i class="bi bi-robot"></i> AI助手</div>${content}`
+        : content;
+    container.appendChild(div);
+    container.scrollTop = container.scrollHeight;
+}
+
+function removeMessage(id) {
+    const el = document.getElementById(id);
+    if (el) el.remove();
+}
+
+function _formatReply(text) {
+    if (!text) return '--';
+    // 简单 Markdown 处理
+    return text
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+        .replace(/`(.*?)`/g, '<code style="background:#f1f5f9;padding:1px 6px;border-radius:4px;font-size:13px;">$1</code>')
+        .replace(/\n/g, '<br>')
+        .replace(/(\d+\.\s)/g, '<br>$1');
+}
+
+function _generateFallbackReply(text) {
+    const t = text.toLowerCase();
+    if (t.includes('统计') || t.includes('今日')) {
+        return '📊 **今日风控统计** (模拟数据)\n\n1. 总事件数: **156** 笔\n2. 通过: **128** 笔 (82.1%)\n3. 增强验证: **15** 笔 (9.6%)\n4. 人工复核: **8** 笔 (5.1%)\n5. 拒绝: **5** 笔 (3.2%)\n\n⚠️ AI 服务未连接, 以上为模拟数据。请配置 LLM API 后获取实时分析。';
+    }
+    if (t.includes('高风险') || t.includes('风险事件')) {
+        return '⚠️ **近期高风险事件概览** (模拟)\n\n1. 大额转账异常 — 用户 USR00005, ¥50,000, 评分 85\n2. 异地登录告警 — 用户 USR00012, IP 10.0.0.55, 评分 78\n3. 贷款申请异常 — 用户 USR00010, ¥200,000, 评分 72\n\n趋势: 近7天高风险事件呈上升趋势 ↑12%';
+    }
+    if (t.includes('画像') || t.includes('风险画像')) {
+        return '👤 **用户风险画像** (模拟)\n\n- 用户ID: USR00005\n- 风险等级: **高**\n- 近30天交易: 47 笔\n- 命中规则: R003(大额转账), R012(异地操作), R025(夜间交易)\n- 关联设备: 3 个\n- 关联IP: 5 个\n- 建议: 触发增强验证, 限制单日额度';
+    }
+    if (t.includes('规则') || t.includes('命中率')) {
+        return '📋 **规则命中率 TOP 5** (模拟)\n\n| 规则ID | 名称 | 命中次数 | 占比 |\n|--------|------|----------|------|\n| R003 | 大额转账检测 | 45 | 28.8% |\n| R010 | 异地登录告警 | 32 | 20.5% |\n| R025 | 夜间交易检测 | 28 | 17.9% |\n| R015 | 短时高频交易 | 22 | 14.1% |\n| R038 | 电信诈骗模式 | 18 | 11.5% |';
+    }
+    if (t.includes('趋势')) {
+        return '📈 **近7天风控趋势** (模拟)\n\n- 总事件: 1,092 笔 (日均 156)\n- 通过率: 82.1% → 79.5% (↓2.6%)\n- 拒绝率: 3.2% → 4.8% (↑1.6%)\n- 人工复核率: 5.1% → 6.3% (↑1.2%)\n\n建议: 关注拒绝率上升趋势, 检查是否存在规则过严或新型攻击模式。';
+    }
+    return '您好! 我是银行风控 AI 助手。\n\n您可以尝试问我:\n- "查询今日风控数据统计"\n- "分析高风险事件"\n- "查看用户风险画像"\n- "风控规则命中率分析"\n- "近一周风控趋势"\n\n⚠️ 当前 AI 服务未连接, 以上为离线回复。请配置 LLM API Key 后使用完整功能。';
+}
+</script>
+{% endblock %}

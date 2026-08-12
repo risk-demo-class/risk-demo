@@ -1,0 +1,257 @@
+{% extends "base.html" %}
+{% block title %}风险事件 - 银行风控系统{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1><i class="bi bi-activity"></i> 风险事件</h1>
+    <div class="breadcrumb-nav">风控评估事件历史记录</div>
+</div>
+
+<!-- 统计概览 -->
+<div class="row g-3 mb-4" id="event-stats"></div>
+
+<!-- 筛选栏 -->
+<div class="card-fresh mb-4">
+    <div class="card-body-fresh" style="padding:14px 24px;">
+        <div class="row align-items-center g-3">
+            <div class="col-md-2">
+                <select class="form-select form-control-fresh" id="filter-decision" onchange="loadEvents(1)">
+                    <option value="">全部决策</option>
+                    <option value="PASS">✅ 通过</option>
+                    <option value="CHALLENGE">⚠️ 增强验证</option>
+                    <option value="MANUAL">⏳ 人工复核</option>
+                    <option value="REJECT">🚫 拒绝</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <select class="form-select form-control-fresh" id="filter-type" onchange="loadEvents(1)">
+                    <option value="">全部类型</option>
+                    <option value="LOGIN">登录</option>
+                    <option value="TRANSFER">转账</option>
+                    <option value="PAYMENT">支付</option>
+                    <option value="LOAN_APPLY">贷款申请</option>
+                    <option value="CARD_APPLY">信用卡申请</option>
+                    <option value="DISBURSE">放款</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <select class="form-select form-control-fresh" id="filter-risk-level" onchange="loadEvents(1)">
+                    <option value="">全部等级</option>
+                    <option value="低">低风险</option>
+                    <option value="中">中风险</option>
+                    <option value="高">高风险</option>
+                    <option value="极高">极高风险</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <input type="text" class="form-control form-control-fresh" id="filter-user" placeholder="搜索用户ID..." onkeydown="if(event.key==='Enter')loadEvents(1)">
+            </div>
+            <div class="col-auto">
+                <select class="form-select form-control-fresh" id="ev-page-size" onchange="loadEvents(1)" style="width:80px;">
+                    <option value="15" selected>15</option>
+                    <option value="30">30</option>
+                    <option value="50">50</option>
+                </select>
+            </div>
+            <div class="col-auto ms-auto">
+                <span style="font-size:13px;color:var(--text-muted);" id="ev-total-count">共 0 条</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 事件表格 -->
+<div class="card-fresh">
+    <div class="card-body-fresh p-0">
+        <div class="table-responsive">
+            <table class="table-fresh mb-0">
+                <thead>
+                    <tr>
+                        <th>事件ID</th>
+                        <th>类型</th>
+                        <th>用户ID</th>
+                        <th>金额</th>
+                        <th>风险评分</th>
+                        <th>等级</th>
+                        <th>决策</th>
+                        <th>命中规则</th>
+                        <th>时间</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody id="events-tbody">
+                    <tr><td colspan="10"><div class="empty-state"><i class="bi bi-hourglass-split"></i><p>加载中...</p></div></td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div class="pagination-bottom">
+        <ul class="pagination mb-0" id="events-pagination"></ul>
+    </div>
+</div>
+
+<!-- 详情 Modal -->
+<div class="modal fade" id="eventModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content modal-content-fresh">
+            <div class="modal-header">
+                <h5 class="modal-title" id="eventModalTitle">
+                    <i class="bi bi-file-earmark-text me-2" style="color:var(--primary-teal);"></i>事件详情
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="event-detail-content" style="padding:24px;">
+                <div class="empty-state"><i class="bi bi-hourglass-split"></i><p>加载中...</p></div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let evCurrentPage = 1;
+let eventModal;
+
+const EVENT_TYPE_MAP = {
+    'LOGIN':'登录','TRANSFER':'转账','PAYMENT':'支付','WITHDRAW':'取现',
+    'LOAN_APPLY':'贷款申请','CARD_APPLY':'信用卡申请','DISBURSE':'放款',
+    'OVERDUE':'逾期','REPAY':'还款','CHANGE_PWD':'修改密码','CHANGE_PHONE':'修改手机',
+    'UPDATE_PROFILE':'更新资料','REGISTER':'注册','BIND_CARD':'绑卡',
+    'LIMIT_ADJUST':'额度调整','DISPUTE':'争议','FROZEN':'冻结','SAR':'可疑报告','REVIEW':'复核'
+};
+
+document.addEventListener('DOMContentLoaded', () => {
+    eventModal = new bootstrap.Modal(document.getElementById('eventModal'));
+    loadEvents(1);
+});
+
+async function loadEvents(page) {
+    evCurrentPage = page;
+    const params = new URLSearchParams({
+        page: page,
+        page_size: parseInt(document.getElementById('ev-page-size').value),
+    });
+    const decision = document.getElementById('filter-decision').value;
+    const evType = document.getElementById('filter-type').value;
+    const level = document.getElementById('filter-risk-level').value;
+    const userId = document.getElementById('filter-user').value.trim();
+
+    if (decision) params.set('decision', decision);
+    if (evType) params.set('event_type', evType);
+    if (level) params.set('risk_level', level);
+    if (userId) params.set('user_id', userId);
+
+    try {
+        // 尝试 events API, 如果不存在则用 dashboard 接口的数据
+        let data;
+        try {
+            data = await apiRequest('/api/risk/events?' + params.toString());
+        } catch {
+            // fallback: 用 dashboard stats
+            const stats = await apiRequest('/api/dashboard/stats');
+            data = { items: stats.recent_events || [], total: (stats.recent_events || []).length };
+        }
+
+        const events = data.items || data.events || data.data || [];
+        document.getElementById('ev-total-count').textContent = `共 ${data.total || events.length} 条`;
+
+        document.getElementById('events-tbody').innerHTML = events.length === 0
+            ? `<tr><td colspan="10"><div class="empty-state"><i class="bi bi-inbox"></i><p>暂无风险事件</p></div></td></tr>`
+            : events.map(e => `
+                <tr>
+                    <td><span class="text-mono">${e.event_id || e.id || '--'}</span></td>
+                    <td>${EVENT_TYPE_MAP[e.event_type] || e.event_type || '--'}</td>
+                    <td><span class="text-mono">${e.user_id || '--'}</span></td>
+                    <td>${e.amount ? fmtAmount(e.amount) : '--'}</td>
+                    <td><span style="font-weight:700;color:${(e.risk_score||0) >= 70 ? '#ef4444' : (e.risk_score||0) >= 40 ? '#f59e0b' : '#10b981'}">${e.risk_score ?? '--'}</span></td>
+                    <td><span class="${getRiskBadgeClass(e.risk_level || '低')}">${e.risk_level || '--'}</span></td>
+                    <td>${getDecisionBadge(e.decision)}</td>
+                    <td style="font-size:12px;color:var(--text-muted);max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${e.rule_ids || ''}">${e.rule_ids || '--'}</td>
+                    <td style="font-size:12px;color:var(--text-muted);">${fmtTime(e.created_at)}</td>
+                    <td>
+                        <button class="btn btn-sm btn-teal-outline" onclick="viewEvent('${e.event_id || e.id}')">
+                            <i class="bi bi-eye"></i> 详情
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+
+        const pageSize = parseInt(document.getElementById('ev-page-size').value);
+        const totalPages = Math.ceil((data.total || events.length) / pageSize) || 1;
+        document.getElementById('events-pagination').innerHTML = buildPaginationHtml(evCurrentPage, totalPages, pageSize, 'loadEvents');
+
+        // 加载统计
+        loadEventStats();
+
+    } catch (err) {
+        showToast('加载事件失败: ' + err.message, 'error');
+    }
+}
+
+async function loadEventStats() {
+    try {
+        const stats = await apiRequest('/api/dashboard/stats');
+        const html = [
+            { icon:'bi-activity', cls:'teal', label:'总事件数', value:(stats.total_risk_events || 0).toLocaleString() },
+            { icon:'bi-shield-x', cls:'rose', label:'已拦截', value:(stats.blocked_count || 0).toLocaleString() },
+            { icon:'bi-clock-history', cls:'amber', label:'人工复核', value:(stats.manual_review_count || 0).toLocaleString() },
+            { icon:'bi-exclamation-triangle', cls:'violet', label:'高风险', value:(stats.high_risk_count || 0).toLocaleString() },
+        ].map(s => `
+            <div class="col-md-3 col-6">
+                <div class="stat-card" style="padding:16px 18px;">
+                    <div class="stat-icon ${s.cls}" style="width:40px;height:40px;font-size:20px;margin-bottom:10px;">
+                        <i class="bi ${s.icon}"></i>
+                    </div>
+                    <div class="stat-value" style="font-size:24px;">${s.value}</div>
+                    <div class="stat-label">${s.label}</div>
+                </div>
+            </div>
+        `).join('');
+        document.getElementById('event-stats').innerHTML = html;
+    } catch { /* silent */ }
+}
+
+async function viewEvent(eventId) {
+    document.getElementById('eventModalTitle').innerHTML =
+        `<i class="bi bi-file-earmark-text me-2" style="color:var(--primary-teal);"></i>事件详情 #${eventId}`;
+    document.getElementById('event-detail-content').innerHTML =
+        '<div class="empty-state"><i class="bi bi-hourglass-split"></i><p>加载中...</p></div>';
+    eventModal.show();
+
+    try {
+        // 尝试从 events API 获取详情
+        let detail;
+        try {
+            detail = await apiRequest('/api/risk/events/' + eventId);
+        } catch {
+            // fallback
+            detail = { event_id: eventId, event_type: '--', user_id: '--',
+                message: '详情 API 暂未实现, 请查看数据库 risk_event 表' };
+        }
+
+        document.getElementById('event-detail-content').innerHTML = `
+            <table class="table table-borderless" style="font-size:14px;">
+                <tr><td style="width:120px;color:var(--text-muted);font-weight:600;">事件ID</td><td><span class="text-mono">${detail.event_id || detail.id || '--'}</span></td></tr>
+                <tr><td style="color:var(--text-muted);font-weight:600;">事件类型</td><td>${EVENT_TYPE_MAP[detail.event_type] || detail.event_type || '--'}</td></tr>
+                <tr><td style="color:var(--text-muted);font-weight:600;">用户ID</td><td>${detail.user_id || '--'}</td></tr>
+                <tr><td style="color:var(--text-muted);font-weight:600;">银行卡号</td><td>${detail.card_id || '--'}</td></tr>
+                <tr><td style="color:var(--text-muted);font-weight:600;">设备ID</td><td>${detail.device_id || '--'}</td></tr>
+                <tr><td style="color:var(--text-muted);font-weight:600;">IP地址</td><td>${detail.ip || '--'}</td></tr>
+                <tr><td style="color:var(--text-muted);font-weight:600;">交易金额</td><td>${detail.amount ? fmtAmount(detail.amount) : '--'}</td></tr>
+                <tr><td style="color:var(--text-muted);font-weight:600;">风险评分</td><td><span style="font-weight:700;">${detail.risk_score ?? '--'}</span></td></tr>
+                <tr><td style="color:var(--text-muted);font-weight:600;">风险等级</td><td><span class="${getRiskBadgeClass(detail.risk_level || '低')}">${detail.risk_level || '--'}</span></td></tr>
+                <tr><td style="color:var(--text-muted);font-weight:600;">最终决策</td><td>${getDecisionBadge(detail.decision)}</td></tr>
+                <tr><td style="color:var(--text-muted);font-weight:600;">命中规则</td><td style="color:var(--text-muted);">${detail.rule_ids || '--'}</td></tr>
+                <tr><td style="color:var(--text-muted);font-weight:600;">处置动作</td><td>${detail.action || '--'}</td></tr>
+                <tr><td style="color:var(--text-muted);font-weight:600;">创建时间</td><td>${fmtTime(detail.created_at)}</td></tr>
+            </table>
+            ${detail.message ? `<div class="alert alert-info" style="border-radius:12px;font-size:13px;">${detail.message}</div>` : ''}
+        `;
+    } catch (err) {
+        document.getElementById('event-detail-content').innerHTML =
+            `<div class="empty-state"><i class="bi bi-exclamation-circle"></i><p>加载失败: ${err.message}</p></div>`;
+    }
+}
+</script>
+{% endblock %}

@@ -1,0 +1,301 @@
+{% extends "base.html" %}
+{% block title %}风险检查 - 银行风控系统{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1><i class="bi bi-shield-check"></i> 风险检查</h1>
+    <div class="breadcrumb-nav">实时事件风控评估</div>
+</div>
+
+<div class="row g-4">
+    <!-- 左侧: 检查表单 -->
+    <div class="col-lg-5">
+        <div class="card-fresh">
+            <div class="card-header-fresh">
+                <span><i class="bi bi-send-check me-2" style="color:var(--primary-teal);"></i>发起风控检查</span>
+            </div>
+            <div class="card-body-fresh">
+                <form id="risk-form" onsubmit="submitRiskCheck(event)">
+                    <!-- 事件类型 -->
+                    <div class="mb-3">
+                        <label class="form-label-fresh" for="event_type">
+                            <i class="bi bi-tag-fill me-1"></i> 事件类型 <span style="color:#ef4444;">*</span>
+                        </label>
+                        <select class="form-select form-control-fresh" id="event_type" required>
+                            <option value="">请选择事件类型</option>
+                            <optgroup label="账户安全">
+                                <option value="LOGIN">🔐 登录</option>
+                                <option value="CHANGE_PWD">🔑 修改密码</option>
+                                <option value="CHANGE_PHONE">📱 修改手机号</option>
+                            </optgroup>
+                            <optgroup label="交易类">
+                                <option value="TRANSFER">💸 转账</option>
+                                <option value="PAYMENT">💳 支付</option>
+                                <option value="WITHDRAW">🏧 取现</option>
+                            </optgroup>
+                            <optgroup label="信贷类">
+                                <option value="LOAN_APPLY">📋 贷款申请</option>
+                                <option value="CARD_APPLY">🪪 信用卡申请</option>
+                                <option value="DISBURSE">💰 放款</option>
+                                <option value="OVERDUE">⚠️ 逾期</option>
+                                <option value="REPAY">💵 还款</option>
+                            </optgroup>
+                        </select>
+                    </div>
+
+                    <!-- 用户ID -->
+                    <div class="mb-3">
+                        <label class="form-label-fresh" for="user_id">
+                            <i class="bi bi-person-fill me-1"></i> 用户ID <span style="color:#ef4444;">*</span>
+                        </label>
+                        <input type="text" class="form-control form-control-fresh" id="user_id"
+                               placeholder="例如: USR00001" required>
+                    </div>
+
+                    <!-- 卡号 -->
+                    <div class="mb-3">
+                        <label class="form-label-fresh" for="card_id">
+                            <i class="bi bi-credit-card-fill me-1"></i> 银行卡号
+                        </label>
+                        <input type="text" class="form-control form-control-fresh" id="card_id"
+                               placeholder="选填, 例如: CARD001">
+                    </div>
+
+                    <!-- 交易金额 -->
+                    <div class="mb-3" id="amount-group" style="display:none;">
+                        <label class="form-label-fresh" for="amount">
+                            <i class="bi bi-cash-stack me-1"></i> 交易金额 (元)
+                        </label>
+                        <input type="number" class="form-control form-control-fresh" id="amount"
+                               placeholder="0.00" step="0.01" min="0">
+                    </div>
+
+                    <!-- 设备ID -->
+                    <div class="mb-3">
+                        <label class="form-label-fresh" for="device_id">
+                            <i class="bi bi-phone-fill me-1"></i> 设备ID
+                        </label>
+                        <input type="text" class="form-control form-control-fresh" id="device_id"
+                               placeholder="例如: DEV_001">
+                    </div>
+
+                    <!-- IP -->
+                    <div class="mb-3">
+                        <label class="form-label-fresh" for="ip_addr">
+                            <i class="bi bi-globe2 me-1"></i> IP 地址
+                        </label>
+                        <input type="text" class="form-control form-control-fresh" id="ip_addr"
+                               placeholder="例如: 192.168.1.100">
+                    </div>
+
+                    <button type="submit" class="btn btn-teal w-100" id="submit-btn">
+                        <i class="bi bi-play-fill"></i> 开始风控检查
+                    </button>
+                </form>
+
+                <!-- 快捷测试 -->
+                <div class="mt-4 pt-3" style="border-top:1px solid var(--border-light);">
+                    <small class="text-muted d-block mb-2">快捷测试场景:</small>
+                    <div class="d-flex flex-wrap gap-2">
+                        <button class="btn btn-sm btn-teal-outline" onclick="quickFill('LOGIN','USR00001','','','DEV_001','192.168.1.10')">正常登录</button>
+                        <button class="btn btn-sm btn-teal-outline" onclick="quickFill('TRANSFER','USR00005','CARD005','50000','DEV_003','10.0.0.55')">大额转账</button>
+                        <button class="btn btn-sm btn-teal-outline" onclick="quickFill('LOAN_APPLY','USR00010','CARD010','200000','DEV_002','172.16.0.8')">贷款申请</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 右侧: 结果面板 -->
+    <div class="col-lg-7">
+        <div class="card-fresh" id="result-card" style="min-height:500px;">
+            <div class="card-header-fresh">
+                <span><i class="bi bi-clipboard-check me-2" style="color:var(--primary-teal);"></i>评估结果</span>
+                <span id="result-assessment-id" style="font-size:12px;color:var(--text-muted);"></span>
+            </div>
+
+            <!-- 空状态 -->
+            <div id="result-empty" class="card-body-fresh text-center" style="padding:80px 24px;">
+                <div style="width:72px;height:72px;margin:0 auto 20px;background:#f0fdfa;border-radius:50%;
+                     display:flex;align-items:center;justify-content:center;">
+                    <i class="bi bi-shield-check" style="font-size:36px;color:var(--primary-teal);"></i>
+                </div>
+                <h6 style="color:#475569;font-weight:600;">提交检查请求</h6>
+                <p style="color:var(--text-muted);font-size:14px;">在左侧填写事件信息后, 点击"开始风控检查"即可查看评估结果</p>
+            </div>
+
+            <!-- 结果内容 (默认隐藏) -->
+            <div id="result-content" class="card-body-fresh" style="display:none;">
+                <!-- 决策横幅 -->
+                <div id="decision-banner" style="padding:16px 20px;border-radius:12px;margin-bottom:20px;font-weight:600;font-size:16px;text-align:center;"></div>
+
+                <!-- 分数概览 -->
+                <div class="row g-3 mb-3" id="score-overview"></div>
+
+                <!-- 命中规则 -->
+                <div class="mb-3">
+                    <h6 style="font-size:14px;font-weight:600;color:#475569;margin-bottom:12px;">
+                        <i class="bi bi-exclamation-diamond-fill me-1" style="color:#f59e0b;"></i>命中规则
+                    </h6>
+                    <div id="hit-rules-list"></div>
+                </div>
+
+                <!-- ML 分数 -->
+                <div id="ml-score-block" class="mb-3"></div>
+
+                <!-- 详情折叠 -->
+                <details class="mt-3">
+                    <summary style="font-size:13px;font-weight:600;color:var(--primary-teal);cursor:pointer;">
+                        <i class="bi bi-code-slash"></i> 查看原始响应
+                    </summary>
+                    <pre id="raw-response" style="background:#f8fafc;padding:12px;border-radius:8px;
+                        font-size:12px;max-height:200px;overflow:auto;margin-top:8px;color:#64748b;"></pre>
+                </details>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// 事件类型变化 → 显示/隐藏金额字段
+document.getElementById('event_type').addEventListener('change', function() {
+    const amtTypes = ['TRANSFER','PAYMENT','WITHDRAW','LOAN_APPLY','CARD_APPLY','DISBURSE','REPAY'];
+    document.getElementById('amount-group').style.display =
+        amtTypes.includes(this.value) ? 'block' : 'none';
+});
+
+// 快捷填充
+function quickFill(eventType, userId, cardId, amount, deviceId, ip) {
+    document.getElementById('event_type').value = eventType;
+    document.getElementById('event_type').dispatchEvent(new Event('change'));
+    document.getElementById('user_id').value = userId;
+    document.getElementById('card_id').value = cardId;
+    document.getElementById('amount').value = amount;
+    document.getElementById('device_id').value = deviceId;
+    document.getElementById('ip_addr').value = ip;
+}
+
+// 提交风控检查
+async function submitRiskCheck(event) {
+    event.preventDefault();
+    const btn = document.getElementById('submit-btn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> 评估中...';
+
+    const body = {
+        event_type: document.getElementById('event_type').value,
+        user_id: document.getElementById('user_id').value,
+        card_id: document.getElementById('card_id').value || null,
+        amount: parseFloat(document.getElementById('amount').value) || null,
+        device_id: document.getElementById('device_id').value || null,
+        ip: document.getElementById('ip_addr').value || null,
+    };
+
+    try {
+        const data = await apiRequest('/api/risk/check', {
+            method: 'POST',
+            body: JSON.stringify(body),
+        });
+
+        document.getElementById('result-empty').style.display = 'none';
+        document.getElementById('result-content').style.display = 'block';
+        document.getElementById('result-assessment-id').textContent =
+            '#' + (data.event_id || data.assessment_id || '--');
+        renderResult(data);
+        showToast('风控检查完成', 'success');
+
+    } catch (err) {
+        showToast('检查失败: ' + err.message, 'error');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-play-fill"></i> 开始风控检查';
+    }
+}
+
+function renderResult(data) {
+    // 决策横幅
+    const banner = document.getElementById('decision-banner');
+    const decisionColors = {
+        PASS:      { bg:'#d1fae5', color:'#065f46', icon:'✅', text:'风控通过 — 该事件风险较低, 已自动放行' },
+        CHALLENGE: { bg:'#fef3c7', color:'#92400e', icon:'⚠️', text:'增强验证 — 需要短信/人脸等二次验证' },
+        MANUAL:    { bg:'#ffedd5', color:'#c2410c', icon:'⏳', text:'人工复核 — 该事件需要风控人员审核' },
+        REJECT:    { bg:'#fee2e2', color:'#991b1b', icon:'🚫', text:'风控拒绝 — 该事件已被拦截, 交易不执行' },
+    };
+    const d = decisionColors[data.decision] || decisionColors.PASS;
+    banner.style.background = d.bg;
+    banner.style.color = d.color;
+    banner.innerHTML = `${d.icon} ${data.decision} — ${d.text}`;
+
+    // 分数概览
+    document.getElementById('score-overview').innerHTML = `
+        <div class="col-4">
+            <div style="background:#f8fafc;border-radius:12px;padding:14px;text-align:center;">
+                <div style="font-size:26px;font-weight:700;color:${(data.final_score ?? data.risk_score ?? 0) >= 70 ? '#ef4444' : (data.final_score ?? data.risk_score ?? 0) >= 40 ? '#f59e0b' : '#10b981'};">${data.final_score ?? data.risk_score ?? '--'}</div>
+                <div style="font-size:11px;color:var(--text-muted);">风险评分</div>
+            </div>
+        </div>
+        <div class="col-4">
+            <div style="background:#f8fafc;border-radius:12px;padding:14px;text-align:center;">
+                <div style="font-size:26px;font-weight:700;color:#475569;">${data.risk_level || '--'}</div>
+                <div style="font-size:11px;color:var(--text-muted);">风险等级</div>
+            </div>
+        </div>
+        <div class="col-4">
+            <div style="background:#f8fafc;border-radius:12px;padding:14px;text-align:center;">
+                <div style="font-size:26px;font-weight:700;color:#475569;">${(data.rule_hits || []).length}</div>
+                <div style="font-size:11px;color:var(--text-muted);">命中规则数</div>
+            </div>
+        </div>`;
+
+    // 命中规则
+    const rules = data.rule_hits || data.hit_rules || data.triggered_rules || [];
+    if (rules.length > 0) {
+        document.getElementById('hit-rules-list').innerHTML = rules.map(r => {
+            const rn = typeof r === 'string' ? r : (r.rule_id || r.rule_name || r.name || '--');
+            const desc = typeof r === 'object' ? (r.description || r.desc || '') : '';
+            return `<div style="background:#fff;border:1px solid var(--border-light);border-radius:10px;
+                padding:10px 14px;margin-bottom:6px;font-size:13px;display:flex;align-items:center;gap:8px;">
+                <span style="width:8px;height:8px;background:#f59e0b;border-radius:50%;flex-shrink:0;"></span>
+                <span style="font-weight:600;color:#475569;">${rn}</span>
+                ${desc ? `<span style="color:var(--text-muted);">— ${desc}</span>` : ''}
+            </div>`;
+        }).join('');
+    } else {
+        document.getElementById('hit-rules-list').innerHTML =
+            '<div style="color:var(--text-muted);font-size:13px;padding:8px;">✅ 未命中任何规则</div>';
+    }
+
+    // ML 分数
+    const mlScore = data.ml_score ?? data.ml_risk_score ?? null;
+    const mlProb = data.ml_prob ?? data.ml_refuse_prob ?? null;
+    if (mlScore != null || mlProb != null) {
+        const sigmoidScore = mlProb != null ? mlProbToRiskScore(mlProb) : null;
+        document.getElementById('ml-score-block').innerHTML = `
+            <h6 style="font-size:14px;font-weight:600;color:#475569;margin-bottom:12px;">
+                <i class="bi bi-cpu-fill me-1" style="color:#7c3aed;"></i>ML 模型评估
+            </h6>
+            <div class="row g-2">
+                <div class="col-6">
+                    <div style="background:#f5f3ff;border-radius:10px;padding:12px;text-align:center;">
+                        <div style="font-size:13px;color:var(--text-muted);">P(拒绝)</div>
+                        <div style="font-size:22px;font-weight:700;color:#7c3aed;">${mlProb != null ? (mlProb*100).toFixed(1)+'%' : '--'}</div>
+                    </div>
+                </div>
+                <div class="col-6">
+                    <div style="background:#f0fdfa;border-radius:10px;padding:12px;text-align:center;">
+                        <div style="font-size:13px;color:var(--text-muted);">ML 风险分 (sigmoid)</div>
+                        <div style="font-size:22px;font-weight:700;color:var(--primary-teal);">${sigmoidScore ?? '--'}</div>
+                    </div>
+                </div>
+            </div>`;
+    } else {
+        document.getElementById('ml-score-block').innerHTML = '';
+    }
+
+    // 原始响应
+    document.getElementById('raw-response').textContent = JSON.stringify(data, null, 2);
+}
+</script>
+{% endblock %}

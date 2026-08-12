@@ -1,0 +1,262 @@
+{% extends "base.html" %}
+{% block title %}仪表盘 - 银行风控系统{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1><i class="bi bi-speedometer2"></i> 风控仪表盘</h1>
+    <div class="breadcrumb-nav">
+        <span style="color:#94a3b8;">最后更新: <span id="last-update">--</span></span>
+        <button class="btn btn-sm btn-teal-outline ms-3" onclick="loadDashboard()">
+            <i class="bi bi-arrow-clockwise"></i> 刷新
+        </button>
+    </div>
+</div>
+
+<!-- 统计卡片 -->
+<div class="row g-4 mb-4" id="stat-cards">
+    <div class="col-xl-3 col-md-6">
+        <div class="stat-card">
+            <div class="stat-icon teal"><i class="bi bi-people-fill"></i></div>
+            <div class="stat-value" id="total-users">--</div>
+            <div class="stat-label">注册用户总数</div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6">
+        <div class="stat-card">
+            <div class="stat-icon blue"><i class="bi bi-arrow-left-right"></i></div>
+            <div class="stat-value" id="total-txns">--</div>
+            <div class="stat-label">累计交易笔数</div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6">
+        <div class="stat-card">
+            <div class="stat-icon amber"><i class="bi bi-exclamation-triangle-fill"></i></div>
+            <div class="stat-value" id="high-risk-count">--</div>
+            <div class="stat-label">高风险事件</div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6">
+        <div class="stat-card">
+            <div class="stat-icon rose"><i class="bi bi-shield-x"></i></div>
+            <div class="stat-value" id="blocked-count">--</div>
+            <div class="stat-label">已拦截事件</div>
+        </div>
+    </div>
+</div>
+
+<!-- 图表 + 规则分布 -->
+<div class="row g-4 mb-4">
+    <!-- 趋势图 -->
+    <div class="col-lg-8">
+        <div class="card-fresh">
+            <div class="card-header-fresh">
+                <span><i class="bi bi-graph-up me-2" style="color:var(--primary-teal);"></i>风险事件趋势 (近7天)</span>
+                <span class="badge" style="background:#f0fdfa;color:var(--primary-teal-dark);font-size:12px;">每日统计</span>
+            </div>
+            <div class="card-body-fresh">
+                <canvas id="trendChart" height="280"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- 规则命中 TOP -->
+    <div class="col-lg-4">
+        <div class="card-fresh" style="height:100%;">
+            <div class="card-header-fresh">
+                <span><i class="bi bi-bar-chart-fill me-2" style="color:var(--primary-teal);"></i>规则命中 TOP 5</span>
+            </div>
+            <div class="card-body-fresh" id="top-rules-list">
+                <div class="empty-state">
+                    <i class="bi bi-inbox"></i>
+                    <p>暂无数据</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 待审核事件 -->
+<div class="card-fresh">
+    <div class="card-header-fresh">
+        <span><i class="bi bi-clock-history me-2" style="color:var(--primary-teal);"></i>最近审核事件</span>
+        <a href="/events" class="btn btn-sm btn-teal-outline">查看全部 <i class="bi bi-arrow-right"></i></a>
+    </div>
+    <div class="card-body-fresh p-0">
+        <div class="table-responsive">
+            <table class="table-fresh mb-0">
+                <thead>
+                    <tr>
+                        <th>事件ID</th>
+                        <th>事件类型</th>
+                        <th>用户ID</th>
+                        <th>风险评分</th>
+                        <th>风险等级</th>
+                        <th>最终决策</th>
+                        <th>命中规则</th>
+                        <th>时间</th>
+                    </tr>
+                </thead>
+                <tbody id="recent-events-tbody">
+                    <tr><td colspan="8"><div class="empty-state"><i class="bi bi-hourglass-split"></i><p>加载中...</p></div></td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let trendChart = null;
+
+async function loadDashboard() {
+    try {
+        const data = await apiRequest('/api/dashboard/stats');
+
+        // 统计卡片
+        document.getElementById('total-users').textContent = (data.total_users || 0).toLocaleString();
+        document.getElementById('total-txns').textContent = (data.total_transactions || 0).toLocaleString();
+        document.getElementById('high-risk-count').textContent = (data.high_risk_count || 0).toLocaleString();
+        document.getElementById('blocked-count').textContent = (data.blocked_count || 0).toLocaleString();
+        document.getElementById('last-update').textContent = new Date().toLocaleTimeString('zh-CN');
+
+        // 趋势图
+        if (data.risk_event_trend && data.risk_event_trend.length) {
+            renderTrendChart(data.risk_event_trend);
+        }
+
+        // 规则 TOP 5
+        if (data.rule_hit_distribution && data.rule_hit_distribution.length) {
+            renderTopRules(data.rule_hit_distribution);
+        }
+
+        // 最近事件 (dummy or from API)
+        loadRecentEvents();
+
+    } catch (err) {
+        console.error('加载仪表盘数据失败:', err);
+        showToast('加载数据失败: ' + err.message, 'error');
+    }
+}
+
+function renderTrendChart(trend) {
+    const ctx = document.getElementById('trendChart').getContext('2d');
+    const labels = trend.map(t => t.date || t.label || '');
+    const totalData = trend.map(t => t.total || t.count || 0);
+    const highData = trend.map(t => t.high_risk || t.blocked || 0);
+
+    if (trendChart) trendChart.destroy();
+
+    trendChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: '总事件数',
+                    data: totalData,
+                    borderColor: '#0d9488',
+                    backgroundColor: 'rgba(13,148,136,0.08)',
+                    fill: true,
+                    tension: 0.4,
+                    pointRadius: 4,
+                    pointBackgroundColor: '#0d9488',
+                },
+                {
+                    label: '高风险事件',
+                    data: highData,
+                    borderColor: '#ef4444',
+                    backgroundColor: 'rgba(239,68,68,0.06)',
+                    fill: true,
+                    tension: 0.4,
+                    pointRadius: 4,
+                    pointBackgroundColor: '#ef4444',
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { position: 'top', labels: { usePointStyle: true, padding: 24, font: { size: 12 } } }
+            },
+            scales: {
+                x: { grid: { display: false }, ticks: { font: { size: 11 } } },
+                y: { beginAtZero: true, grid: { color: '#f1f5f9' }, ticks: { font: { size: 11 } } }
+            }
+        }
+    });
+}
+
+function renderTopRules(rules) {
+    const top5 = rules.slice(0, 5);
+    const colors = ['#0d9488', '#06b6d4', '#3b82f6', '#8b5cf6', '#f59e0b'];
+    const maxCount = Math.max(...top5.map(r => r.count || r.hit_count || 1));
+
+    let html = '';
+    top5.forEach((r, i) => {
+        const count = r.count || r.hit_count || 0;
+        const name = r.rule_name || r.name || r.rule_id || `规则 #${i+1}`;
+        const pct = Math.round(count / maxCount * 100);
+        html += `
+            <div class="mb-3">
+                <div class="d-flex justify-content-between align-items-center mb-1">
+                    <span style="font-size:13px;font-weight:500;color:#475569;">${name}</span>
+                    <span style="font-size:13px;font-weight:600;color:${colors[i]};">${count}</span>
+                </div>
+                <div style="height:6px;background:#f1f5f9;border-radius:3px;overflow:hidden;">
+                    <div style="height:100%;width:${pct}%;background:${colors[i]};border-radius:3px;transition:width .6s ease;"></div>
+                </div>
+            </div>`;
+    });
+
+    if (!html) {
+        html = '<div class="empty-state"><i class="bi bi-inbox"></i><p>暂无数据</p></div>';
+    }
+
+    document.getElementById('top-rules-list').innerHTML = html;
+}
+
+async function loadRecentEvents() {
+    try {
+        // 如果有 events API 就用, 否则用 dashboard stats 里的 data
+        const data = await apiRequest('/api/dashboard/stats');
+        const events = data.recent_events || [];
+        const tbody = document.getElementById('recent-events-tbody');
+
+        if (!events.length) {
+            tbody.innerHTML = `<tr><td colspan="8"><div class="empty-state"><i class="bi bi-inbox"></i><p>暂无风险事件</p></div></td></tr>`;
+            return;
+        }
+
+        const eventTypeMap = {
+            'LOGIN':'登录','TRANSFER':'转账','PAYMENT':'支付','WITHDRAW':'取现',
+            'LOAN_APPLY':'贷款申请','CARD_APPLY':'信用卡申请','DISBURSE':'放款',
+            'OVERDUE':'逾期','REPAY':'还款','CHANGE_PWD':'修改密码','CHANGE_PHONE':'修改手机',
+            'UPDATE_PROFILE':'更新资料','REGISTER':'注册','BIND_CARD':'绑卡',
+            'LIMIT_ADJUST':'额度调整','DISPUTE':'争议','FROZEN':'冻结','SAR':'可疑报告','REVIEW':'复核'
+        };
+
+        tbody.innerHTML = events.map(e => `
+            <tr>
+                <td><span class="text-mono">${e.event_id || '-'}</span></td>
+                <td>${eventTypeMap[e.event_type] || e.event_type || '-'}</td>
+                <td><span class="text-mono">${e.user_id || '-'}</span></td>
+                <td><span style="font-weight:700;color:${e.risk_score >= 70 ? '#ef4444' : e.risk_score >= 40 ? '#f59e0b' : '#10b981'}">${e.risk_score ?? '-'}</span></td>
+                <td><span class="${getRiskBadgeClass(e.risk_level || '低')}">${e.risk_level || '-'}</span></td>
+                <td>${getDecisionBadge(e.decision)}</td>
+                <td style="font-size:12px;color:#94a3b8;">${e.rule_ids || '--'}</td>
+                <td style="font-size:12px;color:#94a3b8;">${fmtTime(e.created_at)}</td>
+            </tr>
+        `).join('');
+    } catch (err) {
+        document.getElementById('recent-events-tbody').innerHTML =
+            `<tr><td colspan="8"><div class="empty-state"><i class="bi bi-exclamation-circle"></i><p>加载失败: ${err.message}</p></div></td></tr>`;
+    }
+}
+
+// 页面加载
+document.addEventListener('DOMContentLoaded', loadDashboard);
+</script>
+{% endblock %}

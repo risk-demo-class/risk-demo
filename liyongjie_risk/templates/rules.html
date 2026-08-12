@@ -1,0 +1,330 @@
+{% extends "base.html" %}
+{% block title %}规则管理 - 银行风控系统{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1><i class="bi bi-sliders2"></i> 规则管理</h1>
+    <div>
+        <button class="btn btn-teal" onclick="openCreateModal()">
+            <i class="bi bi-plus-lg"></i> 新建规则
+        </button>
+    </div>
+</div>
+
+<!-- 筛选栏 -->
+<div class="card-fresh mb-4">
+    <div class="card-body-fresh" style="padding:14px 24px;">
+        <div class="row align-items-center g-3">
+            <div class="col-auto">
+                <label class="form-label-fresh mb-0 me-2">场景筛选:</label>
+            </div>
+            <div class="col-md-3">
+                <select class="form-select form-control-fresh" id="filter-scene" onchange="loadRules(1)">
+                    <option value="">全部场景</option>
+                    <option value="LOGIN">登录</option>
+                    <option value="TRANSFER">转账</option>
+                    <option value="LOAN">贷款</option>
+                    <option value="CARD">信用卡</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <select class="form-select form-control-fresh" id="filter-level" onchange="loadRules(1)">
+                    <option value="">全部等级</option>
+                    <option value="1">低风险</option>
+                    <option value="2">中风险</option>
+                    <option value="3">高风险</option>
+                    <option value="4">极高风险 (一票否决)</option>
+                </select>
+            </div>
+            <div class="col-auto">
+                <label class="form-label-fresh mb-0 me-2">每页:</label>
+            </div>
+            <div class="col-auto">
+                <select class="form-select form-control-fresh" id="page-size" onchange="loadRules(1)" style="width:80px;">
+                    <option value="10">10</option>
+                    <option value="20" selected>20</option>
+                    <option value="50">50</option>
+                </select>
+            </div>
+            <div class="col-auto ms-auto">
+                <span style="font-size:13px;color:var(--text-muted);" id="total-count">共 0 条</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 规则表格 -->
+<div class="card-fresh">
+    <div class="card-body-fresh p-0">
+        <div class="table-responsive">
+            <table class="table-fresh mb-0">
+                <thead>
+                    <tr>
+                        <th>规则ID</th>
+                        <th>规则名称</th>
+                        <th>场景</th>
+                        <th>风险等级</th>
+                        <th>分值</th>
+                        <th>处置动作</th>
+                        <th>优先级</th>
+                        <th>状态</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody id="rules-tbody">
+                    <tr><td colspan="9"><div class="empty-state"><i class="bi bi-hourglass-split"></i><p>加载中...</p></div></td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <!-- 分页 -->
+    <div class="pagination-bottom">
+        <ul class="pagination mb-0" id="rules-pagination"></ul>
+    </div>
+</div>
+
+<!-- 新建/编辑规则 Modal -->
+<div class="modal fade" id="ruleModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content modal-content-fresh">
+            <div class="modal-header">
+                <h5 class="modal-title" id="ruleModalTitle">
+                    <i class="bi bi-plus-circle-fill me-2" style="color:var(--primary-teal);"></i>新建规则
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" style="padding:24px;">
+                <form id="rule-form" onsubmit="submitRule(event)">
+                    <input type="hidden" id="rule-id-hidden">
+
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label-fresh" for="rule-id-input">规则ID <span style="color:#ef4444;">*</span></label>
+                            <input type="text" class="form-control form-control-fresh" id="rule-id-input"
+                                   placeholder="例如: R046" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label-fresh" for="rule-name-input">规则名称 <span style="color:#ef4444;">*</span></label>
+                            <input type="text" class="form-control form-control-fresh" id="rule-name-input"
+                                   placeholder="例如: 夜间大额转账检测" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label-fresh" for="rule-scene">场景</label>
+                            <select class="form-select form-control-fresh" id="rule-scene">
+                                <option value="LOGIN">登录</option>
+                                <option value="TRANSFER">转账</option>
+                                <option value="LOAN">贷款</option>
+                                <option value="CARD">信用卡</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label-fresh" for="rule-level">风险等级</label>
+                            <select class="form-select form-control-fresh" id="rule-level">
+                                <option value="1">1 - 低风险</option>
+                                <option value="2">2 - 中风险</option>
+                                <option value="3">3 - 高风险</option>
+                                <option value="4">4 - 极高 (一票否决)</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label-fresh" for="rule-score">风险分值 (0-100)</label>
+                            <input type="number" class="form-control form-control-fresh" id="rule-score"
+                                   min="0" max="100" value="20">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label-fresh" for="rule-action">处置动作</label>
+                            <select class="form-select form-control-fresh" id="rule-action">
+                                <option value="PASS">放行</option>
+                                <option value="CHALLENGE">增强验证</option>
+                                <option value="MANUAL">人工审核</option>
+                                <option value="REJECT">拒绝</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label-fresh" for="rule-priority">优先级 (1-10)</label>
+                            <input type="number" class="form-control form-control-fresh" id="rule-priority"
+                                   min="1" max="10" value="5">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label-fresh" for="rule-condition">条件表达式 (JSON)</label>
+                            <textarea class="form-control form-control-fresh" id="rule-condition" rows="3"
+                                      placeholder='例如: {"operator":"and","conditions":[{"field":"txn_amount","op":">","value":50000},{"field":"txn_is_night","op":"==","value":1}]}'></textarea>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label-fresh" for="rule-desc">规则描述</label>
+                            <textarea class="form-control form-control-fresh" id="rule-desc" rows="2"
+                                      placeholder="详细描述该规则的检测逻辑..."></textarea>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer" style="border-top:1px solid var(--border-light);padding:16px 24px;">
+                <button type="button" class="btn btn-teal-outline" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-teal" onclick="document.getElementById('rule-form').dispatchEvent(new Event('submit'))">
+                    <i class="bi bi-check-lg"></i> 保存规则
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let currentPage = 1;
+let ruleModal;
+
+document.addEventListener('DOMContentLoaded', () => {
+    ruleModal = new bootstrap.Modal(document.getElementById('ruleModal'));
+    loadRules(1);
+});
+
+async function loadRules(page) {
+    currentPage = page;
+    const scene = document.getElementById('filter-scene').value;
+    const level = document.getElementById('filter-level').value;
+    const pageSize = parseInt(document.getElementById('page-size').value);
+
+    try {
+        const params = new URLSearchParams({ page: page, page_size: pageSize });
+        if (scene) params.set('scene', scene);
+        if (level) params.set('risk_level', level);
+
+        const data = await apiRequest('/api/rules?' + params.toString());
+
+        const rules = data.rules || data.items || data.data || [];
+        document.getElementById('total-count').textContent = `共 ${data.total || rules.length} 条`;
+
+        const sceneMap = { LOGIN:'登录', TRANSFER:'转账', LOAN:'贷款', CARD:'信用卡' };
+
+        document.getElementById('rules-tbody').innerHTML = rules.length === 0
+            ? `<tr><td colspan="9"><div class="empty-state"><i class="bi bi-inbox"></i><p>暂无匹配规则</p></div></td></tr>`
+            : rules.map(r => `
+                <tr>
+                    <td><span class="text-mono">${r.rule_id || r.id || '--'}</span></td>
+                    <td style="font-weight:600;">${r.rule_name || r.name || '--'}</td>
+                    <td>${sceneMap[r.category] || sceneMap[r.scene] || r.category || r.scene || '--'}</td>
+                    <td><span class="${getRiskBadgeClass(_levelName(r.risk_level))}">${_levelName(r.risk_level)}</span></td>
+                    <td><span style="font-weight:600;color:${r.score >= 70 ? '#ef4444' : r.score >= 40 ? '#f59e0b' : '#10b981'}">${r.score ?? r.rule_score ?? '--'}</span></td>
+                    <td>${getDecisionBadge(r.action || 'PASS')}</td>
+                    <td>${r.priority ?? '--'}</td>
+                    <td>
+                        <div class="form-check form-switch" style="padding-left:3.2em;">
+                            <input class="form-check-input" type="checkbox" role="switch"
+                                   ${r.status === 1 || r.is_enabled === 1 || r.enabled ? 'checked' : ''}
+                                   onchange="toggleRule('${r.rule_id || r.id}', this.checked)"
+                                   style="width:2.2em;height:1.2em;">
+                        </div>
+                    </td>
+                    <td>
+                        <button class="btn btn-sm btn-teal-outline" onclick='editRule(${JSON.stringify(r).replace(/'/g,"&#39;")})' title="编辑">
+                            <i class="bi bi-pencil"></i>
+                        </button>
+                        <button class="btn btn-sm" style="color:#ef4444;border:1px solid #fecaca;" onclick="deleteRule('${r.rule_id || r.id}')" title="删除">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+
+        // 分页
+        const totalPages = Math.ceil((data.total || rules.length) / pageSize) || 1;
+        document.getElementById('rules-pagination').innerHTML = buildPaginationHtml(currentPage, totalPages, pageSize, 'loadRules');
+
+    } catch (err) {
+        showToast('加载规则失败: ' + err.message, 'error');
+    }
+}
+
+function _levelName(lv) {
+    const map = {'1':'低','2':'中','3':'高','4':'极高'};
+    return map[String(lv)] || '低';
+}
+
+function openCreateModal() {
+    document.getElementById('ruleModalTitle').innerHTML = '<i class="bi bi-plus-circle-fill me-2" style="color:var(--primary-teal);"></i>新建规则';
+    document.getElementById('rule-id-hidden').value = '';
+    document.getElementById('rule-id-input').value = '';
+    document.getElementById('rule-id-input').disabled = false;
+    document.getElementById('rule-name-input').value = '';
+    document.getElementById('rule-scene').value = 'LOGIN';
+    document.getElementById('rule-level').value = '1';
+    document.getElementById('rule-score').value = 20;
+    document.getElementById('rule-action').value = 'PASS';
+    document.getElementById('rule-priority').value = 5;
+    document.getElementById('rule-condition').value = '';
+    document.getElementById('rule-desc').value = '';
+    ruleModal.show();
+}
+
+function editRule(rule) {
+    document.getElementById('ruleModalTitle').innerHTML = '<i class="bi bi-pencil-fill me-2" style="color:var(--primary-teal);"></i>编辑规则';
+    document.getElementById('rule-id-hidden').value = rule.rule_id || rule.id;
+    document.getElementById('rule-id-input').value = rule.rule_id || rule.id || '';
+    document.getElementById('rule-id-input').disabled = true;
+    document.getElementById('rule-name-input').value = rule.rule_name || rule.name || '';
+    document.getElementById('rule-scene').value = rule.category || rule.scene || 'LOGIN';
+    document.getElementById('rule-level').value = rule.risk_level || '1';
+    document.getElementById('rule-score').value = rule.score ?? rule.rule_score ?? 20;
+    document.getElementById('rule-action').value = rule.action || 'PASS';
+    document.getElementById('rule-priority').value = rule.priority || 5;
+    document.getElementById('rule-condition').value = typeof rule.condition === 'object' ? JSON.stringify(rule.condition, null, 2) : (rule.condition || '');
+    document.getElementById('rule-desc').value = rule.description || rule.desc || '';
+    ruleModal.show();
+}
+
+async function submitRule(e) {
+    e.preventDefault();
+    const ruleId = document.getElementById('rule-id-hidden').value;
+    const body = {
+        rule_id: document.getElementById('rule-id-input').value,
+        rule_name: document.getElementById('rule-name-input').value,
+        category: document.getElementById('rule-scene').value,
+        risk_level: parseInt(document.getElementById('rule-level').value),
+        score: parseInt(document.getElementById('rule-score').value),
+        action: document.getElementById('rule-action').value,
+        priority: parseInt(document.getElementById('rule-priority').value),
+        condition: document.getElementById('rule-condition').value,
+        description: document.getElementById('rule-desc').value,
+    };
+
+    try {
+        if (ruleId) {
+            await apiRequest('/api/rules/' + ruleId, { method: 'PUT', body: JSON.stringify(body) });
+            showToast('规则已更新', 'success');
+        } else {
+            await apiRequest('/api/rules', { method: 'POST', body: JSON.stringify(body) });
+            showToast('规则已创建', 'success');
+        }
+        ruleModal.hide();
+        loadRules(currentPage);
+    } catch (err) {
+        showToast('保存失败: ' + err.message, 'error');
+    }
+}
+
+async function toggleRule(ruleId, enabled) {
+    try {
+        await apiRequest('/api/rules/' + ruleId + '/toggle', {
+            method: 'POST',
+            body: JSON.stringify({ enabled: enabled }),
+        });
+        showToast(`规则 ${ruleId} 已${enabled ? '启用' : '停用'}`, 'info');
+    } catch (err) {
+        showToast('操作失败: ' + err.message, 'error');
+        loadRules(currentPage);
+    }
+}
+
+async function deleteRule(ruleId) {
+    if (!confirm(`确认删除规则 ${ruleId} 吗? 此操作不可撤销。`)) return;
+    try {
+        await apiRequest('/api/rules/' + ruleId, { method: 'DELETE' });
+        showToast('规则已删除', 'success');
+        loadRules(currentPage);
+    } catch (err) {
+        showToast('删除失败: ' + err.message, 'error');
+    }
+}
+</script>
+{% endblock %}

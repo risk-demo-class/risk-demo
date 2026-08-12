@@ -1,0 +1,275 @@
+{% extends "base.html" %}
+{% block title %}黑名单管理 - 银行风控系统{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1><i class="bi bi-shield-lock"></i> 黑名单管理</h1>
+    <div>
+        <button class="btn btn-teal" onclick="openAddModal()">
+            <i class="bi bi-plus-lg"></i> 添加黑名单
+        </button>
+    </div>
+</div>
+
+<!-- 统计卡片 -->
+<div class="row g-3 mb-4" id="bl-stats">
+    <div class="col-md-3 col-6">
+        <div class="stat-card" style="padding:16px 18px;">
+            <div class="stat-icon rose" style="width:40px;height:40px;font-size:20px;margin-bottom:10px;">
+                <i class="bi bi-person-x"></i>
+            </div>
+            <div class="stat-value" style="font-size:24px;" id="bl-idcard-count">--</div>
+            <div class="stat-label">身份证黑名单</div>
+        </div>
+    </div>
+    <div class="col-md-3 col-6">
+        <div class="stat-card" style="padding:16px 18px;">
+            <div class="stat-icon amber" style="width:40px;height:40px;font-size:20px;margin-bottom:10px;">
+                <i class="bi bi-credit-card-2-back"></i>
+            </div>
+            <div class="stat-value" style="font-size:24px;" id="bl-card-count">--</div>
+            <div class="stat-label">卡号黑名单</div>
+        </div>
+    </div>
+    <div class="col-md-3 col-6">
+        <div class="stat-card" style="padding:16px 18px;">
+            <div class="stat-icon blue" style="width:40px;height:40px;font-size:20px;margin-bottom:10px;">
+                <i class="bi bi-phone"></i>
+            </div>
+            <div class="stat-value" style="font-size:24px;" id="bl-device-count">--</div>
+            <div class="stat-label">设备黑名单</div>
+        </div>
+    </div>
+    <div class="col-md-3 col-6">
+        <div class="stat-card" style="padding:16px 18px;">
+            <div class="stat-icon violet" style="width:40px;height:40px;font-size:20px;margin-bottom:10px;">
+                <i class="bi bi-globe"></i>
+            </div>
+            <div class="stat-value" style="font-size:24px;" id="bl-ip-count">--</div>
+            <div class="stat-label">IP 黑名单</div>
+        </div>
+    </div>
+</div>
+
+<!-- 筛选 + 表格 -->
+<div class="card-fresh mb-4">
+    <div class="card-body-fresh" style="padding:14px 24px;">
+        <div class="row align-items-center g-3">
+            <div class="col-md-3">
+                <select class="form-select form-control-fresh" id="bl-filter-type" onchange="loadBlacklist(1)">
+                    <option value="">全部类型</option>
+                    <option value="IDCARD">身份证</option>
+                    <option value="BANKCARD">银行卡号</option>
+                    <option value="DEVICE">设备ID</option>
+                    <option value="IP">IP地址</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <input type="text" class="form-control form-control-fresh" id="bl-filter-value" placeholder="搜索值..." onkeydown="if(event.key==='Enter')loadBlacklist(1)">
+            </div>
+            <div class="col-auto">
+                <select class="form-select form-control-fresh" id="bl-page-size" onchange="loadBlacklist(1)" style="width:80px;">
+                    <option value="15">15</option>
+                    <option value="30" selected>30</option>
+                    <option value="50">50</option>
+                </select>
+            </div>
+            <div class="col-auto ms-auto">
+                <span style="font-size:13px;color:var(--text-muted);" id="bl-total-count">共 0 条</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card-fresh">
+    <div class="card-body-fresh p-0">
+        <div class="table-responsive">
+            <table class="table-fresh mb-0">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>类型</th>
+                        <th>值</th>
+                        <th>原因</th>
+                        <th>过期时间</th>
+                        <th>创建时间</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody id="bl-tbody">
+                    <tr><td colspan="7"><div class="empty-state"><i class="bi bi-hourglass-split"></i><p>加载中...</p></div></td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div class="pagination-bottom">
+        <ul class="pagination mb-0" id="bl-pagination"></ul>
+    </div>
+</div>
+
+<!-- 添加 Modal -->
+<div class="modal fade" id="blModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content modal-content-fresh">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="bi bi-shield-lock-fill me-2" style="color:var(--primary-teal);"></i>添加黑名单
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" style="padding:24px;">
+                <form id="bl-form" onsubmit="submitBlacklist(event)">
+                    <div class="mb-3">
+                        <label class="form-label-fresh" for="bl-type">黑名单类型 <span style="color:#ef4444;">*</span></label>
+                        <select class="form-select form-control-fresh" id="bl-type" required>
+                            <option value="">请选择类型</option>
+                            <option value="IDCARD">身份证号</option>
+                            <option value="BANKCARD">银行卡号</option>
+                            <option value="DEVICE">设备ID</option>
+                            <option value="IP">IP地址</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label-fresh" for="bl-value">黑名单值 <span style="color:#ef4444;">*</span></label>
+                        <input type="text" class="form-control form-control-fresh" id="bl-value"
+                               placeholder="输入要拉黑的值" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label-fresh" for="bl-reason">拉黑原因 <span style="color:#ef4444;">*</span></label>
+                        <textarea class="form-control form-control-fresh" id="bl-reason" rows="2"
+                                  placeholder="描述拉黑原因..." required></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label-fresh" for="bl-expire">过期时间</label>
+                        <input type="datetime-local" class="form-control form-control-fresh" id="bl-expire">
+                        <small style="color:var(--text-muted);">留空表示永久有效</small>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer" style="border-top:1px solid var(--border-light);padding:16px 24px;">
+                <button type="button" class="btn btn-teal-outline" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-teal" onclick="document.getElementById('bl-form').dispatchEvent(new Event('submit'))">
+                    <i class="bi bi-shield-lock"></i> 确认拉黑
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let blCurrentPage = 1;
+let blModal;
+
+const BL_TYPE_MAP = { 'IDCARD':'身份证','BANKCARD':'银行卡号','DEVICE':'设备ID','IP':'IP地址' };
+
+document.addEventListener('DOMContentLoaded', () => {
+    blModal = new bootstrap.Modal(document.getElementById('blModal'));
+    loadBlacklist(1);
+});
+
+async function loadBlacklist(page) {
+    blCurrentPage = page;
+    const params = new URLSearchParams({
+        page: page,
+        page_size: parseInt(document.getElementById('bl-page-size').value),
+    });
+    const type = document.getElementById('bl-filter-type').value;
+    const value = document.getElementById('bl-filter-value').value.trim();
+    if (type) params.set('type', type);
+    if (value) params.set('value', value);
+
+    try {
+        let data;
+        try {
+            data = await apiRequest('/api/blacklist?' + params.toString());
+        } catch {
+            // fallback: empty data
+            data = { items: [], total: 0 };
+        }
+
+        const items = data.items || data.data || [];
+        document.getElementById('bl-total-count').textContent = `共 ${data.total || items.length} 条`;
+
+        document.getElementById('bl-tbody').innerHTML = items.length === 0
+            ? `<tr><td colspan="7"><div class="empty-state"><i class="bi bi-inbox"></i><p>暂无黑名单记录</p></div></td></tr>`
+            : items.map(item => `
+                <tr>
+                    <td><span class="text-mono">${item.id || '--'}</span></td>
+                    <td><span class="badge" style="background:#fee2e2;color:#991b1b;">${BL_TYPE_MAP[item.type] || item.type || '--'}</span></td>
+                    <td style="font-weight:600;">${item.value || item.blacklist_value || '--'}</td>
+                    <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${item.reason || ''}">${item.reason || '--'}</td>
+                    <td style="font-size:12px;color:var(--text-muted);">${item.expire_time ? fmtTime(item.expire_time) : '永久'}</td>
+                    <td style="font-size:12px;color:var(--text-muted);">${fmtTime(item.created_at)}</td>
+                    <td>
+                        <button class="btn btn-sm" style="color:#ef4444;border:1px solid #fecaca;" onclick="removeBlacklist(${item.id})">
+                            <i class="bi bi-trash"></i> 移除
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+
+        const pageSize = parseInt(document.getElementById('bl-page-size').value);
+        const totalPages = Math.ceil((data.total || items.length) / pageSize) || 1;
+        document.getElementById('bl-pagination').innerHTML = buildPaginationHtml(blCurrentPage, totalPages, pageSize, 'loadBlacklist');
+
+        // 更新统计
+        updateBlStats(items, data);
+
+    } catch (err) {
+        showToast('加载黑名单失败: ' + err.message, 'error');
+    }
+}
+
+function updateBlStats(items, data) {
+    const all = data.all_items || items;
+    const counts = { IDCARD: 0, BANKCARD: 0, DEVICE: 0, IP: 0 };
+    all.forEach(item => {
+        const t = (item.type || '').toUpperCase();
+        if (counts.hasOwnProperty(t)) counts[t]++;
+    });
+    document.getElementById('bl-idcard-count').textContent = (data.idcard_count ?? counts.IDCARD ?? '--').toLocaleString();
+    document.getElementById('bl-card-count').textContent = (data.bankcard_count ?? counts.BANKCARD ?? '--').toLocaleString();
+    document.getElementById('bl-device-count').textContent = (data.device_count ?? counts.DEVICE ?? '--').toLocaleString();
+    document.getElementById('bl-ip-count').textContent = (data.ip_count ?? counts.IP ?? '--').toLocaleString();
+}
+
+function openAddModal() {
+    document.getElementById('bl-type').value = '';
+    document.getElementById('bl-value').value = '';
+    document.getElementById('bl-reason').value = '';
+    document.getElementById('bl-expire').value = '';
+    blModal.show();
+}
+
+async function submitBlacklist(e) {
+    e.preventDefault();
+    const body = {
+        type: document.getElementById('bl-type').value,
+        value: document.getElementById('bl-value').value,
+        reason: document.getElementById('bl-reason').value,
+        expire_time: document.getElementById('bl-expire').value || null,
+    };
+    try {
+        await apiRequest('/api/blacklist', { method: 'POST', body: JSON.stringify(body) });
+        showToast('已添加黑名单', 'success');
+        blModal.hide();
+        loadBlacklist(1);
+    } catch (err) {
+        showToast('添加失败: ' + err.message, 'error');
+    }
+}
+
+async function removeBlacklist(id) {
+    if (!confirm('确认将此条目移出黑名单吗?')) return;
+    try {
+        await apiRequest('/api/blacklist/' + id, { method: 'DELETE' });
+        showToast('已移出黑名单', 'success');
+        loadBlacklist(blCurrentPage);
+    } catch (err) {
+        showToast('移除失败: ' + err.message, 'error');
+    }
+}
+</script>
+{% endblock %}
