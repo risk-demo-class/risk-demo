@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}AI Agent - 旅游出行风控{% endblock %}
+{% block content %}
+<h1>AI Agent</h1>
+<div class="panel">
+    <label>问题</label>
+    <textarea id="message" rows="3">帮我查一下案件数量</textarea>
+    <button onclick="askAgent()">发送</button>
+</div>
+<div class="panel">
+    <pre id="reply">等待...</pre>
+</div>
+<script>
+async function askAgent() {
+    const res = await fetch('/api/agent/chat', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({message: document.getElementById('message').value})
+    });
+    const data = await res.json();
+    document.getElementById('reply').textContent = data.reply;
+}
+</script>
+{% endblock %}

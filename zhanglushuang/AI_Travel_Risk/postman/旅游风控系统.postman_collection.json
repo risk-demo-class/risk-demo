@@ -1,0 +1,71 @@
+{
+  "info": {
+    "name": "旅游出行风控系统",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "风控检查",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "url": "http://localhost:8000/api/risk/check",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"event_type\": \"下单\",\n  \"source_id\": \"RISK004_ORD_1\",\n  \"user_id\": \"RISK004\",\n  \"order_id\": \"RISK004_ORD_1\",\n  \"event_data\": {\n    \"order_remark\": \"多订几张，一起走\",\n    \"device_id\": \"DEV_RISK004\",\n    \"pay_account\": \"PAY_SCALPER\"\n  }\n}"
+        }
+      }
+    },
+    {
+      "name": "规则列表",
+      "request": {
+        "method": "GET",
+        "url": "http://localhost:8000/api/rules?page_size=20"
+      }
+    },
+    {
+      "name": "案件列表",
+      "request": {
+        "method": "GET",
+        "url": "http://localhost:8000/api/cases?page_size=20"
+      }
+    },
+    {
+      "name": "评估历史",
+      "request": {
+        "method": "GET",
+        "url": "http://localhost:8000/api/assessments?page_size=20"
+      }
+    },
+    {
+      "name": "新增黑名单",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "url": "http://localhost:8000/api/blacklist",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"blacklist_type\": \"护照号\",\n  \"blacklist_value\": \"P_TEST_001\",\n  \"reason\": \"测试拦截\"\n}"
+        }
+      }
+    },
+    {
+      "name": "AI Agent",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "url": "http://localhost:8000/api/agent/chat",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"message\": \"帮我查一下案件数量\"\n}"
+        }
+      }
+    }
+  ]
+}

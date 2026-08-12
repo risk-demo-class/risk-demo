@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}仪表盘 - 旅游出行风控{% endblock %}
+{% block content %}
+<h1>仪表盘</h1>
+<div class="grid" id="stats"></div>
+<div class="panel">
+    <h2>最近评估</h2>
+    <table>
+        <thead><tr><th>评估ID</th><th>用户</th><th>事件</th><th>评分</th><th>决策</th><th>时间</th></tr></thead>
+        <tbody id="assessments"></tbody>
+    </table>
+</div>
+<script>
+async function loadStats() {
+    const res = await fetch('/api/dashboard/stats');
+    const data = await res.json();
+    document.getElementById('stats').innerHTML = `
+        <div class="stat"><div class="muted">案件总数</div><div class="num">${data.case_total}</div></div>
+        <div class="stat"><div class="muted">评估总数</div><div class="num">${data.assessment_total}</div></div>
+        <div class="stat"><div class="muted">启用规则</div><div class="num">${data.rule_total}</div></div>
+        <div class="stat"><div class="muted">拒绝/审核</div><div class="num">${(data.decision_stats['拒绝']||0)+(data.decision_stats['人工审核']||0)}</div></div>`;
+}
+async function loadAssessments() {
+    const res = await fetch('/api/assessments?page_size=10');
+    const data = await res.json();
+    document.getElementById('assessments').innerHTML = data.items.map(a => `
+        <tr>
+            <td>${a.assessment_id}</td>
+            <td>${a.user_id}</td>
+            <td>${a.event_type}</td>
+            <td>${a.final_score}</td>
+            <td>${a.decision}</td>
+            <td>${a.create_time || ''}</td>
+        </tr>`).join('');
+}
+loadStats(); loadAssessments();
+</script>
+{% endblock %}

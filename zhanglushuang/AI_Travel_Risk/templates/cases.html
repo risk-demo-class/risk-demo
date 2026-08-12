@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}案件 - 旅游出行风控{% endblock %}
+{% block content %}
+<h1>案件工作台</h1>
+<div class="panel">
+    <table>
+        <thead><tr><th>案件ID</th><th>用户</th><th>事件</th><th>状态</th><th>分类</th><th>时间</th></tr></thead>
+        <tbody id="cases"></tbody>
+    </table>
+</div>
+<script>
+async function loadCases() {
+    const res = await fetch('/api/cases?page_size=50');
+    const data = await res.json();
+    document.getElementById('cases').innerHTML = data.items.map(c => `
+        <tr>
+            <td>${c.case_id}</td>
+            <td>${c.user_id}</td>
+            <td>${c.event_type || ''}</td>
+            <td><span class="badge ${c.case_status==='待审核' ? 'red' : 'gray'}">${c.case_status}</span></td>
+            <td>${c.case_category || ''}</td>
+            <td>${c.create_time || ''}</td>
+        </tr>`).join('');
+}
+loadCases();
+</script>
+{% endblock %}

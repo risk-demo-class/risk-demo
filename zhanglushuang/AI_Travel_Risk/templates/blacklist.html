@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}黑名单 - 旅游出行风控{% endblock %}
+{% block content %}
+<h1>黑名单管理</h1>
+<div class="panel">
+    <div class="grid">
+        <div>
+            <label>类型</label>
+            <select id="bl_type">
+                <option value="用户">用户</option>
+                <option value="手机号">手机号</option>
+                <option value="护照号">护照号</option>
+                <option value="设备指纹">设备指纹</option>
+                <option value="支付账号">支付账号</option>
+                <option value="IP">IP</option>
+            </select>
+        </div>
+        <div><label>值</label><input id="bl_value" placeholder="黑名单值"></div>
+        <div><label>原因</label><input id="bl_reason" placeholder="加入原因"></div>
+    </div>
+    <button onclick="addBlacklist()">加入黑名单</button>
+</div>
+<div class="panel">
+    <table>
+        <thead><tr><th>ID</th><th>类型</th><th>值</th><th>原因</th><th>过期时间</th></tr></thead>
+        <tbody id="blacklist"></tbody>
+    </table>
+</div>
+<script>
+async function loadBlacklist() {
+    const res = await fetch('/api/blacklist?page_size=100');
+    const data = await res.json();
+    document.getElementById('blacklist').innerHTML = data.items.map(b => `
+        <tr><td>${b.blacklist_id}</td><td>${b.blacklist_type}</td><td>${b.blacklist_value}</td><td>${b.reason||''}</td><td>${b.expire_time||''}</td></tr>`).join('');
+}
+async function addBlacklist() {
+    await fetch('/api/blacklist', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+            blacklist_type: document.getElementById('bl_type').value,
+            blacklist_value: document.getElementById('bl_value').value,
+            reason: document.getElementById('bl_reason').value
+        })
+    });
+    loadBlacklist();
+}
+loadBlacklist();
+</script>
+{% endblock %}

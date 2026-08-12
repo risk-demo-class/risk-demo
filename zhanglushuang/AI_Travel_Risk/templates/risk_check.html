@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block title %}风控检查 - 旅游出行风控{% endblock %}
+{% block content %}
+<h1>风控检查</h1>
+<div class="panel">
+    <div class="grid">
+        <div>
+            <label>事件类型</label>
+            <select id="event_type">
+                <option value="下单">下单</option>
+                <option value="支付">支付</option>
+                <option value="退改申请">退改申请</option>
+                <option value="签证申请">签证申请</option>
+                <option value="拼团报名">拼团报名</option>
+            </select>
+        </div>
+        <div>
+            <label>用户ID</label>
+            <input id="user_id" value="U10001">
+        </div>
+        <div>
+            <label>业务ID</label>
+            <input id="source_id" value="ORD_T001">
+        </div>
+        <div>
+            <label>订单ID（可选）</label>
+            <input id="order_id" value="ORD_T001">
+        </div>
+    </div>
+    <div class="grid">
+        <div>
+            <label>订单备注（可选）</label>
+            <input id="order_remark" placeholder="例如: 多订几张，一起走">
+        </div>
+        <div>
+            <label>金额（可选）</label>
+            <input id="amount" value="26000">
+        </div>
+    </div>
+    <button onclick="runCheck()">执行风控检查</button>
+</div>
+<div class="panel">
+    <h2>检查结果</h2>
+    <pre id="result">等待执行...</pre>
+</div>
+<script>
+async function runCheck() {
+    const body = {
+        event_type: document.getElementById('event_type').value,
+        source_id: document.getElementById('source_id').value,
+        user_id: document.getElementById('user_id').value,
+        order_id: document.getElementById('order_id').value,
+        event_data: {
+            order_remark: document.getElementById('order_remark').value,
+            total_amount: Number(document.getElementById('amount').value || 0)
+        }
+    };
+    const res = await fetch('/api/risk/check', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(body)
+    });
+    const data = await res.json();
+    document.getElementById('result').textContent = JSON.stringify(data, null, 2);
+}
+</script>
+{% endblock %}

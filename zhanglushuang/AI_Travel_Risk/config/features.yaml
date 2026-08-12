@@ -1,0 +1,209 @@
+version: 1
+description: 旅游出行风控特征配置, 增删特征只需改这里并同步 feature.py 实现
+
+features:
+  # ---------- 用户维度 ----------
+  - name: user_total_orders
+    group: user
+    entity: user_id
+    category: history
+    enabled: true
+    description: 历史订单总数
+  - name: user_orders_30d
+    group: user
+    entity: user_id
+    category: time_series
+    enabled: true
+    description: 近30天订单数
+  - name: user_orders_7d
+    group: user
+    entity: user_id
+    category: time_series
+    enabled: true
+    description: 7天下单次数
+  - name: user_total_amount
+    group: user
+    entity: user_id
+    category: history
+    enabled: true
+    description: 历史消费总金额
+  - name: user_avg_order_amount
+    group: user
+    entity: user_id
+    category: history
+    enabled: true
+    description: 平均订单金额
+  - name: user_max_order_amount
+    group: user
+    entity: user_id
+    category: history
+    enabled: true
+    description: 最大单笔订单金额
+  - name: user_cancel_count
+    group: user
+    entity: user_id
+    category: history
+    enabled: true
+    description: 取消订单数
+  - name: user_refund_count
+    group: user
+    entity: user_id
+    category: history
+    enabled: true
+    description: 退改次数
+  - name: user_refund_rate
+    group: user
+    entity: user_id
+    category: history
+    enabled: true
+    description: 退改率
+  - name: user_refund_amount
+    group: user
+    entity: user_id
+    category: history
+    enabled: true
+    description: 退改金额
+  - name: user_visa_reject_90d
+    group: user
+    entity: user_id
+    category: time_series
+    enabled: true
+    description: 90天内拒签次数
+  - name: user_visa_countries_30d
+    group: user
+    entity: user_id
+    category: time_series
+    enabled: true
+    description: 30天内申请签证国家数
+  - name: user_passenger_id_count
+    group: user
+    entity: user_id
+    category: graph
+    enabled: true
+    description: 历史常用乘客证件数
+  - name: user_device_count
+    group: user
+    entity: user_id
+    category: graph
+    enabled: true
+    description: 关联设备数
+
+  # ---------- 订单维度 ----------
+  - name: order_total_amount
+    group: order
+    entity: order_id
+    category: order
+    enabled: true
+    description: 订单总金额
+  - name: order_passenger_count
+    group: order
+    entity: order_id
+    category: order
+    enabled: true
+    description: 乘客人数
+  - name: order_hotel_room_count
+    group: order
+    entity: order_id
+    category: order
+    enabled: true
+    description: 酒店房晚/间夜数
+  - name: order_flight_count
+    group: order
+    entity: order_id
+    category: order
+    enabled: true
+    description: 航班航段数
+  - name: order_trip_days
+    group: order
+    entity: order_id
+    category: order
+    enabled: true
+    description: 出行天数
+  - name: order_days_to_departure
+    group: order
+    entity: order_id
+    category: order
+    enabled: true
+    description: 距出发天数
+  - name: order_is_night
+    group: order
+    entity: order_id
+    category: order
+    enabled: true
+    description: 是否凌晨下单
+  - name: order_dest_risk_score
+    group: order
+    entity: order_id
+    category: order
+    enabled: true
+    description: 目的地风险分
+  - name: order_preauth_diff
+    group: order
+    entity: order_id
+    category: order
+    enabled: true
+    description: 酒店预授权与实付差异
+  - name: order_group_member_count
+    group: order
+    entity: order_id
+    category: order
+    enabled: true
+    description: 团票参团人数
+
+  # ---------- 设备 / 行为时序 / 乘客 ----------
+  - name: device_user_count_7d
+    group: device
+    entity: device_id
+    category: time_series
+    enabled: true
+    description: 同一设备7天关联账号数
+  - name: device_hotel_account_count
+    group: device
+    entity: device_id
+    category: graph
+    enabled: true
+    description: 同一设备切换账号订酒店数
+  - name: same_pay_account_1h_orders
+    group: device
+    entity: pay_account
+    category: time_series
+    enabled: true
+    description: 同一支付账号1小时订单数
+  - name: same_flight_1h_bookings
+    group: order
+    entity: flight_no
+    category: time_series
+    enabled: true
+    description: 同一航班1小时预订张数
+  - name: user_consecutive_refund_change
+    group: user
+    entity: user_id
+    category: time_series
+    enabled: true
+    description: 连续退改次数
+  - name: passenger_match_rate
+    group: passenger
+    entity: order_id
+    category: graph
+    enabled: true
+    description: 乘客与历史乘客匹配率
+
+  # ---------- LLM 语义 ----------
+  - name: remark_llm_score
+    group: llm
+    entity: order_id
+    category: semantic
+    enabled: true
+    description: LLM备注风险分
+  - name: remark_scalper_flag
+    group: llm
+    entity: order_id
+    category: semantic
+    enabled: true
+    description: 黄牛暗号标记
+  - name: remark_illegal_group_buy_flag
+    group: llm
+    entity: order_id
+    category: semantic
+    enabled: true
+    description: 违规拼团标记

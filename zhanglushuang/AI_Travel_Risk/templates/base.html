@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}旅游出行风控系统{% endblock %}</title>
+    <style>
+        :root {
+            --bg: #f5f7fa;
+            --panel: #ffffff;
+            --line: #e3e8ef;
+            --text: #1f2937;
+            --muted: #6b7280;
+            --accent: #2563eb;
+            --danger: #dc2626;
+            --ok: #16a34a;
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            background: var(--bg);
+            color: var(--text);
+            font-family: "Microsoft YaHei", Arial, sans-serif;
+        }
+        header {
+            background: #0f172a;
+            color: #fff;
+            padding: 14px 24px;
+            display: flex;
+            align-items: center;
+            gap: 18px;
+            flex-wrap: wrap;
+        }
+        header .brand { font-weight: 700; font-size: 18px; }
+        header a {
+            color: #cbd5e1;
+            text-decoration: none;
+            font-size: 14px;
+        }
+        header a:hover, header a.active { color: #fff; }
+        main { padding: 24px; max-width: 1200px; margin: 0 auto; }
+        .panel {
+            background: var(--panel);
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            padding: 18px;
+            margin-bottom: 16px;
+        }
+        h1 { font-size: 22px; margin: 0 0 12px; }
+        h2 { font-size: 17px; margin: 0 0 10px; }
+        label { display: block; font-size: 13px; color: var(--muted); margin: 8px 0 4px; }
+        input, select, textarea {
+            width: 100%;
+            padding: 8px 10px;
+            border: 1px solid var(--line);
+            border-radius: 6px;
+            font-size: 14px;
+        }
+        button {
+            margin-top: 12px;
+            padding: 8px 16px;
+            background: var(--accent);
+            color: #fff;
+            border: 0;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        th, td { text-align: left; padding: 8px; border-bottom: 1px solid var(--line); }
+        th { color: var(--muted); font-weight: 600; }
+        .badge { padding: 2px 8px; border-radius: 10px; font-size: 12px; }
+        .badge.red { background: #fee2e2; color: var(--danger); }
+        .badge.green { background: #dcfce7; color: var(--ok); }
+        .badge.blue { background: #dbeafe; color: var(--accent); }
+        .badge.gray { background: #f1f5f9; color: var(--muted); }
+        .muted { color: var(--muted); font-size: 13px; }
+        pre { background: #f8fafc; padding: 12px; border-radius: 6px; overflow: auto; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+        .stat { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 14px; }
+        .stat .num { font-size: 24px; font-weight: 700; }
+    </style>
+</head>
+<body>
+<header>
+    <span class="brand">旅游出行风控</span>
+    <a href="/">仪表盘</a>
+    <a href="/risk-check">风控检查</a>
+    <a href="/rules">规则</a>
+    <a href="/cases">案件</a>
+    <a href="/blacklist">黑名单</a>
+    <a href="/assessments">评估历史</a>
+    <a href="/chat">AI Agent</a>
+</header>
+<main>
+{% block content %}{% endblock %}
+</main>
+</body>
+</html>

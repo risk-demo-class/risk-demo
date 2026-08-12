@@ -1,0 +1,51 @@
+version: "3.8"
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: travel-risk-mysql
+    environment:
+      MYSQL_ALLOW_EMPTY_PASSWORD: "yes"
+      MYSQL_DATABASE: ${DB_NAME:-travel_risk}
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_0900_ai_ci
+    ports:
+      - "3306:3306"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    volumes:
+      - travel-risk-mysql-data:/var/lib/mysql
+
+  app:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    container_name: travel-risk-app
+    environment:
+      DB_HOST: mysql
+      DB_PORT: "3306"
+      DB_USER: root
+      DB_PASSWORD: ""
+      DB_NAME: ${DB_NAME:-travel_risk}
+      XGB_ENABLED: "true"
+      LLM_ENABLED: ${LLM_ENABLED:-false}
+      LLM_BASE_URL: ${LLM_BASE_URL:-http://host.docker.internal:11434/v1}
+      LLM_MODEL_NAME: ${LLM_MODEL_NAME:-deepseek-r1:7b}
+    command: >
+      sh -c "python scripts/init_db.py --yes &&
+             python scripts/gen_business_data.py --users 100 --orders 300 &&
+             python scripts/gen_risky_users.py &&
+             python scripts/gen_risk_data.py --count 30 --balance-pos &&
+             uvicorn scripts.main:app --host 0.0.0.0 --port 8000"
+    depends_on:
+      mysql:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+
+volumes:
+  travel-risk-mysql-data:

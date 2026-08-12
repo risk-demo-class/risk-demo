@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}规则 - 旅游出行风控{% endblock %}
+{% block content %}
+<h1>规则管理</h1>
+<div class="panel">
+    <table>
+        <thead><tr><th>规则ID</th><th>名称</th><th>分类</th><th>事件</th><th>等级</th><th>分值</th><th>动作</th><th>启用</th></tr></thead>
+        <tbody id="rules"></tbody>
+    </table>
+</div>
+<script>
+async function loadRules() {
+    const res = await fetch('/api/rules?page_size=100');
+    const data = await res.json();
+    document.getElementById('rules').innerHTML = data.items.map(r => `
+        <tr>
+            <td>${r.rule_id}</td>
+            <td>${r.rule_name}</td>
+            <td>${r.rule_category}</td>
+            <td>${r.event_type}</td>
+            <td>${r.risk_level}</td>
+            <td>${r.risk_score}</td>
+            <td>${r.action}</td>
+            <td>${r.is_enabled ? '是' : '否'}</td>
+        </tr>`).join('');
+}
+loadRules();
+</script>
+{% endblock %}

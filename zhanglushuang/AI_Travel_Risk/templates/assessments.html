@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}评估历史 - 旅游出行风控{% endblock %}
+{% block content %}
+<h1>评估历史</h1>
+<div class="panel">
+    <table>
+        <thead><tr><th>评估ID</th><th>事件ID</th><th>用户</th><th>事件</th><th>评分</th><th>等级</th><th>决策</th><th>ML分</th></tr></thead>
+        <tbody id="assessments"></tbody>
+    </table>
+</div>
+<script>
+async function loadAssessments() {
+    const res = await fetch('/api/assessments?page_size=50');
+    const data = await res.json();
+    document.getElementById('assessments').innerHTML = data.items.map(a => `
+        <tr>
+            <td>${a.assessment_id}</td>
+            <td>${a.event_id}</td>
+            <td>${a.user_id}</td>
+            <td>${a.event_type}</td>
+            <td>${a.final_score}</td>
+            <td>${a.risk_level}</td>
+            <td>${a.decision}</td>
+            <td>${a.ml_score ?? ''}</td>
+        </tr>`).join('');
+}
+loadAssessments();
+</script>
+{% endblock %}
