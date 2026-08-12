@@ -1,7 +1,7 @@
 [project]
 name = "ai-risk"
 version = "2.0.0"
-description = "电商风控系统 - 规则引擎 + XGBoost 双轨融合 + AI Agent (教学项目)"
+description = "医疗风控系统 - 规则引擎 + XGBoost 双轨融合 + AI Agent (教学项目)"
 authors = [
     { name = "Mavis", email = "dev@example.com" },
 ]

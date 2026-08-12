@@ -1,5 +1,5 @@
 """
-电商风控系统 - 带日期范围的模拟风控评估数据生成 (异步)
+医疗风控系统 - 带日期范围的模拟风控评估数据生成 (异步)
 支持指定"近 N 天"或"起止日期"造数据，让仪表盘趋势图有跨天数据
 
 【P4-L3 2026-08-08 第三轮】支持 --balance-pos / --target-pos-ratio 控制正负例比例:
@@ -441,16 +441,6 @@ async def generate_risk_data_with_dates(
                         _log_failure(target_time, request, e)
                         success_done = True
                         break  # 异常不 retry
-                        grand_success += 1
-                        success_done = True
-                        break
-                    except Exception as e:
-                        await db.rollback()
-                        day_reject += 1
-                        grand_reject += 1
-                        _log_failure(target_time, request, e)
-                        success_done = True
-                        break  # 业务异常, 不 retry
 
                 # 【P4-L3 第五轮】--force-pos-ratio retry 兜底:
                 # 如果 use_force_pos=True 但 force retry 3 次都失败 (success_done=True 但 day_positive 没++),

@@ -6,7 +6,7 @@
 
 ## Current Phase
 
-Phase 3 (P2 工程基建)
+已结束 (P2 于 2026-08-12 由用户取消, 改为完善现有逻辑)
 
 ## Phases
 
@@ -30,13 +30,16 @@ Phase 3 (P2 工程基建)
 
 ### Phase 3: P2 工程基建
 
+> 2026-08-12: 用户决定不做本阶段 (Alembic/CI/画像表医疗化/遗留清理/覆盖率).
+> 改为完善现有逻辑: 清理死代码、修正训练脚本汇总、电商残留命名医疗化 (见 progress.md).
+
 - [ ] 3.1 Alembic 迁移工具初始化（baseline 迁移替换 create_all）
 - [ ] 3.2 CI/CD：GitHub Actions（pytest + 覆盖率 + 镜像构建检查）
 - [ ] 3.3 安全测试用例：401 用例、`.dockerignore` 断言、脱敏单测
 - [ ] 3.4 画像表医疗化：`risk_user_profile` 改医疗维度 + `_update_user_profile` 取真实医疗特征
 - [ ] 3.5 清理遗留：`train_demo_model.py`/`gen_10w_data.py`/`gen_risk_data.py` 标记废弃；项目名/标题改医疗版
 - [ ] 3.6 覆盖率门槛：pytest-cov 配置 + 阈值
-- **Status:** pending
+- **Status:** cancelled
 
 ## Key Questions
 

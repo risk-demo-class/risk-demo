@@ -1,5 +1,5 @@
 """
-电商风控系统 - XGBoost ml_score 字段回填脚本 (P4-L4 2026-08-08)
+医疗风控系统 - XGBoost ml_score 字段回填脚本 (P4-L4 2026-08-08)
 
 【目的】
   gen_train_dataset.py 造训练数据时强制 ml_score=NULL (避免"未训练模型"推理垃圾值).

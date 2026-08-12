@@ -2,6 +2,22 @@
 
 ## Session: 2026-08-11
 
+### 附加任务: 完善现有逻辑 (P2 取消后)
+
+- **Status:** complete
+- **Started:** 2026-08-12
+- Actions taken:
+  - 用户决定: P2 剩余 (Alembic/CI/画像表医疗化/遗留清理/覆盖率) 不做, 改为完善现有逻辑
+  - 清理 gen_risk_data_with_dates.py 重复 except 死代码 (两个 except + break 后不可达代码合并为单个 handler)
+  - 修正 gen_train_dataset.py: 汇总目标数按实际可用用户重算 (之前打印 1500 实际 875); docstring/文案医疗化
+  - 电商残留命名 → 医疗: scripts/main.py (title/description), app/api.py, backfill_ml_score.py, train_xgb_model.py, init_db.py, one_command.py, pyproject.toml (description)
+  - 验证: 全量 pytest 450 passed
+- Files created/modified:
+  - `scripts/gen_risk_data_with_dates.py`、`scripts/gen_train_dataset.py`
+  - `scripts/main.py`、`app/api.py`、`scripts/backfill_ml_score.py`、`scripts/train_xgb_model.py`
+  - `scripts/init_db.py`、`scripts/one_command.py`、`pyproject.toml`
+- 备注: 画像表医疗化按用户要求未做; pyproject name 保留 ai-risk (避免动 uv.lock), 只改 description
+
 ### 附加任务: 生成人工审核事件 (审核工作台测试数据)
 
 - **Status:** complete

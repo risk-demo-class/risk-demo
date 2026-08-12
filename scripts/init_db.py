@@ -177,7 +177,7 @@ def split_sql_statements(sql_text):
 
 async def main():
     parser = argparse.ArgumentParser(
-        description="电商风控系统 - 一键数据库初始化 (异步). 默认 --reset 重置整个数据库",
+        description="医疗风控系统 - 一键数据库初始化 (异步). 默认 --reset 重置整个数据库",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 用法:

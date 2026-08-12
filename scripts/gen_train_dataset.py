@@ -1,9 +1,10 @@
 """
-电商风控系统 - 训练数据集生成 (P4-L4 2026-08-08)
+医疗风控系统 - 训练数据集生成 (P4-L4 2026-08-08)
 
 【目的】
-  造一份**严格标注**的 XGBoost 训练数据集 (1500 条), 满足:
-    1. 数量: 1500 条 (100 RISK 用户 × 25 高风险 + 普通用户 × 25 正常)
+  造一份**严格标注**的 XGBoost 训练数据集 (目标 1500 条), 满足:
+    1. 数量: 目标 1500 条 (30 RISK × 25 高风险 + 30 普通 × 25 正常;
+       普通用户按库里实际数量调整, 不足则用现有数量)
     2. 标签: 真实由 19 规则跑出 (decision 字段), 不是随机
     3. 特征: 25 维真实从 DB 查 (feature.py), 不是捏造
     4. ml_score 字段: 强制 NULL (写库后 UPDATE), 不存"未训练的垃圾模型"推理值
@@ -137,7 +138,7 @@ async def gen_train_dataset(
         print("[DRY-RUN] 训练数据集预演 (不写库)")
     else:
         print("=" * 60)
-        print("训练数据集生成 (1500 条强标注, ml_score=NULL)")
+        print("训练数据集生成 (目标 1500 条强标注, ml_score=NULL)")
 
     total_target = (n_risk + n_normal) * per_user
     print(f"目标: {n_risk} RISK × {per_user} + {n_normal} 普通 × {per_user} = {total_target} 条")
@@ -171,6 +172,8 @@ async def gen_train_dataset(
         if len(normal_users) < n_normal:
             print(f"  [WARN] 普通用户只 {len(normal_users)} 个 < 目标 {n_normal}, 用现有数量")
             n_normal = len(normal_users)
+        # 【2026-08-11】按实际可用用户数重算目标 (避免汇总打印 1500 实际只有 875)
+        total_target = (n_risk + n_normal) * per_user
         print(f"  RISK: {len(risk_users)} 个 ({risk_users[0]} ~ {risk_users[-1]})")
         print(f"  普通: {len(normal_users)} 个 ({normal_users[0]} ~ {normal_users[-1]})")
 
@@ -304,11 +307,11 @@ async def _runner():
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        description="造训练数据集 (1500 条强标注, ml_score=NULL, 训练 SQL 显式 WHERE ml_score IS NULL)"
+        description="造训练数据集 (目标 1500 条强标注, ml_score=NULL, 训练 SQL 显式 WHERE ml_score IS NULL)"
     )
     parser.add_argument("--n-risk", type=int, default=30, help="RISK 高风险用户数 (默认 30)")
     parser.add_argument("--n-normal", type=int, default=30, help="普通用户数 (默认 30)")
-    parser.add_argument("--per-user", type=int, default=25, help="每个用户造几条 (默认 25, 总 1500)")
+    parser.add_argument("--per-user", type=int, default=25, help="每个用户造几条 (默认 25, 目标总 1500, 按库存量调整)")
     parser.add_argument("--reset", action="store_true", help="先清空训练用表 (risk_event/feature/assessment/case)")
     parser.add_argument("--dry-run", action="store_true", help="只统计不写入")
     args = parser.parse_args()
