@@ -1,0 +1,49 @@
+-- ============================================================
+-- 教育行业 AI 风控系统 - 数据库初始化指南
+-- ============================================================
+--
+-- 完整初始化按以下顺序执行：
+--
+--   1. init_business_tables.sql  -- 7 张教育业务表 DDL
+--   2. init_business_data.sql    -- 530 行教育业务样例数据
+--   3. init_risk_tables.sql      -- 9 张受保护的风控核心表 DDL
+--   4. init_risk_data.sql        -- 教育行业规则
+--
+-- 表总数：7 张教育业务表 + 9 张风控核心表 = 16 张。
+-- ============================================================
+-- 推荐方式
+-- ============================================================
+--
+-- 只验证表结构（阶段 4）：
+--   python scripts/init_db.py --schema-only --reset --yes
+--
+-- 完整重置并导入业务数据与当前基线规则：
+--   python scripts/init_db.py --reset --yes
+--
+-- 指定测试数据库：
+--   python scripts/init_db.py --schema-only --reset --yes --db ecs_test
+--
+-- 手动仅创建表结构：
+--   mysql -u root -p --default-character-set=utf8mb4 ecs < sql/init_business_tables.sql
+--   mysql -u root -p --default-character-set=utf8mb4 ecs < sql/init_risk_tables.sql
+--
+-- 手动完整初始化：
+--   mysql -u root -p --default-character-set=utf8mb4 ecs < sql/init_business_tables.sql
+--   mysql -u root -p --default-character-set=utf8mb4 ecs < sql/init_business_data.sql
+--   mysql -u root -p --default-character-set=utf8mb4 ecs < sql/init_risk_tables.sql
+--   mysql -u root -p --default-character-set=utf8mb4 ecs < sql/init_risk_data.sql
+-- ============================================================
+-- 注意事项
+-- ============================================================
+--
+-- 1. MySQL 版本要求 8.0，字符集 utf8mb4，排序规则 utf8mb4_0900_ai_ci。
+-- 2. 教育业务和原电商业务结构不兼容，第一次切换必须使用 --reset，
+--    不要用 --keep-data 试图在旧电商表上直接补字段。
+-- 3. init_business_tables.sql 使用 CREATE TABLE IF NOT EXISTS；
+--    --reset 会先删除整个目标数据库，再创建干净结构。
+--    Python 初始化器会忽略 SQL 文件内部历史遗留的 USE 语句，确保 --db 生效。
+-- 4. init_business_data.sql 已在阶段 5 改写，可执行完整初始化；
+--    init_risk_data.sql 已替换为教育行业规则。
+-- 5. 风控核心表仍由 init_risk_tables.sql 创建，本阶段未修改其 schema。
+-- 6. 业务表按外键依赖顺序创建；脚本结束时恢复 FOREIGN_KEY_CHECKS。
+-- 7. 生产环境不得直接使用教学默认密码，真实密码只放本地 .env。

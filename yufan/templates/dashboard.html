@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+{% block title %}仪表盘 - 教育行业风控系统{% endblock %}
+{% block content %}
+<section class="dashboard-hero">
+    <div class="hero-copy">
+        <div class="eyebrow">INTELLIGENT RISK CONTROL</div>
+        <h1>教育业务风险全景</h1>
+        <p>融合业务规则、XGBoost 与大模型协作，实时识别报名、退费和学习异常。</p>
+    </div>
+    <a class="hero-action" href="/risk-check"><i class="bi bi-lightning-charge-fill"></i> 发起风险检查</a>
+</section>
+
+<!-- 统计卡片 -->
+<div class="row g-3 mb-4" id="stat-cards">
+    <div class="col-md-3">
+        <div class="card stat-card metric-card primary">
+            <div class="metric-head"><span class="metric-label">今日评估</span><span class="metric-icon"><i class="bi bi-activity"></i></span></div>
+            <div class="stat-value" id="total-today">-</div>
+            <div class="metric-foot">今日进入决策流水线的事件</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card metric-card danger">
+            <div class="metric-head"><span class="metric-label">高风险</span><span class="metric-icon"><i class="bi bi-exclamation-triangle"></i></span></div>
+            <div class="stat-value" id="high-risk-today">-</div>
+            <div class="metric-foot">高与极高风险评估数量</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card metric-card warning">
+            <div class="metric-head"><span class="metric-label">待审案件</span><span class="metric-icon"><i class="bi bi-hourglass-split"></i></span></div>
+            <div class="stat-value" id="pending-cases">-</div>
+            <div class="metric-foot">等待人工判断的风险案件</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card metric-card success">
+            <div class="metric-head"><span class="metric-label">通过率</span><span class="metric-icon"><i class="bi bi-check2-circle"></i></span></div>
+            <div class="stat-value" id="pass-rate">-</div>
+            <div class="metric-foot">正常业务自动放行比例</div>
+        </div>
+    </div>
+</div>
+
+<!-- 图表 -->
+<div class="row g-3">
+    <div class="col-md-8">
+        <div class="card stat-card section-card">
+            <div class="section-title"><h6>近 7 天评估趋势</h6><span class="section-kicker">ASSESSMENT TREND</span></div>
+            <canvas id="trendChart" height="400"></canvas>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card stat-card section-card">
+            <div class="section-title"><h6>规则命中 TOP 5</h6><span class="section-kicker">RULE INSIGHT</span></div>
+            <ul class="list-group list-group-flush" id="top-rules">
+                <li class="list-group-item text-muted">加载中...</li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+async function loadDashboard() {
+    try {
+        const res = await fetch('/api/dashboard/overview');
+        const data = await res.json();
+
+        document.getElementById('total-today').textContent = data.today_assessments || 0;
+        document.getElementById('high-risk-today').textContent = data.today_high_risk || 0;
+        document.getElementById('pending-cases').textContent = data.pending_cases || 0;
+        document.getElementById('pass-rate').textContent = (data.pass_rate || 0) + '%';
+
+        // 趋势图
+        const trend = data.trend_7d || [];
+        const ctx = document.getElementById('trendChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: trend.map(t => t.date),
+                datasets: [
+                    { label: '总评估', data: trend.map(t => t.count), borderColor: '#5b5bd6', backgroundColor: 'rgba(91,91,214,.08)', fill: true, pointBackgroundColor: '#fff', pointBorderColor: '#5b5bd6', pointBorderWidth: 2, tension: 0.38 },
+                    { label: '高风险', data: trend.map(t => t.high_risk_count), borderColor: '#e0526a', backgroundColor: 'rgba(224,82,106,.04)', fill: true, pointBackgroundColor: '#fff', pointBorderColor: '#e0526a', pointBorderWidth: 2, tension: 0.38 }
+                ]
+            },
+            options: {
+                responsive: true,
+                plugins: { legend: { position: 'top', align: 'end', labels: { usePointStyle: true, boxWidth: 7, padding: 18 } } },
+                scales: { x: { grid: { display: false } }, y: { beginAtZero: true, grid: { color: '#edf0f4' }, border: { display: false } } }
+            }
+        });
+
+        // TOP5规则
+        const topRulesEl = document.getElementById('top-rules');
+        const topRules = data.top_rules || [];
+        if (topRules.length === 0) {
+            topRulesEl.innerHTML = '<li class="list-group-item text-muted">暂无数据</li>';
+        } else {
+            topRulesEl.innerHTML = topRules.map(r =>
+                `<li class="list-group-item d-flex justify-content-between">
+                    <span>${r.rule_name}</span>
+                    <span class="badge" style="background:#eeeeff;color:#5151c5">${r.hit_count}</span>
+                </li>`
+            ).join('');
+        }
+    } catch (e) {
+        console.error('加载仪表盘失败:', e);
+    }
+}
+loadDashboard();
+</script>
+{% endblock %}

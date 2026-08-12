@@ -1,0 +1,43 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Virtual environments
+.venv/
+venv/
+env/
+uv/
+
+# Local configuration and secrets
+.env
+.env.*
+!.env.example
+
+# Runtime output
+logs/
+*.log
+*.pid
+*.tmp
+*.bak
+_trash_*/
+.trash/
+
+# Generated model/data artifacts
+*.csv
+*.xlsx
+ml_models/
+*.pkl
+*.joblib
+*.json.gz
+
+# IDE and OS files
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+*.swp
