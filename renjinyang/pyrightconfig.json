@@ -1,0 +1,22 @@
+{
+    "venvPath": "uv",
+    "venv": ".venv",
+    "pythonVersion": "3.11",
+    "extraPaths": [
+        "."
+    ],
+    "include": [
+        "app",
+        "scripts",
+        "tests",
+        "run_app.py"
+    ],
+    "exclude": [
+        "uv/.venv",
+        "**/__pycache__",
+        ".pytest_cache"
+    ],
+    "typeCheckingMode": "basic",
+    "reportMissingImports": true,
+    "reportMissingTypeStubs": false
+}
