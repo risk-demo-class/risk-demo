@@ -22,7 +22,7 @@
 | `telecom` | 电信 | 🔒 受保护，仅组织所有者可推送 |
 | `sharing-economy` | 共享经济 | 🔒 受保护，仅组织所有者可推送 |
 
-> 行业分支由老师维护，**同学们不要推送**。你们的成果推送到**自己的个人分支**（见下方对照表）。
+> 行业分支由老师维护，**同学们不要推送**。你们的成果推送到**自己的个人分支**（分支名由老师统一分配，见老师发放的对照表）。
 
 ---
 
@@ -35,83 +35,12 @@
 
 ---
 
-## 三、姓名-分支对照表（找你的分支）
-
-| 序号 | 姓名 | 分支名 | 行业 |
-|---|---|---|---|
-| 序号 | 姓名 | 分支名 | 行业 |
-|---|---|---|---|
-| 1 | 华振 | `huazhen` | 制造业 |
-| 2 | 孙帅彦 | `sunshuaiyan` | 银行 |
-| 3 | 林煌钦 | `linhuangqin` | 物流 |
-| 4 | 邱家维 | `qiujiawei` | 银行 |
-| 5 | 朱炜杰 | `zhuweijie` | 旅游 |
-| 6 | 谢豪然 | `xiehaoran` | 银行 |
-| 7 | 王梓豪 | `wangzihao` | 制造业 |
-| 8 | 李勇杰 | `liyongjie` | 银行 |
-| 9 | 欧阳志昌 | `ouyangzhichang` | 物流 |
-| 10 | 尼丹阳 | `nidanyang` | 银行 |
-| 11 | 程文辉 | `chengwenhui` | 教育 |
-| 12 | 范宇佳 | `fanyujia` | 银行 |
-| 13 | 胡国印 | `huguoyin` | 教育 |
-| 14 | 杜泽伟 | `duzewei` | 制造业 |
-| 15 | 闫禄瑜 | `yanluyu` | 教育 |
-| 16 | 郭孟豪 | `guomenghao` | 物流 |
-| 17 | 任金阳 | `renjinyang` | 旅游 |
-| 18 | 黄正杰 | `huangzhengjie` | 旅游 |
-| 19 | 姚志博 | `yaozhibo` | 教育 |
-| 20 | 刘须宏 | `liuxuhong` | 教育 |
-| 21 | 郭澳 | `guoao` | 物流 |
-| 22 | 余帆 | `yufan` | 教育 |
-| 23 | 刘子傲 | `liuziao` | 教育 |
-| 24 | 杨荣来 | `yangronglai` | 银行 |
-| 25 | 李天意 | `litianyi` | 制造业 |
-| 26 | 章思涵 | `zhangsihan` | 旅游 |
-| 27 | 许杰 | `xujie` | 教育 |
-| 28 | 彭文熠 | `pengwenyi` | 银行 |
-| 29 | 郭志文 | `guozhiwen` | 教育 |
-| 30 | 崔晓静 | `cuixiaojing` | 制造业 |
-| 31 | 雷凡 | `leifan` | 旅游 |
-| 32 | 彭志浩 | `pengzhihao` | 物流 |
-| 33 | 郭玉文 | `guoyuwen` | 银行 |
-| 34 | 龚桀 | `gongjie` | 医疗 |
-| 35 | 张露霜 | `zhanglushuang` | 旅游 |
-| 36 | 何强 | `heqiang` | 银行 |
-| 37 | 韦宏业 | `weihongye` | 银行 |
-| 38 | 钟庆楠 | `zhongqingnan` | 物流 |
-| 39 | 王梦龙 | `wangmenglong` | 电信 |
-| 40 | 陈鹤文 | `chenhewen` | 银行 |
-| 41 | 罗富麟 | `luofulin` | 医疗 |
-| 42 | 蓝小俊 | `lanxiaojun` | 教育 |
-| 43 | 熊喜林 | `xiongxilin` | 旅游 |
-| 44 | 梅佳 | `meijia` | 教育 |
-| 45 | 许新民 | `xuxinmin` | 旅游 |
-| 46 | 丁鑫 | `dingxin` | 旅游 |
-| 47 | 毛洋 | `maoyang` | 旅游 |
-| 48 | 肖石平 | `xiaoshiping` | 制造业 |
-| 49 | 闫馨扬 | `yanxinyang` | 教育 |
-| 50 | 张凯雷 | `zhangkailei` | 旅游 |
-| 51 | 孙飞虎 | `sunfeihu` | 医疗 |
-| 52 | 王锐 | `wangrui` | 银行 |
-| 53 | 董超 | `dongchao` | 银行 |
-| 54 | 贺祺 | `heqi` | 制造业 |
-| 55 | 李志 | `lizhi` | 旅游 |
-| 56 | 刘懿城 | `liuyicheng` | 银行 |
-| 57 | 莫海强 | `mohaiqiang` | 物流 |
-| 58 | 梁文森 | `liangwensen` | 银行 |
-| 59 | 余乐 | `yule` | 制造业 |
-| 60 | 张振 | `zhangzhen` | 银行 |
-| 61 | 蔡建超 | `caijianchao` | 银行 |
-| 62 | 虞海锋 | `yuhaifeng` | 物流 |
-| 63 | 杨茗铄 | `yangmingshuo` | 银行 |
----
-
-## 四、学生推送步骤（第一次）
+## 三、学生推送步骤（第一次）
 
 ### 第 0 步：准备工作
 
 1. **注册 GitHub 账号**：https://github.com/join （已有账号跳过）
-2. **确认已接受组织邀请**：老师已向你发出 **risk-demo-class 组织邀请**，请在 GitHub 通知/邮件里点 **Accept（接受）**——没接受就无法推送
+2. **确认已接受组织邀请**：老师已向你发出 **risk-demo-class 组织邀请**，请在 GitHub 通知/邮箱里点 **Accept（接受）**——没接受就无法推送
 3. **安装 Git**：https://git-scm.com/download/win 一路 Next 安装
 
 ### 第 1 步：克隆仓库到本地
@@ -125,7 +54,7 @@ cd risk-demo
 
 ### 第 2 步：切换到你的分支（分支已由老师预建，直接切换）
 
-在上面的对照表里找到你的分支名，然后执行（以 `zhangsan` 为例）：
+使用老师发给你的**个人分支名**（如 `zhangsan`），执行：
 
 ```bash
 git checkout zhangsan
@@ -158,7 +87,7 @@ git push
 
 ---
 
-## 五、以后每次更新（重复这三条）
+## 四、以后每次更新（重复这三条）
 
 ```bash
 git add .
@@ -168,7 +97,7 @@ git push
 
 ---
 
-## 六、常见问题（FAQ）
+## 五、常见问题（FAQ）
 
 | 问题 | 原因与解决办法 |
 |---|---|
@@ -176,7 +105,7 @@ git push
 | `protected branch ... declined` / `Updates were rejected` | 推到了受保护分支（main/行业分支）或别人的分支。`git checkout 自己的分支名` 切回去再推 |
 | `master has no upstream branch` | 在 `main` 上，先执行第 2 步切换到自己的分支 |
 | 推送超时 / 网络错误 | GitHub 网络不稳定，可以开代理，或改用 SSH 方式（见下节） |
-| 忘了自己分支名 | 看上面的对照表，或 `git branch -a` 查看所有分支 |
+| 忘了自己分支名 | 问老师，或 `git branch -a` 查看所有分支 |
 
 ### 网络不好？用 SSH 方式（可选）
 
@@ -196,9 +125,9 @@ git checkout zhangsan
 
 ---
 
-## 七、老师（管理员）操作备忘
+## 六、老师（管理员）操作备忘
 
-已完成：8 个行业团队建好（均有仓库写权限）、60 名学生已发组织邀请、个人分支已预建并锁定（仅本人可推）。
+已完成：8 个行业团队建好（均有仓库写权限）、学生已发组织邀请、个人分支已预建并锁定（仅本人可推，每 30 分钟自动补锁新接受邀请的学生）。
 
 ### 1. 查看学生是否已接受邀请
 
@@ -216,7 +145,7 @@ gh api -X PUT orgs/risk-demo-class/teams/tourism-team/memberships/<用户名> -f
 # 预建个人分支（从行业分支派生，如 zhangsan 从 tourism）
 git push origin tourism:refs/heads/zhangsan
 
-# 锁定分支（仅本人可推）
+# 锁定分支（仅本人可推；须在学生接受邀请后执行，否则 GitHub 会忽略）
 gh api -X PUT repos/risk-demo-class/risk-demo/branches/zhangsan/protection \
   -H "Accept: application/vnd.github+json" \
   --input - <<'EOF'
