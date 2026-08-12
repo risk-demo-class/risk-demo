@@ -1,0 +1,43 @@
+-- ============================================
+-- 旅游风控系统 - 数据库初始化指南
+-- ============================================
+--
+-- 本系统共需初始化 4 个 SQL 脚本，按以下顺序执行:
+--
+--   1. init_business_tables.sql  -- 7 张行业业务表 (DDL)
+--   2. init_business_data.sql    -- 行业业务数据 (772 条, 含 7 个 RISK 高风险用户)
+--   3. init_risk_tables.sql      -- 9 张风控核心表 (DDL, 含 P4 2 张)
+--   4. init_risk_data.sql        -- 11 条旅游行业规则 + 黑名单种子
+--
+-- ============================================
+-- 使用方式
+-- ============================================
+--
+-- 方式1 (推荐): 一键 Python 脚本
+--   conda activate risk
+--   python scripts/init_db.py
+--
+-- 方式2: 手动按顺序执行 (在项目根目录下)
+--   mysql -u root -p123456 --default-character-set=utf8mb4 travel_risk < sql/init_business_tables.sql
+--   mysql -u root -p123456 --default-character-set=utf8mb4 travel_risk < sql/init_business_data.sql
+--   mysql -u root -p123456 --default-character-set=utf8mb4 travel_risk < sql/init_risk_tables.sql
+--   mysql -u root -p123456 --default-character-set=utf8mb4 travel_risk < sql/init_risk_data.sql
+--
+-- 方式3: 仅创建数据库结构 (不含数据)
+--   mysql -u root -p123456 --default-character-set=utf8mb4 travel_risk < sql/init_business_tables.sql
+--   mysql -u root -p123456 --default-character-set=utf8mb4 travel_risk < sql/init_risk_tables.sql
+--
+-- 老环境升级 (电商基线迁移到旅游版): 建议直接重建
+--   python scripts/init_db.py --reset --yes
+--
+-- ============================================
+-- 注意事项
+-- ============================================
+-- - 数据库名: travel_risk (init_db.py 自动创建)
+-- - 字符集: utf8mb4
+-- - 业务表按外键依赖排序，可安全顺序执行
+-- - 业务数据脚本已包含 SET FOREIGN_KEY_CHECKS = 0 处理
+-- - 风控核心表 9 张结构复用电商基线, 仅枚举值按行业调整
+--   (事件类型: 预订/支付/签证申请/退改签; 黑名单类型: 用户/护照号/身份证号/
+--    手机号/设备指纹/IP/签证号; 特征实体: 用户/订单/乘客)
+-- - 如需重新生成业务数据: python scripts/gen_business_data.py
