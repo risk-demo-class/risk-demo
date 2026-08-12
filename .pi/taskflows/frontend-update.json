@@ -1,0 +1,179 @@
+{
+  "name": "frontend-update",
+  "description": "华信银行信贷风控平台前端 UI/UX 更新：探索现状 → 制定银行风格优化方案 → 人工审批 → 按页面并行实施 → 测试+评审 → 汇总报告。适用于 AI-BankRisk 的 templates/ 与 static/app.js。",
+  "args": {
+    "project_dir": {
+      "default": "/home/leon/projects/尚硅谷大模型项目之风控系统/3.代码/AI_Risk"
+    },
+    "pages": {
+      "default": [
+        "dashboard",
+        "risk_check",
+        "rules",
+        "cases",
+        "blacklist",
+        "assessments",
+        "chat"
+      ]
+    }
+  },
+  "budget": {
+    "maxTokens": 2000000
+  },
+  "concurrency": 4,
+  "strictInterpolation": true,
+  "phases": [
+    {
+      "id": "discover",
+      "type": "agent",
+      "agent": "scout",
+      "cwd": "/home/leon/projects/尚硅谷大模型项目之风控系统/3.代码/AI_Risk",
+      "output": "json",
+      "expect": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "required": [
+            "page",
+            "file",
+            "current_state",
+            "issues"
+          ],
+          "properties": {
+            "page": {
+              "type": "string"
+            },
+            "file": {
+              "type": "string"
+            },
+            "current_state": {
+              "type": "string"
+            },
+            "issues": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "retry": {
+        "max": 2,
+        "backoffMs": 0
+      },
+      "task": "探索 AI-BankRisk 项目的前端现状（银行信贷风控平台，华信银行品牌）。\n\n1. 读取 templates/base.html（公共布局/侧边栏/样式基座）、static/app.js（全局 JS）、以及页面 {args.pages} 对应的 templates/*.html。\n2. 评估每个页面：当前 UI 结构、是否体现银行专业风格、一致性（卡片/表格/按钮/色彩/间距）、可用性问题（表单校验提示、空态、加载态、错误提示）、以及银行风控场景的体验短板（如规则命中解释、风险等级视觉、审批流程）。\n3. 输出 ONLY JSON 数组，每页一项：{\"page\":\"dashboard\",\"file\":\"templates/dashboard.html\",\"current_state\":\"一句话现状\",\"issues\":[\"问题1\",\"问题2\"]}。不要输出任何其他文字。"
+    },
+    {
+      "id": "plan",
+      "type": "agent",
+      "agent": "planner",
+      "cwd": "/home/leon/projects/尚硅谷大模型项目之风控系统/3.代码/AI_Risk",
+      "dependsOn": [
+        "discover"
+      ],
+      "output": "json",
+      "expect": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "required": [
+            "page",
+            "changes"
+          ],
+          "properties": {
+            "page": {
+              "type": "string"
+            },
+            "changes": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "retry": {
+        "max": 2,
+        "backoffMs": 0
+      },
+      "task": "基于探索结果制定银行信贷风控平台的前端 UI/UX 优化方案。\n\n探索结果：\n{steps.discover.output}\n\n要求：\n1. 保持现有技术栈（Jinja2 + Bootstrap 5.3 + 左侧固定深色侧边栏布局），不引入新依赖、不重写架构。\n2. 方案要体现银行专业气质：克制的色彩体系（沿用现有配色，可微调）、清晰的信息层级、统一组件风格（卡片/表格/徽章/按钮）、关键状态（风险等级 低/中/高/极高、决策 通过/标记/人工审核/拒绝）的视觉一致性。\n3. 每个页面的改动项要具体可执行（描述改动位置与内容），控制在每个页面 3-8 项，避免过度设计。\n4. 必须保持现有 DOM id / JS 绑定（static/app.js 与页面 API 拉取逻辑）不变，只做样式与结构增强。\n5. 输出 ONLY JSON 数组，每页一项：{\"page\":\"dashboard\",\"changes\":[\"改动1\",\"改动2\"]}。不要输出任何其他文字。"
+    },
+    {
+      "id": "approve",
+      "type": "approval",
+      "dependsOn": [
+        "plan"
+      ],
+      "task": "以下是对华信银行信贷风控平台前端的 UI/UX 优化方案，请审阅：\n\n{steps.plan.output}\n\n选择：Approve（按方案执行）/ Edit（输入修改意见）/ Reject（终止）。"
+    },
+    {
+      "id": "implement",
+      "type": "map",
+      "over": "{steps.plan.json}",
+      "as": "item",
+      "agent": "executor-ui",
+      "cwd": "/home/leon/projects/尚硅谷大模型项目之风控系统/3.代码/AI_Risk",
+      "dependsOn": [
+        "approve"
+      ],
+      "task": "按方案优化前端页面 {item.page}（文件 {item.file}）。\n\n要求改动：\n{item.changes}\n\n约束：\n1. 只修改 {item.file} 文件本身（如涉及 static/app.js 或 base.html 的公共改动，把改动需求写进输出说明，不要越权修改其他文件）。\n2. 保持现有 DOM id / JS 绑定 / API 拉取逻辑不变。\n3. 保持银行专业风格，色彩克制、层级清晰。\n4. 完成后自检：grep 确认无电商残留词（下单/订单/售后/物流），HTML 结构完整（标签闭合）。\n5. 输出：一句话总结改了什么 + 是否涉及公共文件改动需求。"
+    },
+    {
+      "id": "check",
+      "type": "script",
+      "dependsOn": [
+        "implement"
+      ],
+      "cwd": "/home/leon/projects/尚硅谷大模型项目之风控系统/3.代码/AI_Risk",
+      "run": "DB_PORT=3307 .venv/bin/python -m pytest tests/test_bank_pages.py -q 2>&1 | tail -5",
+      "timeout": 180000
+    },
+    {
+      "id": "review",
+      "type": "gate",
+      "agent": "reviewer",
+      "cwd": "/home/leon/projects/尚硅谷大模型项目之风控系统/3.代码/AI_Risk",
+      "dependsOn": [
+        "check"
+      ],
+      "output": "json",
+      "expect": {
+        "type": "object",
+        "required": [
+          "verdict",
+          "reason"
+        ],
+        "properties": {
+          "verdict": {
+            "enum": [
+              "pass",
+              "block"
+            ]
+          },
+          "reason": {
+            "type": "string"
+          }
+        }
+      },
+      "task": "审查前端更新后的质量：\n1. git diff 查看 templates/ 与 static/app.js 的改动。\n2. 核对是否遵循方案、是否破坏 DOM id / JS 绑定。\n3. 检查银行风格一致性、无电商残留词。\n4. 页面测试结果：\n{steps.check.output}\n\n输出 ONLY JSON：{\"verdict\":\"pass\"|\"block\",\"reason\":\"...\"}。"
+    },
+    {
+      "id": "report",
+      "type": "reduce",
+      "from": [
+        "implement",
+        "check",
+        "review"
+      ],
+      "agent": "doc-writer",
+      "cwd": "/home/leon/projects/尚硅谷大模型项目之风控系统/3.代码/AI_Risk",
+      "dependsOn": [
+        "review"
+      ],
+      "task": "汇总前端更新结果，输出最终报告（Markdown）：\n1. 各页面改动摘要（来自 implement 输出）\n2. 页面测试结果（来自 check）\n3. 评审结论（来自 review）\n4. 若 implement 输出提到公共文件（base.html/app.js）改动需求，列出待办。\n\n输出简洁的中文报告。",
+      "final": true
+    }
+  ]
+}

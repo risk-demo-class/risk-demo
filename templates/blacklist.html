@@ -43,13 +43,21 @@
 </div>
 
 <!-- 筛选 + 分页大小 -->
-<div class="mb-3 d-flex gap-2 align-items-center">
+<div class="mb-3 d-flex gap-2 align-items-center flex-wrap">
     <select class="form-select form-select-sm w-auto" id="filterType" onchange="loadList(1)">
         <option value="">全部类型</option>
         <option value="客户">客户</option>
         <option value="地址">地址</option>
         <option value="手机号">手机号</option>
         <option value="设备">设备</option>
+    </select>
+    <input type="text" class="form-control form-control-sm w-auto" id="filterValue"
+           placeholder="按值搜索" oninput="onFilterValueInput()">
+    <select class="form-select form-select-sm w-auto" id="filterStatus" onchange="loadList(1)">
+        <option value="">有效/失效</option>
+        <option value="active">有效</option>
+        <option value="expired">已过期</option>
+        <option value="permanent">永久</option>
     </select>
     <span class="text-muted small">每页</span>
     <select class="form-select form-select-sm w-auto" id="pageSize" onchange="onPageSizeChange()">
@@ -80,7 +88,7 @@
     </div>
 </div>
 
-<nav class="pagination-bottom"><ul class="pagination justify-content-center mb-0" id="pagination"></ul></nav>
+<nav class="pagination-bottom" id="paginationWrap"><ul class="pagination justify-content-center mb-0" id="pagination"></ul></nav>
 
 <!-- 新增黑名单 模态框 -->
 <div class="modal fade" id="addModal" tabindex="-1">
@@ -96,17 +104,20 @@
                 <div class="mb-3">
                     <label class="form-label">类型 <span class="text-danger">*</span></label>
                     <select class="form-select" id="addType">
-                        <option value="客户">客户 (customer_id)</option>
+                        <option value="" selected disabled>请选择类型</option>
+                        <option value="客户">客户</option>
                         <option value="手机号">手机号</option>
-                        <option value="地址">地址 (联系信息ID)</option>
-                        <option value="设备">设备 (device_id)</option>
-        <option value="设备">设备</option>
+                        <option value="地址">地址</option>
+                        <option value="设备">设备</option>
                     </select>
-                    <div class="form-text">客户 = customer_id; 手机号 = 11位手机号; 地址 = 联系信息ID; 设备 = 申请设备ID</div>
+                    <div class="form-text">客户 = 客户ID（C 开头）; 手机号 = 11位数字; 地址 = 联系信息ID（ct 开头）; 设备 = DEV- 前缀</div>
                 </div>
                 <div class="mb-3">
                     <label class="form-label">值 <span class="text-danger">*</span></label>
-                    <input type="text" class="form-control" id="addValue" placeholder="例如: C00001 / 13800138000 / ct0001 / DEV-0001">
+                    <input type="text" class="form-control" id="addValue"
+                           placeholder="例如: C00001 / 13800138000 / ct0001 / DEV-0001"
+                           oninput="clearValueError()">
+                    <div class="invalid-feedback" id="addValueError"></div>
                 </div>
                 <div class="mb-3">
                     <label class="form-label">原因</label>
@@ -125,12 +136,16 @@
     </div>
 </div>
 
+<!-- Toast 反馈容器 -->
+<div class="toast-container position-fixed top-0 end-0 p-3" id="blToastContainer" style="z-index: 2000;"></div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
 let currentPage = 1;
 const PAGE_SIZE_KEY = 'bl_pageSize';
+let pendingRemoveId = null;
+let debounceTimer = null;
 
 // 从 localStorage 恢复 pageSize, 默认 20
 (function initPageSize() {
@@ -149,65 +164,176 @@ function typeBadge(t) {
     return `<span class="badge ${cls}">${t}</span>`;
 }
 
-// 加载统计 (拉 page_size=100 汇总; 100 条封顶, 教学项目先求简单)
+// HTML 转义, 防特殊字符破坏按钮 onclick / data 属性
+function esc(s) {
+    return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+// 过期判定: expire_time 早于当前时间即视为已过期; 永久(无 expire_time)不算过期
+function isExpired(it) {
+    return !!it.expire_time && new Date(it.expire_time).getTime() < Date.now();
+}
+
+// 拉全量 (page_size=100 循环直到累计 >= total)
+async function fetchAll() {
+    const all = [];
+    let page = 1;
+    let total = Infinity;
+    while (all.length < total) {
+        const res = await fetch(`/api/blacklist?page=${page}&page_size=100`);
+        const data = await res.json();
+        total = data.total;
+        data.items.forEach(it => all.push(it));
+        if (data.items.length === 0) break;
+        page++;
+    }
+    return all;
+}
+
+// 加载统计 (循环拉 page_size=100 直到累计 >= total, 再按类型累加; 总数直接用 data.total)
 async function loadStats() {
-    const res = await fetch('/api/blacklist?page=1&page_size=100');
-    const data = await res.json();
     const cnt = {客户: 0, 手机号: 0, 地址: 0, 设备: 0};
-    data.items.forEach(it => { if (cnt[it.blacklist_type] !== undefined) cnt[it.blacklist_type]++; });
+    let page = 1;
+    let fetched = 0;
+    let total = 0;
+    while (true) {
+        const res = await fetch(`/api/blacklist?page=${page}&page_size=100`);
+        const data = await res.json();
+        total = data.total;
+        data.items.forEach(it => { if (cnt[it.blacklist_type] !== undefined) cnt[it.blacklist_type]++; });
+        fetched += data.items.length;
+        if (fetched >= total || data.items.length === 0) break;
+        page++;
+    }
     document.getElementById('bl-stat-customer').textContent = cnt.客户;
     document.getElementById('bl-stat-address').textContent = cnt.地址;
     document.getElementById('bl-stat-device').textContent = cnt.设备;
     document.getElementById('bl-stat-phone').textContent = cnt.手机号;
-    document.getElementById('bl-stat-total').textContent = data.total;
+    document.getElementById('bl-stat-total').textContent = total;
 }
 
-// 加载列表 (前端过滤 type, 因为后端没 type 筛选参数)
+// 前端追加过滤: 值搜索 + 有效/已过期
+function applyLocalFilters(items, kw, status) {
+    let out = items;
+    if (kw) out = out.filter(it => String(it.blacklist_value).toLowerCase().includes(kw));
+    if (status === 'active') out = out.filter(it => !isExpired(it));
+    else if (status === 'expired') out = out.filter(it => isExpired(it));
+    else if (status === 'permanent') out = out.filter(it => !it.expire_time);
+    return out;
+}
+
+// 渲染行 (过期行置灰 + 「已过期」红徽章)
+function renderTable(items) {
+    const tbody = document.getElementById('bl-table');
+    if (items.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">暂无符合条件的黑名单</td></tr>';
+        return;
+    }
+    tbody.innerHTML = items.map(it => {
+        const expired = isExpired(it);
+        const rowAttrs = expired ? ' class="table-active text-muted"' : '';
+        const expireCell = it.expire_time
+            ? new Date(it.expire_time).toLocaleString('zh-CN')
+              + (expired ? ' <span class="badge bg-danger">已过期</span>' : '')
+            : '<span class="text-muted small">永久</span>';
+        return `<tr${rowAttrs}>
+            <td>${it.blacklist_id}</td>
+            <td>${typeBadge(it.blacklist_type)}</td>
+            <td><code>${esc(it.blacklist_value)}</code></td>
+            <td>${it.reason ? esc(it.reason) : '<span class="text-muted small">-</span>'}</td>
+            <td>${expireCell}</td>
+            <td>${it.create_time ? new Date(it.create_time).toLocaleString('zh-CN') : '-'}</td>
+            <td>
+                <button class="btn btn-outline-danger btn-sm" id="rm-${it.blacklist_id}"
+                    data-value="${esc(it.blacklist_value)}" onclick="confirmRemove(${it.blacklist_id}, this)">
+                    <i class="bi bi-trash"></i> 移除
+                </button>
+            </td>
+        </tr>`;
+    }).join('');
+}
+
+// 加载列表
 async function loadList(page) {
     currentPage = page || 1;
     const filterType = document.getElementById('filterType').value;
+    const filterValue = document.getElementById('filterValue').value.trim().toLowerCase();
+    const filterStatus = document.getElementById('filterStatus').value;
     const pageSize = parseInt(document.getElementById('pageSize').value);
+    const hasLocal = !!(filterValue || filterStatus);
+    const wrap = document.getElementById('paginationWrap');
+
+    if (filterType) {
+        // 类型筛选: 循环拉全量 + 前端过滤, 显示真实匹配数, 隐藏分页条
+        const all = await fetchAll();
+        let items = all.filter(it => it.blacklist_type === filterType);
+        items = applyLocalFilters(items, filterValue, filterStatus);
+        document.getElementById('listCount').textContent = `筛选结果 ${items.length} 条`;
+        wrap.style.display = 'none';
+        renderTable(items);
+        return;
+    }
+
+    // 无类型筛选: 正常分页 (值/状态过滤 标注基于当前页)
+    wrap.style.display = '';
     const res = await fetch(`/api/blacklist?page=${currentPage}&page_size=${pageSize}`);
     const data = await res.json();
     let items = data.items;
-    if (filterType) items = items.filter(it => it.blacklist_type === filterType);
-    document.getElementById('listCount').textContent =
-        filterType ? `当前 ${items.length} 条 (类型筛选为前端过滤)` : `共 ${data.total} 条, 当前 ${items.length} 条/页`;
-
-    const tbody = document.getElementById('bl-table');
-    if (items.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">暂无黑名单</td></tr>';
+    if (hasLocal) {
+        items = applyLocalFilters(items, filterValue, filterStatus);
+        document.getElementById('listCount').textContent = `当前 ${items.length} 条 (基于当前第 ${currentPage} 页过滤)`;
     } else {
-        tbody.innerHTML = items.map(it => `
-            <tr>
-                <td>${it.blacklist_id}</td>
-                <td>${typeBadge(it.blacklist_type)}</td>
-                <td><code>${it.blacklist_value}</code></td>
-                <td>${it.reason || '<span class="text-muted small">-</span>'}</td>
-                <td>${it.expire_time ? new Date(it.expire_time).toLocaleString('zh-CN') : '<span class="text-muted small">永久</span>'}</td>
-                <td>${it.create_time ? new Date(it.create_time).toLocaleString('zh-CN') : '-'}</td>
-                <td>
-                    <button class="btn btn-outline-danger btn-sm" onclick="removeBl(${it.blacklist_id}, '${it.blacklist_value}')">
-                        <i class="bi bi-trash"></i> 移除
-                    </button>
-                </td>
-            </tr>
-        `).join('');
+        document.getElementById('listCount').textContent = `共 ${data.total} 条, 当前 ${items.length} 条/页`;
     }
+    renderTable(items);
     // 分页 (P4-L4 2026-08-08: 用通用分页组件 app.js::buildPaginationHtml, 与评估/案件一致)
-    // 智能省略号, 总页数 > 7 时显示 ...
     const totalPages = Math.ceil(data.total / pageSize);
     document.getElementById('pagination').innerHTML =
         buildPaginationHtml(currentPage, totalPages, pageSize, 'loadList');
 }
 
-// 新增模态框
+// 值搜索框防抖 (300ms)
+function onFilterValueInput() {
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(() => loadList(1), 300);
+}
+
+// ----- 新增模态框 -----
 function showAddModal() {
     document.getElementById('addType').value = '客户';
     document.getElementById('addValue').value = '';
     document.getElementById('addReason').value = '';
     document.getElementById('addExpire').value = '';
+    clearValueError();
     new bootstrap.Modal(document.getElementById('addModal')).show();
+}
+
+function clearValueError() {
+    const input = document.getElementById('addValue');
+    input.classList.remove('is-invalid');
+    document.getElementById('addValueError').textContent = '';
+}
+
+function setValueError(msg) {
+    const input = document.getElementById('addValue');
+    input.classList.add('is-invalid');
+    document.getElementById('addValueError').textContent = msg;
+}
+
+// 按类型校验值格式, 返回错误文案 (空串 = 通过)
+function validateValue(type, value) {
+    if (!type) return '请选择类型';
+    if (!value) return '请填写值';
+    if (type === '手机号') {
+        if (!/^\d{11}$/.test(value)) return '手机号必须为 11 位数字';
+    } else if (type === '设备') {
+        if (!/^DEV-/i.test(value)) return '设备 ID 需以 DEV- 开头';
+    } else if (type === '客户') {
+        if (!/^[Cc][0-9A-Za-z]{2,}$/.test(value)) return '客户 ID 需以 C/c 开头且符合 ID 规范';
+    } else if (type === '地址') {
+        if (!/^[Cc][Tt][0-9A-Za-z]+$/.test(value)) return '地址 ID 需以 ct 开头且符合联系信息 ID 规范';
+    }
+    return '';
 }
 
 // 提交新增
@@ -216,7 +342,10 @@ async function submitAdd() {
     const value = document.getElementById('addValue').value.trim();
     const reason = document.getElementById('addReason').value.trim();
     const expireRaw = document.getElementById('addExpire').value;
-    if (!value) { alert('请填写值'); return; }
+
+    // 前端校验, 红字显示在值字段下方, 阻止非法入库
+    const verr = validateValue(type, value);
+    if (verr) { setValueError(verr); return; }
 
     // datetime-local 没有时区, 直接拼秒 + 用 ISO 格式
     // 浏览器: "2026-08-15T10:30" → 后端需要完整 ISO (含秒, 不含时区会被当本地时间)
@@ -228,32 +357,76 @@ async function submitAdd() {
         reason: reason || null,
         expire_time: expire_time,
     };
+    const btn = document.querySelector('#addModal .btn-primary');
+    btn.disabled = true;
     const res = await fetch('/api/blacklist', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify(body),
     });
+    btn.disabled = false;
     if (res.ok) {
         bootstrap.Modal.getInstance(document.getElementById('addModal')).hide();
+        showToast('success', '添加成功');
         loadList(currentPage);
         loadStats();
     } else {
         const err = await res.json().catch(() => ({detail: '请求失败'}));
-        alert('添加失败: ' + (err.detail || res.status));
+        showToast('danger', '添加失败: ' + (err.detail || res.status));
     }
 }
 
-// 移除黑名单
-async function removeBl(blacklistId, value) {
-    if (!confirm(`确定要移除黑名单 "${value}" 吗?`)) return;
-    const res = await fetch(`/api/blacklist/${blacklistId}`, { method: 'DELETE' });
+// ----- 移除 (行内二次确认) -----
+function restoreRemoveBtn(btn) {
+    btn.className = 'btn btn-outline-danger btn-sm';
+    btn.disabled = false;
+    btn.innerHTML = '<i class="bi bi-trash"></i> 移除';
+}
+
+function confirmRemove(id, btn) {
+    if (pendingRemoveId !== id) {
+        // 第一击: 进入「确认移除?」待确认态, 其它按钮复位
+        pendingRemoveId = id;
+        document.querySelectorAll('[id^="rm-"]').forEach(b => {
+            if (+b.id.slice(3) !== id) restoreRemoveBtn(b);
+        });
+        btn.className = 'btn btn-danger btn-sm';
+        btn.innerHTML = '确认移除?';
+        return;
+    }
+    // 第二击: 执行
+    pendingRemoveId = null;
+    doRemove(id, btn);
+}
+
+async function doRemove(id, btn) {
+    const value = btn.dataset.value || '';
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>移除中...';
+    const res = await fetch(`/api/blacklist/${id}`, { method: 'DELETE' });
     if (res.ok) {
+        showToast('success', `已移除黑名单 "${value}"`);
         loadList(currentPage);
         loadStats();
     } else {
         const err = await res.json().catch(() => ({detail: '请求失败'}));
-        alert('移除失败: ' + (err.detail || res.status));
+        showToast('danger', '移除失败: ' + (err.detail || res.status));
+        restoreRemoveBtn(btn);
     }
+}
+
+// Toast 反馈
+function showToast(kind, msg) {
+    const container = document.getElementById('blToastContainer');
+    const el = document.createElement('div');
+    el.className = `toast align-items-center text-bg-${kind} border-0`;
+    el.setAttribute('role', 'alert');
+    el.innerHTML = `<div class="d-flex"><div class="toast-body">${esc(msg)}</div>
+        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button></div>`;
+    container.appendChild(el);
+    const t = new bootstrap.Toast(el, { delay: 3000 });
+    t.show();
+    el.addEventListener('hidden.bs.toast', () => el.remove());
 }
 
 loadStats();

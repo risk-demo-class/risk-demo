@@ -3,6 +3,18 @@
 {% block content %}
 <h4 class="mb-4">评估历史 <small class="text-muted fs-6">全量评估, 含已结案 + 通过/标记 (案件工作台只看待办)</small></h4>
 
+<style>
+    /* 表格阅读体验: 表头 sticky 固定 + 等级/决策列固定宽度 (仅本页生效) */
+    #assessTableWrap { max-height: 68vh; overflow-y: auto; }
+    #assessTableWrap thead th {
+        position: sticky; top: 0; z-index: 2;
+        background-color: #f8f9fa;
+        box-shadow: inset 0 -1px 0 rgba(0,0,0,.08);
+    }
+    #assessTableWrap th.col-level, #assessTableWrap td.col-level { width: 64px; white-space: nowrap; }
+    #assessTableWrap th.col-decision, #assessTableWrap td.col-decision { width: 88px; white-space: nowrap; }
+</style>
+
 <!-- 筛选 -->
 <div class="mb-3 d-flex gap-2 align-items-center flex-wrap">
     <select class="form-select form-select-sm w-auto" id="filterDecision" onchange="loadAssessments(1)">
@@ -34,12 +46,19 @@
         <option value="100">100 条</option>
     </select>
     <button class="btn btn-outline-primary btn-sm" onclick="loadAssessments(1)">查询</button>
+    <button class="btn btn-outline-secondary btn-sm" onclick="exportAssessmentsCSV()" title="导出当前筛选结果 (UTF-8, 兼容 Excel)">导出 CSV</button>
     <span class="text-muted small ms-2" id="assessmentsCount"></span>
+</div>
+
+<!-- 决策分布汇总条 (基于当前页结果集) -->
+<div class="mb-3 d-flex gap-2 align-items-center flex-wrap" id="decisionSummaryWrap" hidden>
+    <span class="text-muted small me-1">决策分布</span>
+    <span id="decisionSummary"></span>
 </div>
 
 <!-- 评估列表 -->
 <div class="card stat-card">
-    <div class="table-responsive">
+    <div class="table-responsive" id="assessTableWrap">
         <table class="table table-hover mb-0">
             <thead class="table-light">
                 <tr>
@@ -47,11 +66,9 @@
                     <th>用户</th>
                     <th>事件</th>
                     <th>评分</th>
-                    <th>等级</th>
-                    <th>决策</th>
-                    <th>命中</th>
-                    <th>ML分 (P拒绝)</th>
-                    <th>风险分 (sigmoid)</th>
+                    <th class="col-level">等级</th>
+                    <th class="col-decision">决策</th>
+                    <th title="PD违约概率(sigmoid校准) → 0-100 风险分">风险分 (sigmoid)</th>
                     <th>时间</th>
                     <th>操作</th>
                 </tr>
@@ -67,7 +84,7 @@
 <div class="modal fade" id="assessModal" tabindex="-1">
     <div class="modal-dialog modal-xl">
         <div class="modal-content">
-            <div class="modal-header"><h5 class="modal-title">评估详情</h5><button type="button" class="btn-close-risk" data-bs-dismiss="modal" title="关闭" aria-label="Close"><i class="bi bi-x-lg"></i></button></div>
+            <div class="modal-header"><h5 class="modal-title">评估详情</h5><button type="button" class="btn btn-outline-primary btn-sm me-auto ms-3" onclick="recheckAssessment()" id="recheckBtn"><i class="bi bi-arrow-repeat"></i> 重做检查</button><button type="button" class="btn-close-risk" data-bs-dismiss="modal" title="关闭" aria-label="Close"><i class="bi bi-x-lg"></i></button></div>
             <div class="modal-body" id="assessDetailBody">加载中...</div>
         </div>
     </div>
@@ -101,6 +118,47 @@ function decisionBadge(d) {
     return `<span class="badge ${cls}">${d}</span>`;
 }
 
+// 决策分布汇总条: 基于当前页结果集统计各项计数
+function renderDecisionSummary(items) {
+    const wrap = document.getElementById('decisionSummaryWrap');
+    const el = document.getElementById('decisionSummary');
+    if (!items || !items.length) { wrap.hidden = true; return; }
+    const counts = { '通过':0, '标记':0, '人工审核':0, '拒绝':0 };
+    items.forEach(a => { if (counts[a.decision] != null) counts[a.decision]++; });
+    const order = [['通过','bg-success'],['标记','bg-info'],['人工审核','bg-warning'],['拒绝','bg-danger']];
+    el.innerHTML = order.map(([d, cls]) =>
+        `<span class="badge ${cls} me-1">${d}: ${counts[d]}</span>`
+    ).join('') + ` <span class="text-muted small">基于当前页 ${items.length} 条</span>`;
+    wrap.hidden = false;
+}
+
+// 导出 CSV (纯前端 Blob + UTF-8 BOM, 兼容 Excel 不乱码)
+function exportAssessmentsCSV() {
+    if (!currentItems.length) { alert('当前没有可导出的数据'); return; }
+    const header = ['评估ID','用户ID','事件类型','最终评分','风险等级','决策','风险分(sigmoid)','PD违约概率','命中规则数','创建时间'];
+    const rows = currentItems.map(a => [
+        a.assessment_id, a.user_id, a.event_type, a.final_score, a.risk_level, a.decision,
+        a.ml_score != null ? mlProbToRiskScore(a.ml_score) : '',
+        a.ml_score != null ? (a.ml_score*100).toFixed(4) + '%' : '',
+        a.rule_count,
+        new Date(a.create_time).toLocaleString('zh-CN'),
+    ]);
+    const escape = v => { v = String(v == null ? '' : v); return /[,"\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; };
+    const csv = '\ufeff' + [header, ...rows].map(r => r.map(escape).join(',')).join('\r\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const ts = new Date().toISOString().replace(/[-:T]/g,'').slice(0,14);
+    a.href = url; a.download = `评估历史_${ts}.csv`;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+}
+
+// 当前页结果集 (供导出 CSV / 决策分布汇总使用)
+let currentItems = [];
+// 当前打开详情的评估对象 (供重做检查使用)
+let currentDetail = null;
+
 async function loadAssessments(page) {
     currentPage = page || 1;
     const decision = document.getElementById('filterDecision').value;
@@ -115,11 +173,13 @@ async function loadAssessments(page) {
     if (userId) params.set('user_id', userId);
     const res = await fetch('/api/assessments?' + params);
     const data = await res.json();
+    currentItems = data.items || [];
     document.getElementById('assessmentsCount').textContent =
         `共 ${data.total} 条, 当前 ${data.items.length} 条/页`;
+    renderDecisionSummary(data.items);
     const tbody = document.getElementById('assessments-table');
     if (!data.items.length) {
-        tbody.innerHTML = '<tr><td colspan="10" class="text-center text-muted">暂无评估</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="9" class="text-center text-muted">暂无评估</td></tr>';
     } else {
         tbody.innerHTML = data.items.map(a => `
             <tr>
@@ -127,11 +187,11 @@ async function loadAssessments(page) {
                 <td>${a.user_id}</td>
                 <td><span class="badge bg-light text-dark">${a.event_type}</span></td>
                 <td><strong>${a.final_score}</strong></td>
-                <td>${levelBadge(a.risk_level)}</td>
-                <td>${decisionBadge(a.decision)}</td>
-                <td>${a.rule_count}</td>
-                <td>${a.ml_score != null ? a.ml_score.toFixed(3) : '<span class="text-muted">-</span>'}</td>
-                <td>${a.ml_score != null ? mlProbToRiskScore(a.ml_score) : '<span class="text-muted">-</span>'}</td>
+                <td class="col-level">${levelBadge(a.risk_level)}</td>
+                <td class="col-decision">${decisionBadge(a.decision)}</td>
+                <td>${a.ml_score != null
+                    ? `<span class="risk-score-inline" title="PD违约概率: ${(a.ml_score*100).toFixed(2)}% (${a.ml_score.toFixed(4)})" style="cursor:help;border-bottom:1px dashed #adb5bd;">${mlProbToRiskScore(a.ml_score)}</span>`
+                    : '<span class="text-muted">-</span>'}</td>
                 <td>${new Date(a.create_time).toLocaleString('zh-CN')}</td>
                 <td><button class="btn btn-outline-primary btn-sm" onclick="viewAssessment('${a.assessment_id}')">详情</button></td>
             </tr>
@@ -148,6 +208,9 @@ async function viewAssessment(id) {
     const res = await fetch('/api/assessments/' + id);
     if (!res.ok) { alert('加载详情失败'); return; }
     const a = await res.json();
+    currentDetail = a;
+    const recheckBtn = document.getElementById('recheckBtn');
+    if (recheckBtn) recheckBtn.disabled = !a.event_source_id;
     let eventDataPretty = '';
     if (a.event_data) {
         try {
@@ -195,6 +258,22 @@ async function viewAssessment(id) {
         ${eventDataPretty ? `<hr><h6>事件快照 (回溯当时事件数据)</h6>${eventDataPretty}` : ''}
     `;
     new bootstrap.Modal(document.getElementById('assessModal')).show();
+}
+
+// 重做检查: 把评估的业务ID/用户ID/事件类型带到风控检查页 (评估 → 检查链路)
+function recheckAssessment() {
+    const d = currentDetail;
+    if (!d || !d.event_source_id) { alert('该评估没有记录业务ID, 无法重做检查'); return; }
+    // 同时写入 sessionStorage 与 localStorage (sessionStorage 优先, localStorage 兜底, 与案件页一致)
+    const prefill = JSON.stringify({
+        case_id: d.assessment_id,
+        event_type: d.event_type || '贷款申请',
+        user_id: d.user_id,
+        source_id: d.event_source_id,
+    });
+    sessionStorage.setItem('risk_check_prefill', prefill);
+    localStorage.setItem('risk_check_prefill', prefill);
+    window.location.href = '/risk-check';
 }
 
 loadAssessments();

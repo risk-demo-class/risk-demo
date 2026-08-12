@@ -1,45 +1,146 @@
 {% extends "base.html" %}
 {% block title %}仪表盘 - 华信银行信贷风控平台{% endblock %}
-{% block content %}
-<h4 class="mb-4">信贷风控仪表盘</h4>
 
-<!-- 统计卡片 -->
+{% block extra_css %}
+<style>
+    /* ===== 仪表盘专用样式 ===== */
+
+    /* shimmer 骨架屏 */
+    .skeleton {
+        background: linear-gradient(90deg, #e5e7eb 25%, #f3f4f6 37%, #e5e7eb 63%);
+        background-size: 400% 100%;
+        animation: shimmer 1.4s ease infinite;
+        border-radius: 6px;
+    }
+    @keyframes shimmer {
+        0%   { background-position: 100% 50%; }
+        100% { background-position: 0 50%; }
+    }
+
+    /* 统计卡片可点击链接 + hover 上浮 */
+    .stat-link {
+        display: block;
+        color: inherit;
+        transition: transform 0.18s ease, box-shadow 0.18s ease;
+    }
+    .stat-link:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.10);
+        color: inherit;
+    }
+    .stat-arrow {
+        opacity: 0;
+        color: #94a3b8;
+        transition: opacity 0.18s ease, color 0.18s ease;
+    }
+    .stat-link:hover .stat-arrow {
+        opacity: 1;
+        color: #0d6efd;
+    }
+
+    /* 趋势图占位（空态 / 加载态覆盖层） */
+    .trend-placeholder {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #94a3b8;
+        font-size: 14px;
+        border-radius: 8px;
+        background: #fafbfc;
+    }
+
+    /* 页头控制区 */
+    .dash-toolbar .form-select-sm {
+        width: auto;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- 页头：标题 + 刷新 / 自动刷新 / 最后更新时间 -->
+<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+    <h4 class="mb-0">信贷风控仪表盘</h4>
+    <div class="dash-toolbar d-flex align-items-center gap-2 flex-wrap">
+        <span class="text-muted small" id="last-update">最后更新：—</span>
+        <select class="form-select form-select-sm" id="auto-refresh" onchange="onAutoRefreshChange()" title="自动刷新间隔">
+            <option value="0">自动刷新：关</option>
+            <option value="30">自动刷新：30秒</option>
+            <option value="60">自动刷新：60秒</option>
+        </select>
+        <button class="btn btn-outline-primary btn-sm" type="button" onclick="loadDashboard()">
+            <i class="bi bi-arrow-clockwise"></i> 刷新
+        </button>
+    </div>
+</div>
+
+<!-- 错误横幅 -->
+<div id="error-banner" class="alert alert-danger d-none align-items-center" role="alert">
+    <div class="d-flex justify-content-between align-items-center w-100 flex-wrap gap-2">
+        <div><i class="bi bi-exclamation-triangle-fill me-2"></i><strong>加载失败：</strong><span id="error-msg"></span></div>
+        <button class="btn btn-sm btn-outline-danger" type="button" onclick="loadDashboard()">
+            <i class="bi bi-arrow-clockwise me-1"></i>重试
+        </button>
+    </div>
+</div>
+
+<!-- 统计卡片（可点击链接） -->
 <div class="row mb-4" id="stat-cards">
-    <div class="col-md-3">
-        <div class="card stat-card p-3">
-            <div class="text-muted small">今日贷款申请评估</div>
-            <div class="stat-value text-primary" id="total-today">-</div>
-        </div>
+    <div class="col-md-3 mb-3">
+        <a href="/assessments" class="card stat-card stat-link p-3">
+            <div class="d-flex justify-content-between align-items-start">
+                <div class="text-muted small">今日贷款申请评估</div>
+                <i class="bi bi-arrow-right-circle stat-arrow"></i>
+            </div>
+            <div class="stat-value text-primary" id="total-today"><div class="skeleton" style="height:28px;width:55%"></div></div>
+        </a>
     </div>
-    <div class="col-md-3">
-        <div class="card stat-card p-3">
-            <div class="text-muted small">高风险</div>
-            <div class="stat-value text-danger" id="high-risk-today">-</div>
-        </div>
+    <div class="col-md-3 mb-3">
+        <a href="/assessments?risk_level=%E9%AB%98" class="card stat-card stat-link p-3">
+            <div class="d-flex justify-content-between align-items-start">
+                <div class="text-muted small">高风险</div>
+                <i class="bi bi-arrow-right-circle stat-arrow"></i>
+            </div>
+            <div class="stat-value text-danger" id="high-risk-today"><div class="skeleton" style="height:28px;width:55%"></div></div>
+        </a>
     </div>
-    <div class="col-md-3">
-        <div class="card stat-card p-3">
-            <div class="text-muted small">待审案件</div>
-            <div class="stat-value text-warning" id="pending-cases">-</div>
-        </div>
+    <div class="col-md-3 mb-3">
+        <a href="/cases" class="card stat-card stat-link p-3">
+            <div class="d-flex justify-content-between align-items-start">
+                <div class="text-muted small">待审案件</div>
+                <i class="bi bi-arrow-right-circle stat-arrow"></i>
+            </div>
+            <div class="stat-value text-warning" id="pending-cases"><div class="skeleton" style="height:28px;width:55%"></div></div>
+        </a>
     </div>
-    <div class="col-md-3">
-        <div class="card stat-card p-3">
-            <div class="text-muted small">通过率</div>
-            <div class="stat-value text-success" id="pass-rate">-</div>
-        </div>
+    <div class="col-md-3 mb-3">
+        <a href="/assessments?decision=%E9%80%9A%E8%BF%87" class="card stat-card stat-link p-3">
+            <div class="d-flex justify-content-between align-items-start">
+                <div class="text-muted small">通过率</div>
+                <i class="bi bi-arrow-right-circle stat-arrow"></i>
+            </div>
+            <div class="stat-value text-success" id="pass-rate"><div class="skeleton" style="height:28px;width:55%"></div></div>
+        </a>
     </div>
 </div>
 
 <!-- 图表 -->
 <div class="row">
-    <div class="col-md-8">
+    <div class="col-md-8 mb-3">
         <div class="card stat-card p-3">
-            <h6>近7天评估趋势</h6>
-            <canvas id="trendChart" height="400"></canvas>
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <h6 class="mb-0">近7天评估趋势</h6>
+                <span class="text-muted small" id="trend-legend-hint"></span>
+            </div>
+            <div class="position-relative" id="trend-wrap">
+                <canvas id="trendChart" height="400"></canvas>
+                <div id="trend-loading" class="trend-placeholder"><div class="skeleton" style="height:100%;width:100%"></div></div>
+                <div id="trend-empty" class="trend-placeholder d-none">近7天暂无数据</div>
+            </div>
         </div>
     </div>
-    <div class="col-md-4">
+    <div class="col-md-4 mb-3">
         <div class="card stat-card p-3">
             <h6>规则命中 TOP5</h6>
             <ul class="list-group list-group-flush" id="top-rules">
@@ -53,11 +154,40 @@
 
 {% block extra_js %}
 <script>
+let autoRefreshTimer = null;
+
+function showError(msg) {
+    document.getElementById('error-msg').textContent = msg || '未知错误';
+    document.getElementById('error-banner').classList.remove('d-none');
+    document.getElementById('error-banner').classList.add('d-flex');
+}
+
+function hideError() {
+    document.getElementById('error-banner').classList.add('d-none');
+    document.getElementById('error-banner').classList.remove('d-flex');
+}
+
+function updateLastUpdate() {
+    document.getElementById('last-update').textContent =
+        '最后更新：' + new Date().toLocaleString('zh-CN', { hour12: false });
+}
+
+function onAutoRefreshChange() {
+    if (autoRefreshTimer) { clearInterval(autoRefreshTimer); autoRefreshTimer = null; }
+    const sec = parseInt(document.getElementById('auto-refresh').value, 10);
+    if (sec > 0) autoRefreshTimer = setInterval(loadDashboard, sec * 1000);
+}
+
 async function loadDashboard() {
+    // 复用实例先销毁，防止重复刷新内存泄漏
+    if (window.dashboardChart) { window.dashboardChart.destroy(); window.dashboardChart = null; }
+    hideError();
     try {
         const res = await fetch('/api/dashboard/overview');
         const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || data.message || ('请求失败 (' + res.status + ')'));
 
+        // 统计卡片
         document.getElementById('total-today').textContent = data.today_assessments || 0;
         document.getElementById('high-risk-today').textContent = data.today_high_risk || 0;
         document.getElementById('pending-cases').textContent = data.pending_cases || 0;
@@ -65,18 +195,51 @@ async function loadDashboard() {
 
         // 趋势图
         const trend = data.trend_7d || [];
-        const ctx = document.getElementById('trendChart').getContext('2d');
-        new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: trend.map(t => t.date),
-                datasets: [
-                    { label: '总评估', data: trend.map(t => t.count), borderColor: '#3b82f6', tension: 0.3 },
-                    { label: '高风险', data: trend.map(t => t.high_risk_count), borderColor: '#ef4444', tension: 0.3 }
-                ]
-            },
-            options: { responsive: true, plugins: { legend: { position: 'top' } } }
-        });
+        const canvas = document.getElementById('trendChart');
+        const loadingEl = document.getElementById('trend-loading');
+        const emptyEl = document.getElementById('trend-empty');
+        loadingEl.classList.add('d-none');
+
+        if (trend.length === 0) {
+            // 空态：隐藏图例提示，显示占位
+            canvas.classList.add('d-none');
+            emptyEl.classList.remove('d-none');
+            document.getElementById('trend-legend-hint').textContent = '';
+        } else {
+            canvas.classList.remove('d-none');
+            emptyEl.classList.add('d-none');
+            document.getElementById('trend-legend-hint').textContent = '';
+            const ctx = canvas.getContext('2d');
+            window.dashboardChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: trend.map(t => t.date),
+                    datasets: [
+                        { label: '总评估', data: trend.map(t => t.count), borderColor: '#3b82f6', backgroundColor: 'rgba(59,130,246,0.08)', tension: 0.3, fill: true },
+                        { label: '高风险', data: trend.map(t => t.high_risk_count), borderColor: '#ef4444', backgroundColor: 'rgba(239,68,68,0.06)', tension: 0.3, fill: true }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: { stepSize: 1, precision: 0 }
+                        }
+                    },
+                    plugins: {
+                        legend: { position: 'top' },
+                        tooltip: {
+                            callbacks: {
+                                title: (items) => items.length ? ('日期：' + items[0].label) : '',
+                                label: (ctx) => ctx.dataset.label + '：' + ctx.parsed.y + ' 次'
+                            }
+                        }
+                    }
+                }
+            });
+        }
 
         // TOP5规则
         const topRulesEl = document.getElementById('top-rules');
@@ -85,16 +248,21 @@ async function loadDashboard() {
             topRulesEl.innerHTML = '<li class="list-group-item text-muted">暂无数据</li>';
         } else {
             topRulesEl.innerHTML = topRules.map(r =>
-                `<li class="list-group-item d-flex justify-content-between">
-                    <span>${r.rule_name}</span>
+                `<li class="list-group-item d-flex justify-content-between align-items-center">
+                    <span class="text-truncate me-2">${r.rule_name}</span>
                     <span class="badge bg-primary">${r.hit_count}</span>
                 </li>`
             ).join('');
         }
+
+        updateLastUpdate();
     } catch (e) {
         console.error('加载仪表盘失败:', e);
+        showError(e.message);
     }
 }
+
+onAutoRefreshChange();
 loadDashboard();
 </script>
 {% endblock %}

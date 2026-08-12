@@ -1,5 +1,35 @@
 {% extends "base.html" %}
 {% block title %}AI 助手 - 华信银行信贷风控平台{% endblock %}
+{% block extra_css %}
+<style>
+    /* 仅本页使用的样式（错误气泡 / 元信息 / 回答内 Markdown 元素） */
+    .chat-bubble.error {
+        background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca;
+    }
+    .chat-bubble.error .msg-icon { margin-right: 6px; }
+    .chat-meta {
+        max-width: 80%; display: flex; align-items: center; gap: 6px;
+        margin-bottom: 8px; padding-left: 14px;
+    }
+    .chat-meta .chat-copy {
+        padding: 0 4px; font-size: 12px; line-height: 1;
+        color: #64748b; text-decoration: none;
+    }
+    .chat-meta .chat-copy:hover { color: #1d4ed8; }
+    .chat-bubble code {
+        background: #e2e8f0; color: #0f172a; padding: 1px 5px;
+        border-radius: 4px; font-size: 0.9em;
+    }
+    .chat-bubble.user code { background: rgba(255,255,255,.22); color: #fff; }
+    .chat-bubble ul, .chat-bubble ol { margin: 4px 0 4px 20px; padding: 0; }
+    .chat-bubble li { margin-bottom: 2px; }
+    .chat-bubble .ai-table { border-collapse: collapse; margin: 6px 0; font-size: 0.9em; }
+    .chat-bubble .ai-table th, .chat-bubble .ai-table td {
+        border: 1px solid #cbd5e1; padding: 4px 8px; text-align: left;
+    }
+    .chat-bubble .ai-table th { background: #e2e8f0; font-weight: 600; }
+</style>
+{% endblock %}
 {% block content %}
 <h4 class="mb-4">AI 风控助手</h4>
 
@@ -23,10 +53,25 @@
         <div class="border-top p-3">
             <form id="chatForm" class="d-flex gap-2">
                 <input type="text" class="form-control" id="chatInput" placeholder="输入你的问题..." autocomplete="off">
+                <!-- 快捷指令下拉（紧凑，收敛原 5 个大按钮） -->
+                <div class="dropdown">
+                    <button class="btn btn-outline-secondary" type="button" data-bs-toggle="dropdown"
+                            data-bs-auto-close="outside" aria-expanded="false" title="快捷指令">
+                        <i class="bi bi-lightning"></i>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li><h6 class="dropdown-header">快捷指令</h6></li>
+                        <li><button class="dropdown-item" type="button" onclick="sendQuick('查看今天的风控统计数据')"><i class="bi bi-calendar-check me-2"></i>今日统计</button></li>
+                        <li><button class="dropdown-item" type="button" onclick="sendQuick('查看所有待审核的案件')"><i class="bi bi-inboxes me-2"></i>待审案件</button></li>
+                        <li><button class="dropdown-item" type="button" onclick="sendQuick('分析用户1003的风险画像')"><i class="bi bi-person-badge me-2"></i>用户画像</button></li>
+                        <li><button class="dropdown-item" type="button" onclick="sendQuick('分析规则命中效果')"><i class="bi bi-diagram-3 me-2"></i>规则分析</button></li>
+                        <li><button class="dropdown-item" type="button" onclick="sendQuick('查看近30天的风控趋势')"><i class="bi bi-graph-up me-2"></i>趋势分析</button></li>
+                    </ul>
+                </div>
                 <button type="submit" class="btn btn-primary" id="sendBtn">
                     <i class="bi bi-send"></i>
                 </button>
-                <button type="button" class="btn btn-outline-secondary" onclick="clearChat()" title="清空对话">
+                <button type="button" class="btn btn-outline-secondary" onclick="confirmClear()" title="清空对话">
                     <i class="bi bi-trash"></i>
                 </button>
             </form>
@@ -34,14 +79,23 @@
     </div>
 </div>
 
-<!-- 快捷指令 -->
-<div class="mt-3">
-    <small class="text-muted">快捷指令:</small>
-    <button class="btn btn-outline-secondary btn-sm" onclick="sendQuick('查看今天的风控统计数据')">今日统计</button>
-    <button class="btn btn-outline-secondary btn-sm" onclick="sendQuick('查看所有待审核的案件')">待审案件</button>
-    <button class="btn btn-outline-secondary btn-sm" onclick="sendQuick('分析用户1003的风险画像')">用户画像</button>
-    <button class="btn btn-outline-secondary btn-sm" onclick="sendQuick('分析规则命中效果')">规则分析</button>
-    <button class="btn btn-outline-secondary btn-sm" onclick="sendQuick('查看近30天的风控趋势')">趋势分析</button>
+<!-- 清空对话二次确认模态框 -->
+<div class="modal fade" id="clearModal" tabindex="-1" aria-labelledby="clearModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="clearModalLabel">确认清空对话</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="关闭"></button>
+            </div>
+            <div class="modal-body">
+                确定要清空当前对话记录吗？此操作将删除全部上下文，且不可恢复。
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-danger" id="confirmClearBtn">确认清空</button>
+            </div>
+        </div>
+    </div>
 </div>
 
 {% endblock %}
@@ -50,20 +104,221 @@
 <script>
 let sessionId = null;
 
+// ---------- 安全转义：所有用户/模型内容先转义，杜绝 innerHTML 注入 ----------
+function escapeHtml(str) {
+    return String(str ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+// ---------- 轻量 Markdown 渲染（作用于已转义文本，无外部依赖） ----------
+function renderInline(text) {
+    return text
+        .replace(/`([^`]+)`/g, '<code>$1</code>')
+        .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+        .replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
+}
+
+function isTableRow(line) {
+    const t = line.trim();
+    if (!t.includes('|')) return false;
+    return t.split('|').filter(c => c.trim() !== '').length >= 2;
+}
+function isTableSeparator(line) {
+    return /^\s*\|?\s*:?-+:?\s*(\|\s*:?-+:?\s*)+\|?\s*$/.test(line.trim());
+}
+function renderTable(rows) {
+    let html = '<table class="ai-table">';
+    rows.forEach((row, idx) => {
+        if (idx === 1 && isTableSeparator(row)) return; // 分隔行
+        const cells = row.trim().replace(/^\|+|\|+$/g, '').split('|').map(c => c.trim());
+        const tag = idx === 0 ? 'th' : 'td';
+        html += '<tr>' + cells.map(c => '<' + tag + '>' + renderInline(c) + '</' + tag + '>').join('') + '</tr>';
+    });
+    return html + '</table>';
+}
+
+function renderMarkdown(text) {
+    const lines = String(text).split('\n');
+    let html = '';
+    let listType = null;   // 'ul' | 'ol'
+
+    const closeList = () => { if (listType) { html += '</' + listType + '>'; listType = null; } };
+
+    for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+
+        // 简单表格：检测连续含 | 的行（renderTable 输出完整闭合表格）
+        if (isTableRow(line)) {
+            closeList();
+            const rows = [];
+            while (i < lines.length && isTableRow(lines[i])) { rows.push(lines[i]); i++; }
+            i--; // 回退一行，供外层循环继续
+            html += renderTable(rows);
+            continue;
+        }
+
+        // 有序/无序列表
+        const ul = line.match(/^\s*[-*]\s+(.*)$/);
+        const ol = line.match(/^\s*\d+\.\s+(.*)$/);
+        if (ul || ol) {
+            const type = ul ? 'ul' : 'ol';
+            if (listType !== type) { closeList(); html += '<' + type + '>'; listType = type; }
+            html += '<li>' + renderInline((ul ? ul[1] : ol[1])) + '</li>';
+            continue;
+        }
+        if (listType) closeList();
+
+        // 普通段落/空行
+        if (line.trim() === '') { html += '<br>'; }
+        else { html += renderInline(line) + '<br>'; }
+    }
+    closeList();
+    return html;
+}
+
+// ---------- 消息渲染 ----------
+function scrollToBottom() {
+    const c = document.getElementById('chatMessages');
+    if (c) c.scrollTop = c.scrollHeight;
+}
+
 function addMessage(content, role) {
     const container = document.getElementById('chatMessages');
     const div = document.createElement('div');
     div.className = 'd-flex' + (role === 'user' ? ' justify-content-end' : '');
-    // 处理markdown格式（简单替换）
-    let html = content
-        .replace(/\n/g, '<br>')
-        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-        .replace(/`(.*?)`/g, '<code>$1</code>');
-    div.innerHTML = `<div class="chat-bubble ${role}">${html}</div>`;
+    const bubble = document.createElement('div');
+    bubble.className = 'chat-bubble ' + role;
+    // 先转义再渲染 Markdown，禁止原始内容直接 innerHTML
+    bubble.innerHTML = renderMarkdown(escapeHtml(content));
+    div.appendChild(bubble);
     container.appendChild(div);
-    container.scrollTop = container.scrollHeight;
+    scrollToBottom();
+    return div;
 }
 
+function addAiMessage(content) {
+    const container = document.getElementById('chatMessages');
+    const wrapper = document.createElement('div');
+    wrapper.className = 'd-flex';
+    const col = document.createElement('div');
+    col.className = 'chat-bubble ai';
+    col.innerHTML = renderMarkdown(escapeHtml(content));
+    wrapper.appendChild(col);
+
+    // 元信息：时间戳 + 复制按钮
+    const meta = document.createElement('div');
+    meta.className = 'chat-meta';
+    const time = document.createElement('span');
+    time.className = 'text-muted small';
+    time.textContent = new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+    meta.appendChild(time);
+    const copyBtn = document.createElement('button');
+    copyBtn.type = 'button';
+    copyBtn.className = 'chat-copy btn btn-link';
+    copyBtn.innerHTML = '<i class="bi bi-clipboard"></i> 复制';
+    copyBtn.addEventListener('click', function () { copyMessage(content, copyBtn); });
+    meta.appendChild(copyBtn);
+    wrapper.appendChild(meta);
+
+    container.appendChild(wrapper);
+    scrollToBottom();
+}
+
+function addError(message) {
+    const container = document.getElementById('chatMessages');
+    const div = document.createElement('div');
+    div.className = 'd-flex';
+    const bubble = document.createElement('div');
+    bubble.className = 'chat-bubble error';
+    bubble.innerHTML = '<i class="bi bi-exclamation-triangle-fill msg-icon"></i><span>' + escapeHtml(message) + '</span>';
+    div.appendChild(bubble);
+    container.appendChild(div);
+    scrollToBottom();
+}
+
+// ---------- 复制（clipboard API，含降级） ----------
+function copyMessage(text, btn) {
+    const plain = String(text).replace(/[*`]/g, '').trim();
+    const done = () => {
+        const orig = btn.innerHTML;
+        btn.innerHTML = '<i class="bi bi-check2"></i> 已复制';
+        setTimeout(() => { btn.innerHTML = orig; }, 1500);
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(plain).then(done).catch(() => fallbackCopy(plain, done));
+    } else {
+        fallbackCopy(plain, done);
+    }
+}
+function fallbackCopy(text, done) {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    try { document.execCommand('copy'); if (done) done(); }
+    catch (e) { /* 忽略 */ }
+    document.body.removeChild(ta);
+}
+
+// ---------- 流式渲染（预留，供后端 agent 接口启用流式后使用） ----------
+// 逐字追加：读取 ReadableStream，按行解析 {delta, session_id}，完成后用 Markdown 重渲染。
+// 后端未启用流式时走下方 addAiMessage 整体返回逻辑，不改变现有 fetch 契约。
+async function renderStreamedReply(response) {
+    const container = document.getElementById('chatMessages');
+    const wrapper = document.createElement('div');
+    wrapper.className = 'd-flex';
+    const col = document.createElement('div');
+    col.className = 'chat-bubble ai';
+    wrapper.appendChild(col);
+    container.appendChild(wrapper);
+    document.getElementById('loading')?.remove();
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder('utf-8');
+    let buffer = '';
+    let text = '';
+    let sessionId = null;
+
+    const flush = () => {
+        col.innerHTML = escapeHtml(text).replace(/\n/g, '<br>');
+        container.scrollTop = container.scrollHeight;
+    };
+
+    while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        let idx;
+        while ((idx = buffer.indexOf('\n')) !== -1) {
+            const line = buffer.slice(0, idx).replace(/\r$/, '');
+            buffer = buffer.slice(idx + 1);
+            const trimmed = line.trim();
+            if (!trimmed) continue;
+            let payload = trimmed;
+            if (trimmed.startsWith('data:')) payload = trimmed.slice(5).trim();
+            try {
+                const parsed = JSON.parse(payload);
+                if (parsed.session_id) sessionId = parsed.session_id;
+                if (parsed.delta != null) { text += parsed.delta; flush(); }
+            } catch (e) {
+                text += trimmed + '\n';
+                flush();
+            }
+        }
+    }
+    // 流结束：用完整文本做一次 Markdown 渲染
+    col.innerHTML = renderMarkdown(escapeHtml(text));
+    container.scrollTop = container.scrollHeight;
+    return sessionId;
+}
+
+// ---------- 发送 ----------
 async function sendMessage(message) {
     if (!message.trim()) return;
     addMessage(message, 'user');
@@ -71,7 +326,7 @@ async function sendMessage(message) {
     const btn = document.getElementById('sendBtn');
     btn.disabled = true;
 
-    // 显示加载指示器
+    // 加载指示器
     const loadingDiv = document.createElement('div');
     loadingDiv.className = 'd-flex';
     loadingDiv.id = 'loading';
@@ -81,16 +336,23 @@ async function sendMessage(message) {
     try {
         const res = await fetch('/api/agent/chat', {
             method: 'POST',
-            headers: {'Content-Type':'application/json'},
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ message, session_id: sessionId }),
         });
-        const data = await res.json();
-        sessionId = data.session_id;
+        const contentType = res.headers.get('content-type') || '';
+        if (contentType.includes('text/event-stream') || contentType.includes('application/x-ndjson')) {
+            // 后端已启用流式
+            sessionId = await renderStreamedReply(res);
+        } else {
+            const data = await res.json();
+            sessionId = data.session_id;
+            document.getElementById('loading')?.remove();
+            addAiMessage(data.reply);
+        }
+    } catch (e) {
         document.getElementById('loading')?.remove();
-        addMessage(data.reply, 'ai');
-    } catch(e) {
-        document.getElementById('loading')?.remove();
-        addMessage('请求失败: ' + e.message, 'ai');
+        // 失败渲染为红色错误气泡，不再伪装成 AI 回复
+        addError('请求失败: ' + e.message);
     } finally {
         btn.disabled = false;
         document.getElementById('chatInput').focus();
@@ -102,16 +364,33 @@ function sendQuick(msg) {
     sendMessage(msg);
 }
 
+// ---------- 清空（带二次确认） ----------
+function confirmClear() {
+    const modalEl = document.getElementById('clearModal');
+    if (modalEl && window.bootstrap) {
+        new bootstrap.Modal(modalEl).show();
+    } else {
+        clearChat();
+    }
+}
+
 async function clearChat() {
     if (sessionId) {
-        await fetch(`/api/agent/clear?session_id=${sessionId}`, { method: 'POST' });
+        try { await fetch(`/api/agent/clear?session_id=${sessionId}`, { method: 'POST' }); }
+        catch (e) { /* 忽略 */ }
     }
     sessionId = null;
     const container = document.getElementById('chatMessages');
-    container.innerHTML = `<div class="d-flex"><div class="chat-bubble ai">对话已清空，请重新开始提问。</div></div>`;
+    container.innerHTML = '<div class="d-flex"><div class="chat-bubble ai">对话已清空，请重新开始提问。</div></div>';
+    const modalEl = document.getElementById('clearModal');
+    if (modalEl && window.bootstrap) {
+        const m = bootstrap.Modal.getInstance(modalEl);
+        if (m) m.hide();
+    }
 }
 
-document.getElementById('chatForm').addEventListener('submit', function(e) {
+document.getElementById('confirmClearBtn').addEventListener('click', clearChat);
+document.getElementById('chatForm').addEventListener('submit', function (e) {
     e.preventDefault();
     sendMessage(document.getElementById('chatInput').value);
 });
