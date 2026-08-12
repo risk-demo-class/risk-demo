@@ -1,0 +1,42 @@
+-- 银行行业样例规则：覆盖信用卡、贷款、转账、登录四大场景。
+SET NAMES utf8mb4;
+
+INSERT INTO risk_rule
+(rule_id,rule_name,rule_category,event_type,rule_condition,risk_level,risk_score,action,is_enabled,priority,description)
+VALUES
+('R001','异地大额转账','转账欺诈','转账',
+ '{"and":[{"field":"event_geo_mismatch","op":"==","value":1},{"field":"event_amount","op":">","value":50000}]}',
+ '极高',95,'拒绝',1,100,'交易城市与常用城市不一致且转账金额超过5万元'),
+('R002','凌晨密集操作','转账欺诈','转账',
+ '{"and":[{"field":"event_is_night","op":"==","value":1},{"field":"event_velocity_1h","op":">=","value":3}]}',
+ '高',75,'人工审核',1,90,'0-5点且以当前交易为中心1小时内至少3笔'),
+('R003','信用卡高额度消耗','信用卡风险','信用卡',
+ '{"and":[{"field":"context_card_credit_utilization","op":">=","value":0.9},{"field":"event_amount","op":">=","value":20000}]}',
+ '高',78,'人工审核',1,85,'信用卡余额占额度90%以上且单笔消费超过2万元'),
+('R004','境外代理大额信用卡消费','信用卡风险','信用卡',
+ '{"and":[{"field":"event_ip_is_proxy","op":"==","value":1},{"field":"event_amount","op":">=","value":20000}]}',
+ '极高',92,'拒绝',1,95,'代理IP发起大额信用卡消费'),
+('R005','新设备大额操作','设备风险','通用',
+ '{"and":[{"field":"event_is_new_device","op":"==","value":1},{"field":"event_amount","op":">=","value":30000}]}',
+ '高',72,'人工审核',1,80,'设备首次出现不足7天且金额超过3万元'),
+('R008','多卡归集','转账欺诈','转账',
+ '{"field":"event_distinct_source_cards_1h","op":">=","value":5}',
+ '极高',96,'拒绝',1,100,'1小时内至少5张不同卡转入同一卡'),
+('R012','信贷申请突击','信贷风险','贷款',
+ '{"field":"user_loan_institution_count_30d","op":">=","value":3}',
+ '高',76,'人工审核',1,90,'30天内向至少3家机构申请贷款'),
+('R018','设备多人共用','设备风险','通用',
+ '{"field":"context_shared_device_user_count","op":">=","value":5}',
+ '中',50,'标记',1,60,'同一设备关联至少5个不同客户'),
+('R021','连续登录失败','账户安全','登录',
+ '{"field":"context_login_failure_streak","op":">=","value":3}',
+ '高',70,'人工审核',1,75,'当前登录前后出现至少3次连续失败'),
+('R022','高负债贷款申请','信贷风险','贷款',
+ '{"and":[{"field":"context_loan_amount_income_ratio","op":">=","value":6},{"field":"user_avg_debt_ratio","op":">=","value":0.6}]}',
+ '极高',90,'拒绝',1,85,'申请额超过月收入6倍且历史平均负债率不低于60%'),
+('R025','IP代理或Tor登录','IP风险','登录',
+ '{"or":[{"field":"event_ip_is_proxy","op":"==","value":1},{"field":"event_ip_is_tor","op":"==","value":1}]}',
+ '中',55,'标记',1,70,'登录IP命中代理库或Tor出口'),
+('R030','黑卡拦截','账户安全','转账',
+ '{"field":"context_to_card_blacklisted","op":"==","value":1}',
+ '极高',100,'拒绝',1,110,'收款卡命中外部涉诈银行卡名单');

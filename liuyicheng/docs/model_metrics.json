@@ -1,0 +1,64 @@
+{
+  "n_train": 2500,
+  "n_pos": 625,
+  "n_neg": 1875,
+  "pos_ratio": 0.25,
+  "scale_pos_weight": 3.0,
+  "raw_scale_pos_weight": 3.0,
+  "best_iteration": 62,
+  "accuracy": 0.9892,
+  "precision": 0.9776,
+  "recall": 0.9792,
+  "f1": 0.9784,
+  "auc": 0.995,
+  "model_path": "app/engine/xgb_model.json",
+  "baseline_accuracy": 0.75,
+  "is_fake_convergence": false,
+  "n_val": 500,
+  "val_accuracy": 0.982,
+  "val_f1": 0.9641,
+  "val_auc": 0.9748,
+  "best_f1_threshold": 0.7,
+  "top_features": [
+    [
+      "event_ip_is_proxy",
+      36.63212966918945
+    ],
+    [
+      "context_to_card_blacklisted",
+      35.20493698120117
+    ],
+    [
+      "user_loan_institution_count_30d",
+      30.066970825195312
+    ],
+    [
+      "context_shared_device_user_count",
+      28.994348526000977
+    ],
+    [
+      "event_is_night",
+      26.7192325592041
+    ],
+    [
+      "event_geo_mismatch",
+      25.461387634277344
+    ],
+    [
+      "event_velocity_1h",
+      19.95628547668457
+    ],
+    [
+      "event_amount",
+      19.176300048828125
+    ],
+    [
+      "context_card_credit_utilization",
+      18.570709228515625
+    ],
+    [
+      "event_hour",
+      17.55978775024414
+    ]
+  ]
+}
