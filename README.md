@@ -43,26 +43,19 @@
 2. **确认已接受组织邀请**：老师已向你发出 **risk-demo-class 组织邀请**，请在 GitHub 通知/邮箱里点 **Accept（接受）**——没接受就无法推送
 3. **安装 Git**：https://git-scm.com/download/win 一路 Next 安装
 
-### 第 1 步：克隆仓库到本地
+### 第 1 步：克隆仓库（只克隆你自己的分支）
 
-打开命令行（Windows 按 `Win+R` 输入 `cmd` 回车；或右键桌面 →「在终端中打开」），执行：
+打开命令行（Windows 按 `Win+R` 输入 `cmd` 回车；或右键桌面 →「在终端中打开」），执行（把 `zhangsan` 换成老师发给你的**个人分支名**）：
 
 ```bash
-git clone https://github.com/risk-demo-class/risk-demo.git
+git clone --branch zhangsan --single-branch https://github.com/risk-demo-class/risk-demo.git
 cd risk-demo
 ```
 
-### 第 2 步：切换到你的分支（分支已由老师预建，直接切换）
+> `--single-branch` 表示只下载你自己的分支，克隆完你**已经在自己分支上了**，不需要切换。
+> 可执行 `git branch` 确认，显示 `* zhangsan` 即正确。
 
-使用老师发给你的**个人分支名**（如 `zhangsan`），执行：
-
-```bash
-git checkout zhangsan
-```
-
-> 如果提示 `branch 'zhangsan' set up to track` 说明切换成功。如果提示分支不存在，说明你的信息还没登记完整，请联系老师。
-
-### 第 3 步：放入你的成果
+### 第 2 步：放入你的成果
 
 把代码 / 演示文件（PPT、图片、视频、代码等）复制到仓库文件夹里，建议建一个自己的文件夹：
 
@@ -71,7 +64,7 @@ mkdir zhangsan
 # 然后把你的文件放进 zhangsan 文件夹
 ```
 
-### 第 4 步：提交并推送（关键！）
+### 第 3 步：提交并推送（关键！）
 
 ```bash
 git add .
@@ -81,7 +74,7 @@ git push
 
 看到进度条走完，就说明**推送成功**了 🎉
 
-### 第 5 步：确认成果
+### 第 4 步：确认成果
 
 打开 https://github.com/risk-demo-class/risk-demo ，点击左上角的 **Branch 下拉框**，选择你的分支名，即可看到你的文件。
 
@@ -117,9 +110,8 @@ git push
 4. 之后用 SSH 地址克隆：
 
 ```bash
-git clone git@github.com:risk-demo-class/risk-demo.git
+git clone --branch zhangsan --single-branch git@github.com:risk-demo-class/risk-demo.git
 cd risk-demo
-git checkout zhangsan
 # ... 后面的提交推送步骤一样
 ```
 
