@@ -1,0 +1,642 @@
+{% extends "base.html" %}
+{% block title %}规则管理 - 教育风控系统{% endblock %}
+{% set can_manage_rules = request.state.current_user and request.state.current_user.role == 'ADMIN' %}
+{% block extra_css %}
+<style>
+    .condition-editor { padding: 14px; border: 1px solid var(--line); border-radius: 15px; background: #f8faf9; }
+    .condition-mode-toggle { display: inline-flex; gap: 3px; padding: 3px; border-radius: 11px; background: #edf1ef; }
+    .condition-mode-toggle button { min-height: 29px; padding: 4px 10px; border: 0; border-radius: 8px; background: transparent; color: #737d79; font-size: 10px; font-weight: 750; }
+    .condition-mode-toggle button.active { background: white; color: var(--ink); box-shadow: 0 3px 9px rgba(45,58,55,.08); }
+    .condition-logic { display: flex; align-items: center; gap: 9px; margin-bottom: 10px; padding: 9px 11px; border-radius: 11px; background: #eef5e2; color: #556443; font-size: 11px; }
+    .condition-logic .form-select { width: 190px; min-height: 34px; margin-left: auto; }
+    .condition-row { display: grid; grid-template-columns: minmax(220px,2.2fr) minmax(130px,1fr) minmax(170px,1.4fr) 34px; align-items: end; gap: 9px; margin-bottom: 9px; padding: 11px; border: 1px solid #e3e9e7; border-radius: 13px; background: white; }
+    .condition-row .filter-label { margin-left: 1px; }
+    .condition-value-fields { display: flex; align-items: center; gap: 7px; }
+    .condition-value-fields .form-control { min-width: 0; }
+    .condition-between-separator { color: var(--muted); font-size: 10px; }
+    .condition-preview { margin-top: 11px; padding: 10px 12px; border: 1px dashed #d5dfdb; border-radius: 11px; background: white; color: #5e6a66; font-size: 10px; line-height: 1.6; }
+    .condition-preview strong { color: #34413d; }
+    .condition-json-panel textarea { min-height: 150px; font-family: Consolas, "Cascadia Code", monospace; font-size: 12px; }
+    @media (max-width: 767.98px) {
+        .condition-row { grid-template-columns: 1fr; }
+        .condition-row .remove-condition { width: 100%; }
+        .condition-mode-toggle { width: 100%; }
+        .condition-mode-toggle button { flex: 1 1 50%; }
+    }
+</style>
+{% endblock %}
+{% block content %}
+<div class="page-heading">
+    <div>
+        <div class="page-heading-kicker"><i class="bi bi-sliders2"></i> Strategy Center</div>
+        <h4>规则管理</h4>
+        <div class="page-heading-subtitle">维护教育行业风险策略，规则结果将与 XGBoost 模型评分共同参与最终决策。</div>
+    </div>
+    <div class="page-actions">
+        <span class="soft-pill"><i class="bi bi-diagram-3"></i> 规则 + 模型双轨</span>
+        {% if can_manage_rules %}
+        <button class="btn btn-primary btn-sm" onclick="showCreateModal()"><i class="bi bi-plus-circle me-1"></i> 新建规则</button>
+        {% else %}
+        <span class="soft-pill"><i class="bi bi-eye"></i> 审核员只读</span>
+        {% endif %}
+    </div>
+</div>
+
+<div class="mini-stat-grid cols-4">
+    <div class="mini-stat-card"><div class="mini-stat-top"><span class="mini-stat-label">规则总数</span><span class="mini-stat-icon"><i class="bi bi-list-check"></i></span></div><div class="mini-stat-value" id="rules-stat-total">-</div></div>
+    <div class="mini-stat-card is-success"><div class="mini-stat-top"><span class="mini-stat-label">当前页启用</span><span class="mini-stat-icon"><i class="bi bi-toggle-on"></i></span></div><div class="mini-stat-value" id="rules-stat-enabled">-</div></div>
+    <div class="mini-stat-card is-danger"><div class="mini-stat-top"><span class="mini-stat-label">高 / 极高风险</span><span class="mini-stat-icon"><i class="bi bi-exclamation-triangle"></i></span></div><div class="mini-stat-value" id="rules-stat-high">-</div></div>
+    <div class="mini-stat-card is-info"><div class="mini-stat-top"><span class="mini-stat-label">当前页分类</span><span class="mini-stat-icon"><i class="bi bi-tags"></i></span></div><div class="mini-stat-value" id="rules-stat-categories">-</div></div>
+</div>
+
+<div class="filter-panel">
+    <div class="filter-fields">
+        <div class="filter-field">
+            <label class="filter-label" for="filterCategory">规则分类</label>
+            <select class="form-select form-select-sm" id="filterCategory" onchange="loadRules(1)">
+                <option value="">全部分类</option>
+                <option value="退费滥用">退费滥用</option><option value="账户风险">账户风险</option><option value="设备风险">设备风险</option>
+                <option value="认证风险">认证风险</option><option value="交易异常">交易异常</option><option value="学习异常">学习异常</option>
+            </select>
+        </div>
+        <div class="filter-field">
+            <label class="filter-label" for="pageSize">每页显示</label>
+            <select class="form-select form-select-sm" id="pageSize" onchange="onPageSizeChange()"><option value="20">20 条</option><option value="50">50 条</option><option value="100">100 条</option></select>
+        </div>
+    </div>
+    <span class="result-count" id="rulesCount">正在加载…</span>
+</div>
+
+<div class="card data-card">
+    <div class="data-card-head"><div><h5 class="data-card-title">策略规则列表</h5><div class="data-card-meta">按优先级执行，禁用规则不会参与风险计算</div></div><i class="bi bi-table text-muted"></i></div>
+    <div class="table-responsive">
+        <table class="table table-hover mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>规则ID</th><th>名称</th><th>分类</th><th>事件类型</th>
+                    <th>等级</th><th>分值</th><th>动作</th><th>优先级</th>
+                    <th>状态</th><th>操作</th>
+                </tr>
+            </thead>
+            <tbody id="rules-table"><tr class="table-state"><td colspan="10"><div class="table-state-box"><span class="spinner-border spinner-border-sm"></span><span>正在加载规则…</span></div></td></tr></tbody>
+        </table>
+    </div>
+</div>
+
+<nav class="pagination-bottom"><ul class="pagination justify-content-center mb-0" id="pagination"></ul></nav>
+
+<!-- 创建/编辑模态框 -->
+<div class="modal fade" id="ruleModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                    <h5 class="modal-title" id="ruleModalTitle">新建规则</h5>
+                    <button type="button" class="btn-close-risk" data-bs-dismiss="modal" title="关闭" aria-label="Close"><i class="bi bi-x-lg"></i></button>
+                </div>
+            <div class="modal-body">
+                <form id="ruleForm">
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <label class="form-label">规则ID</label>
+                            <input type="text" class="form-control" id="f_rule_id" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">规则名称</label>
+                            <input type="text" class="form-control" id="f_rule_name" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">分类</label>
+                            <select class="form-select" id="f_category" required>
+                                <option value="退费滥用">退费滥用</option>
+                                <option value="账户风险">账户风险</option>
+                                <option value="设备风险">设备风险</option>
+                                <option value="认证风险">认证风险</option>
+                                <option value="交易异常">交易异常</option>
+                                <option value="学习异常">学习异常</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-3">
+                            <label class="form-label">事件类型</label>
+                            <select class="form-select" id="f_event_type">
+                                <option value="通用">通用</option>
+                                <option value="课程报名">课程报名</option>
+                                <option value="退费申请">退费申请</option>
+                                <option value="学历认证">学历认证</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">风险等级</label>
+                            <select class="form-select" id="f_risk_level" required>
+                                <option value="低">低</option>
+                                <option value="中">中</option>
+                                <option value="高">高</option>
+                                <option value="极高">极高</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">分值 (0-100)</label>
+                            <input type="number" class="form-control" id="f_score" min="0" max="100" required>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">动作</label>
+                            <select class="form-select" id="f_action" required>
+                                <option value="通过">通过</option>
+                                <option value="标记">标记</option>
+                                <option value="人工审核">人工审核</option>
+                                <option value="拒绝">拒绝</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2">
+                            <div>
+                                <label class="form-label mb-1">触发条件</label>
+                                <div class="form-text">通过下拉选项配置，保存时会自动转换为规则引擎需要的 JSON。</div>
+                            </div>
+                            <div class="condition-mode-toggle" role="group" aria-label="条件编辑模式">
+                                <button type="button" id="conditionVisualBtn" class="active" onclick="setConditionMode('visual')"><i class="bi bi-ui-checks-grid me-1"></i>可视化配置</button>
+                                <button type="button" id="conditionJsonBtn" onclick="setConditionMode('json')"><i class="bi bi-braces me-1"></i>高级 JSON</button>
+                            </div>
+                        </div>
+
+                        <div class="condition-editor" id="conditionBuilderPanel">
+                            <div class="condition-logic" id="conditionLogicWrap" style="display:none;">
+                                <i class="bi bi-diagram-3"></i>
+                                <span>多条条件之间</span>
+                                <select class="form-select form-select-sm" id="f_condition_logic" onchange="updateConditionPreview()">
+                                    <option value="and">同时满足（AND）</option>
+                                    <option value="or">满足任一（OR）</option>
+                                </select>
+                            </div>
+                            <div id="conditionRows"></div>
+                            <button type="button" class="btn btn-outline-primary btn-sm" onclick="addConditionRow()"><i class="bi bi-plus-circle me-1"></i>添加一条条件</button>
+                            <div class="condition-preview" id="conditionPreview"><strong>条件预览：</strong>请选择字段、运算符并填写比较值。</div>
+                        </div>
+
+                        <div class="condition-json-panel d-none" id="conditionJsonPanel">
+                            <textarea class="form-control" id="f_condition" rows="5" spellcheck="false" placeholder='{"field":"order_total_amount","op":">=","value":5000}'></textarea>
+                            <div class="form-text mt-1">高级模式适用于嵌套条件；格式错误时不能保存。</div>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-3">
+                            <label class="form-label">优先级</label>
+                            <input type="number" class="form-control" id="f_priority" value="0">
+                        </div>
+                        <div class="col-md-9">
+                            <label class="form-label">描述</label>
+                            <input type="text" class="form-control" id="f_description">
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-primary" onclick="saveRule()">保存</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let currentPage = 1;
+let editingRuleId = null;
+const PAGE_SIZE_KEY = 'rules_pageSize';
+let conditionMode = 'visual';
+let conditionRowSequence = 0;
+const CAN_MANAGE_RULES = {{ 'true' if can_manage_rules else 'false' }};
+
+function ruleStatusControl(rule) {
+    if (!CAN_MANAGE_RULES) {
+        return `<span class="badge ${rule.is_enabled ? 'bg-success' : 'bg-secondary'}">${rule.is_enabled ? '已启用' : '已禁用'}</span>`;
+    }
+    return `<div class="form-check form-switch"><input class="form-check-input" type="checkbox" ${rule.is_enabled ? 'checked' : ''} onchange="toggleRule('${rule.rule_id}')"></div>`;
+}
+
+function ruleActionControl(rule) {
+    if (!CAN_MANAGE_RULES) return '<span class="text-muted small">只读</span>';
+    return `<div class="action-cluster">
+        <button class="btn btn-outline-primary btn-sm icon-btn" title="编辑规则" aria-label="编辑 ${escapeHtml(rule.rule_name)}" onclick="editRule('${rule.rule_id}')"><i class="bi bi-pencil"></i></button>
+        <button class="btn btn-outline-danger btn-sm icon-btn" title="删除规则" aria-label="删除 ${escapeHtml(rule.rule_name)}" onclick="deleteRule('${rule.rule_id}')"><i class="bi bi-trash"></i></button>
+    </div>`;
+}
+
+const RULE_FEATURES = [
+    {group:'用户行为', value:'user_total_orders', label:'累计有效报名数'},
+    {group:'用户行为', value:'user_orders_30d', label:'近 30 日报名数'},
+    {group:'用户行为', value:'user_orders_7d', label:'近 7 日报名数'},
+    {group:'用户行为', value:'user_total_amount', label:'累计报名金额'},
+    {group:'用户行为', value:'user_avg_order_amount', label:'平均报名金额'},
+    {group:'用户行为', value:'user_max_order_amount', label:'最大单笔报名金额'},
+    {group:'退费风险', value:'user_refund_count', label:'成功退费次数'},
+    {group:'退费风险', value:'user_postsale_count', label:'退费申请次数'},
+    {group:'退费风险', value:'user_refund_rate', label:'成功退费率（0–1）'},
+    {group:'退费风险', value:'user_postsale_rate', label:'退费申请率（0–1）'},
+    {group:'退费风险', value:'user_refund_amount', label:'累计成功退费金额'},
+    {group:'用户行为', value:'user_cancel_count', label:'取消报名次数'},
+    {group:'认证风险', value:'user_complaint_count', label:'身份认证失败次数'},
+    {group:'设备风险', value:'user_address_count', label:'用户关联设备数'},
+    {group:'当前事件', value:'order_total_amount', label:'当前课程实付金额'},
+    {group:'当前事件', value:'order_item_count', label:'当前课程项目数'},
+    {group:'当前事件', value:'order_sku_count', label:'当前课程种类数'},
+    {group:'当前事件', value:'order_discount_amount', label:'当前优惠金额'},
+    {group:'当前事件', value:'order_discount_rate', label:'当前优惠率（0–1）'},
+    {group:'学习行为', value:'order_pay_interval_sec', label:'退费前累计学习分钟'},
+    {group:'当前事件', value:'order_is_night', label:'是否凌晨操作（0/1）'},
+    {group:'学习行为', value:'order_category_count', label:'历史课程分类数'},
+    {group:'设备风险', value:'addr_total_count', label:'当前有效设备数'},
+    {group:'设备风险', value:'addr_province_count', label:'当前设备关联用户数'},
+    {group:'设备风险', value:'addr_is_new', label:'是否新设备（0/1）'},
+];
+
+const CONDITION_OPERATORS = [
+    {value:'>', label:'大于 >'}, {value:'>=', label:'大于等于 ≥'},
+    {value:'<', label:'小于 <'}, {value:'<=', label:'小于等于 ≤'},
+    {value:'==', label:'等于 ='}, {value:'!=', label:'不等于 ≠'},
+    {value:'between', label:'介于（含边界）'},
+    {value:'in', label:'属于集合'}, {value:'not_in', label:'不属于集合'},
+];
+
+function featureOptionsHtml() {
+    const groups = new Map();
+    RULE_FEATURES.forEach(feature => {
+        if (!groups.has(feature.group)) groups.set(feature.group, []);
+        groups.get(feature.group).push(feature);
+    });
+    return [...groups.entries()].map(([group, features]) =>
+        `<optgroup label="${group}">${features.map(feature =>
+            `<option value="${feature.value}">${feature.label}（${feature.value}）</option>`
+        ).join('')}</optgroup>`
+    ).join('');
+}
+
+function operatorOptionsHtml() {
+    return CONDITION_OPERATORS.map(operator => `<option value="${operator.value}">${operator.label}</option>`).join('');
+}
+
+function addConditionRow(condition = {}) {
+    const rowId = ++conditionRowSequence;
+    const row = document.createElement('div');
+    row.className = 'condition-row';
+    row.dataset.rowId = rowId;
+    row.innerHTML = `
+        <div><label class="filter-label">特征字段</label><select class="form-select form-select-sm condition-field" onchange="updateConditionPreview()">${featureOptionsHtml()}</select></div>
+        <div><label class="filter-label">运算符</label><select class="form-select form-select-sm condition-operator" onchange="renderConditionValueFields(this.closest('.condition-row'));updateConditionPreview();">${operatorOptionsHtml()}</select></div>
+        <div><label class="filter-label">比较值</label><div class="condition-value-fields"></div></div>
+        <button type="button" class="btn btn-outline-danger btn-sm icon-btn remove-condition" title="移除此条件" aria-label="移除此条件" onclick="removeConditionRow(${rowId})"><i class="bi bi-trash"></i></button>
+    `;
+    document.getElementById('conditionRows').appendChild(row);
+    row.querySelector('.condition-field').value = condition.field || 'order_total_amount';
+    row.querySelector('.condition-operator').value = condition.op || '>=';
+    renderConditionValueFields(row, condition.value ?? 5000);
+    refreshConditionLogicVisibility();
+    updateConditionPreview();
+}
+
+function renderConditionValueFields(row, value) {
+    const operator = row.querySelector('.condition-operator').value;
+    const container = row.querySelector('.condition-value-fields');
+    if (operator === 'between') {
+        const values = Array.isArray(value) ? value : ['', ''];
+        container.innerHTML = `<input type="number" step="any" class="form-control form-control-sm condition-value-one" placeholder="最小值" value="${escapeHtml(values[0] ?? '')}" oninput="updateConditionPreview()"><span class="condition-between-separator">至</span><input type="number" step="any" class="form-control form-control-sm condition-value-two" placeholder="最大值" value="${escapeHtml(values[1] ?? '')}" oninput="updateConditionPreview()">`;
+    } else if (operator === 'in' || operator === 'not_in') {
+        const text = Array.isArray(value) ? value.join(', ') : (value ?? '');
+        container.innerHTML = `<input type="text" class="form-control form-control-sm condition-value-one" placeholder="例如：0, 1, 2" value="${escapeHtml(text)}" oninput="updateConditionPreview()">`;
+    } else {
+        const scalar = Array.isArray(value) ? (value[0] ?? '') : (value ?? '');
+        container.innerHTML = `<input type="number" step="any" class="form-control form-control-sm condition-value-one" placeholder="请输入数值" value="${escapeHtml(scalar)}" oninput="updateConditionPreview()">`;
+    }
+}
+
+function removeConditionRow(rowId) {
+    const rows = document.querySelectorAll('#conditionRows .condition-row');
+    if (rows.length <= 1) {
+        showToast('规则至少需要一条触发条件', 'warning');
+        return;
+    }
+    document.querySelector(`#conditionRows .condition-row[data-row-id="${rowId}"]`)?.remove();
+    refreshConditionLogicVisibility();
+    updateConditionPreview();
+}
+
+function refreshConditionLogicVisibility() {
+    const count = document.querySelectorAll('#conditionRows .condition-row').length;
+    document.getElementById('conditionLogicWrap').style.display = count > 1 ? 'flex' : 'none';
+}
+
+function parseConditionValue(row, strict = true) {
+    const operator = row.querySelector('.condition-operator').value;
+    const first = row.querySelector('.condition-value-one')?.value.trim() || '';
+    const second = row.querySelector('.condition-value-two')?.value.trim() || '';
+    const requireValue = (raw, label) => {
+        if (raw === '') {
+            if (strict) throw new Error(`请填写${label}`);
+            return null;
+        }
+        const number = Number(raw);
+        if (!Number.isFinite(number)) {
+            if (strict) throw new Error(`${label}必须是有效数字`);
+            return null;
+        }
+        return number;
+    };
+    if (operator === 'between') {
+        const low = requireValue(first, '区间最小值');
+        const high = requireValue(second, '区间最大值');
+        if (low == null || high == null) return null;
+        if (low > high) throw new Error('区间最小值不能大于最大值');
+        return [low, high];
+    }
+    if (operator === 'in' || operator === 'not_in') {
+        if (!first) {
+            if (strict) throw new Error('请填写集合值');
+            return null;
+        }
+        const values = first.split(/[,，\s]+/).filter(Boolean).map(Number);
+        if (!values.length || values.some(value => !Number.isFinite(value))) throw new Error('集合值请使用数字，并以逗号分隔');
+        return values;
+    }
+    return requireValue(first, '比较值');
+}
+
+function buildVisualCondition(strict = true) {
+    const conditions = [...document.querySelectorAll('#conditionRows .condition-row')].map(row => {
+        const value = parseConditionValue(row, strict);
+        if (value == null) return null;
+        return {
+            field: row.querySelector('.condition-field').value,
+            op: row.querySelector('.condition-operator').value,
+            value,
+        };
+    }).filter(Boolean);
+    if (!conditions.length) {
+        if (strict) throw new Error('请至少配置一条完整条件');
+        return null;
+    }
+    if (conditions.length === 1) return conditions[0];
+    return { [document.getElementById('f_condition_logic').value]: conditions };
+}
+
+function isSimpleCondition(condition) {
+    return condition && typeof condition === 'object' && !Array.isArray(condition)
+        && typeof condition.field === 'string' && typeof condition.op === 'string'
+        && Object.prototype.hasOwnProperty.call(condition, 'value');
+}
+
+function canUseVisualEditor(condition) {
+    if (isSimpleCondition(condition)) return true;
+    const key = condition && (Array.isArray(condition.and) ? 'and' : Array.isArray(condition.or) ? 'or' : null);
+    return Boolean(key && condition[key].length && condition[key].every(isSimpleCondition));
+}
+
+function loadVisualCondition(condition) {
+    document.getElementById('conditionRows').innerHTML = '';
+    let conditions = [condition];
+    if (Array.isArray(condition?.and)) {
+        document.getElementById('f_condition_logic').value = 'and';
+        conditions = condition.and;
+    } else if (Array.isArray(condition?.or)) {
+        document.getElementById('f_condition_logic').value = 'or';
+        conditions = condition.or;
+    } else {
+        document.getElementById('f_condition_logic').value = 'and';
+    }
+    conditions.forEach(item => addConditionRow(item));
+    refreshConditionLogicVisibility();
+    updateConditionPreview();
+}
+
+function conditionSentence(condition) {
+    if (!condition) return '请选择字段、运算符并填写比较值。';
+    if (Array.isArray(condition.and) || Array.isArray(condition.or)) {
+        const key = Array.isArray(condition.and) ? 'and' : 'or';
+        const connector = key === 'and' ? ' 且 ' : ' 或 ';
+        return condition[key].map(item => `（${conditionSentence(item)}）`).join(connector);
+    }
+    const feature = RULE_FEATURES.find(item => item.value === condition.field);
+    const operator = CONDITION_OPERATORS.find(item => item.value === condition.op);
+    const displayValue = Array.isArray(condition.value) ? condition.value.join('、') : condition.value;
+    return `${feature?.label || condition.field} ${operator?.label || condition.op} ${displayValue}`;
+}
+
+function updateConditionPreview() {
+    let condition = null;
+    try {
+        condition = buildVisualCondition(false);
+        if (condition) document.getElementById('f_condition').value = JSON.stringify(condition, null, 2);
+    } catch (error) {
+        // 输入中的区间或集合暂不阻断编辑，保存时统一提示。
+    }
+    document.getElementById('conditionPreview').innerHTML = `<strong>条件预览：</strong>${escapeHtml(conditionSentence(condition))}`;
+}
+
+function applyConditionMode(mode) {
+    conditionMode = mode;
+    document.getElementById('conditionBuilderPanel').classList.toggle('d-none', mode !== 'visual');
+    document.getElementById('conditionJsonPanel').classList.toggle('d-none', mode !== 'json');
+    document.getElementById('conditionVisualBtn').classList.toggle('active', mode === 'visual');
+    document.getElementById('conditionJsonBtn').classList.toggle('active', mode === 'json');
+}
+
+function setConditionMode(mode) {
+    if (mode === conditionMode) return;
+    if (mode === 'json') {
+        try {
+            const condition = buildVisualCondition(false);
+            if (condition) document.getElementById('f_condition').value = JSON.stringify(condition, null, 2);
+        } catch (error) {}
+        applyConditionMode('json');
+        return;
+    }
+    try {
+        const condition = JSON.parse(document.getElementById('f_condition').value);
+        if (!canUseVisualEditor(condition)) {
+            showToast('该 JSON 包含更复杂的嵌套结构，请继续使用高级模式', 'warning');
+            return;
+        }
+        loadVisualCondition(condition);
+        applyConditionMode('visual');
+    } catch (error) {
+        showToast('请先修正高级 JSON 格式', 'warning');
+    }
+}
+
+function loadConditionEditor(rawCondition) {
+    let condition = rawCondition;
+    if (typeof condition === 'string') {
+        try { condition = JSON.parse(condition); } catch (error) { condition = {}; }
+    }
+    document.getElementById('f_condition').value = JSON.stringify(condition, null, 2);
+    if (canUseVisualEditor(condition)) {
+        loadVisualCondition(condition);
+        applyConditionMode('visual');
+    } else {
+        applyConditionMode('json');
+    }
+}
+
+// 从 localStorage 恢复 pageSize, 默认 20
+(function initPageSize() {
+    const saved = localStorage.getItem(PAGE_SIZE_KEY) || '20';
+    document.getElementById('pageSize').value = saved;
+})();
+
+// 用户切换 pageSize 时保存到 localStorage
+function onPageSizeChange() {
+    localStorage.setItem(PAGE_SIZE_KEY, document.getElementById('pageSize').value);
+    loadRules(1);
+}
+
+function riskBadge(level) {
+    const cls = {'低':'badge-risk-low','中':'badge-risk-mid','高':'badge-risk-high','极高':'badge-risk-critical'}[level] || 'bg-secondary';
+    return `<span class="badge ${cls}">${level}</span>`;
+}
+
+async function loadRules(page) {
+    currentPage = page || 1;
+    const category = document.getElementById('filterCategory').value;
+    const pageSize = document.getElementById('pageSize').value;
+    const params = new URLSearchParams({page: currentPage, page_size: pageSize});
+    if (category) params.set('category', category);
+    const tbody = document.getElementById('rules-table');
+    tbody.innerHTML = tableStateHtml(10, 'loading', '正在加载规则…');
+    try {
+        const data = await apiRequest('/api/rules?' + params);
+        document.getElementById('rulesCount').textContent = `共 ${data.total} 条 · 当前第 ${currentPage} 页`;
+        document.getElementById('rules-stat-total').textContent = data.total;
+        document.getElementById('rules-stat-enabled').textContent = data.items.filter(item => item.is_enabled).length;
+        document.getElementById('rules-stat-high').textContent = data.items.filter(item => ['高','极高'].includes(item.risk_level)).length;
+        document.getElementById('rules-stat-categories').textContent = new Set(data.items.map(item => item.rule_category)).size;
+        if (data.items.length === 0) {
+            tbody.innerHTML = tableStateHtml(10, 'empty', '暂无符合当前筛选条件的规则');
+        } else {
+            tbody.innerHTML = data.items.map(r => `
+            <tr>
+                <td><code>${escapeHtml(r.rule_id)}</code></td>
+                <td><strong>${escapeHtml(r.rule_name)}</strong><div class="text-muted" style="font-size:9px;max-width:220px;">${escapeHtml(r.description || '暂无描述')}</div></td>
+                <td><span class="badge bg-info text-dark">${escapeHtml(r.rule_category)}</span></td>
+                <td>${escapeHtml(r.event_type)}</td>
+                <td>${riskBadgeHtml(r.risk_level)}</td>
+                <td><strong>${r.risk_score}</strong></td>
+                <td>${decisionBadgeHtml(r.action)}</td>
+                <td>${r.priority}</td>
+                <td>${ruleStatusControl(r)}</td>
+                <td>${ruleActionControl(r)}</td>
+            </tr>
+            `).join('');
+        }
+        const totalPages = Math.ceil(data.total / pageSize);
+        document.getElementById('pagination').innerHTML = buildPaginationHtml(currentPage, totalPages, pageSize, 'loadRules');
+    } catch (error) {
+        tbody.innerHTML = tableStateHtml(10, 'error', error.message || '规则加载失败');
+        document.getElementById('rulesCount').textContent = '加载失败';
+        showToast(error.message || '规则加载失败', 'danger');
+    }
+}
+
+function showCreateModal() {
+    editingRuleId = null;
+    document.getElementById('ruleModalTitle').textContent = '新建规则';
+    document.getElementById('ruleForm').reset();
+    document.getElementById('f_rule_id').disabled = false;
+    loadConditionEditor({field: 'order_total_amount', op: '>=', value: 5000});
+    new bootstrap.Modal(document.getElementById('ruleModal')).show();
+}
+
+async function editRule(ruleId) {
+    let r;
+    try {
+        r = await apiRequest(`/api/rules/${ruleId}`);
+    } catch (error) {
+        showToast(error.message || '规则详情加载失败', 'danger');
+        return;
+    }
+    editingRuleId = ruleId;
+    document.getElementById('ruleModalTitle').textContent = '编辑规则';
+    document.getElementById('f_rule_id').value = r.rule_id;
+    document.getElementById('f_rule_id').disabled = true;
+    document.getElementById('f_rule_name').value = r.rule_name;
+    document.getElementById('f_category').value = r.rule_category;
+    document.getElementById('f_event_type').value = r.event_type;
+    document.getElementById('f_risk_level').value = r.risk_level;
+    document.getElementById('f_score').value = r.risk_score;
+    document.getElementById('f_action').value = r.action;
+    loadConditionEditor(r.rule_condition);
+    document.getElementById('f_priority').value = r.priority;
+    document.getElementById('f_description').value = r.description || '';
+    new bootstrap.Modal(document.getElementById('ruleModal')).show();
+}
+
+async function saveRule() {
+    const form = document.getElementById('ruleForm');
+    if (!form.checkValidity()) {
+        form.reportValidity();
+        return;
+    }
+    let condition;
+    try {
+        condition = conditionMode === 'visual'
+            ? buildVisualCondition(true)
+            : JSON.parse(document.getElementById('f_condition').value);
+        if (!condition || typeof condition !== 'object' || Array.isArray(condition) || Object.keys(condition).length === 0) {
+            throw new Error('条件表达式必须是非空 JSON 对象');
+        }
+    } catch (error) {
+        showToast(error.message || '条件配置不完整', 'warning');
+        if (conditionMode === 'json') document.getElementById('f_condition').focus();
+        return;
+    }
+    const data = {
+        rule_id: document.getElementById('f_rule_id').value,
+        rule_name: document.getElementById('f_rule_name').value,
+        rule_category: document.getElementById('f_category').value,
+        event_type: document.getElementById('f_event_type').value,
+        rule_condition: condition,
+        risk_level: document.getElementById('f_risk_level').value,
+        risk_score: parseInt(document.getElementById('f_score').value),
+        action: document.getElementById('f_action').value,
+        priority: parseInt(document.getElementById('f_priority').value) || 0,
+        description: document.getElementById('f_description').value,
+    };
+    const url = editingRuleId ? `/api/rules/${editingRuleId}` : '/api/rules';
+    const method = editingRuleId ? 'PUT' : 'POST';
+    try {
+        await apiRequest(url, { method, body: JSON.stringify(data) });
+        bootstrap.Modal.getInstance(document.getElementById('ruleModal')).hide();
+        loadRules(currentPage);
+        showToast(editingRuleId ? '规则已更新' : '规则已创建');
+    } catch (error) {
+        showToast(error.message || '规则保存失败', 'danger');
+    }
+}
+
+async function toggleRule(ruleId) {
+    try {
+        await apiRequest(`/api/rules/${ruleId}/toggle`, { method: 'PUT' });
+        showToast('规则状态已更新');
+        loadRules(currentPage);
+    } catch (error) {
+        showToast(error.message || '规则状态更新失败', 'danger');
+        loadRules(currentPage);
+    }
+}
+
+async function deleteRule(ruleId) {
+    if (!confirm('确定要删除这条规则吗？')) return;
+    try {
+        await apiRequest(`/api/rules/${ruleId}`, { method: 'DELETE' });
+        showToast('规则已删除');
+        loadRules(currentPage);
+    } catch (error) {
+        showToast(error.message || '规则删除失败', 'danger');
+    }
+}
+
+loadRules();
+</script>
+{% endblock %}

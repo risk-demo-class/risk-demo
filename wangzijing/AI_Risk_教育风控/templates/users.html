@@ -1,0 +1,261 @@
+{% extends "base.html" %}
+{% block title %}用户管理 - 教育风控系统{% endblock %}
+
+{% block content %}
+<div class="page-heading">
+    <div>
+        <div class="page-heading-kicker"><i class="bi bi-people"></i> Account Management</div>
+        <h4>用户管理</h4>
+        <div class="page-heading-subtitle">系统只保留管理员和审核员两种角色。管理员拥有全部页面权限，审核员只处理分配给自己的案件。</div>
+    </div>
+    <div class="page-actions">
+        <button class="btn btn-primary btn-sm" type="button" onclick="openCreateUser()">
+            <i class="bi bi-person-plus me-1"></i> 新增用户
+        </button>
+    </div>
+</div>
+
+<div class="mini-stat-grid cols-4 mb-3">
+    <div class="mini-stat-card"><div class="mini-stat-top"><span class="mini-stat-label">全部用户</span><span class="mini-stat-icon"><i class="bi bi-people"></i></span></div><div class="mini-stat-value" id="userTotal">-</div></div>
+    <div class="mini-stat-card is-info"><div class="mini-stat-top"><span class="mini-stat-label">管理员</span><span class="mini-stat-icon"><i class="bi bi-shield-lock"></i></span></div><div class="mini-stat-value" id="adminTotal">-</div></div>
+    <div class="mini-stat-card is-success"><div class="mini-stat-top"><span class="mini-stat-label">审核员</span><span class="mini-stat-icon"><i class="bi bi-person-check"></i></span></div><div class="mini-stat-value" id="reviewerTotal">-</div></div>
+    <div class="mini-stat-card is-warning"><div class="mini-stat-top"><span class="mini-stat-label">已停用</span><span class="mini-stat-icon"><i class="bi bi-person-slash"></i></span></div><div class="mini-stat-value" id="disabledTotal">-</div></div>
+</div>
+
+<div class="filter-panel">
+    <div class="filter-fields">
+        <div class="filter-field">
+            <label class="filter-label" for="roleFilter">角色</label>
+            <select class="form-select form-select-sm" id="roleFilter" onchange="renderUsers()">
+                <option value="">全部角色</option>
+                <option value="ADMIN">管理员</option>
+                <option value="REVIEWER">审核员</option>
+            </select>
+        </div>
+        <div class="filter-field filter-search">
+            <label class="filter-label" for="userKeyword">搜索</label>
+            <input class="form-control form-control-sm" id="userKeyword" placeholder="账号或姓名" oninput="renderUsers()">
+        </div>
+    </div>
+    <span class="result-count" id="userCount">正在加载…</span>
+</div>
+
+<div class="card data-card">
+    <div class="data-card-head">
+        <div><h5 class="data-card-title">后台账号</h5><div class="data-card-meta">停用账号后，该账号已有登录会话也会失效</div></div>
+        <span class="soft-pill"><i class="bi bi-shield-check"></i> 两角色权限</span>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-hover mb-0">
+            <thead class="table-light"><tr><th>账号</th><th>姓名</th><th>角色</th><th>状态</th><th>最近登录</th><th>创建时间</th><th>操作</th></tr></thead>
+            <tbody id="usersTable"><tr class="table-state"><td colspan="7"><div class="table-state-box"><span class="spinner-border spinner-border-sm"></span><span>正在加载用户…</span></div></td></tr></tbody>
+        </table>
+    </div>
+</div>
+
+<div class="modal fade" id="userModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="userModalTitle">新增用户</h5>
+                <button type="button" class="btn-close-risk" data-bs-dismiss="modal" aria-label="关闭"><i class="bi bi-x-lg"></i></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="editingUserId">
+                <div class="mb-3">
+                    <label class="form-label" for="userUsername">登录账号</label>
+                    <input class="form-control" id="userUsername" maxlength="50" autocomplete="off" placeholder="例如 reviewer02">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label" for="userDisplayName">姓名</label>
+                    <input class="form-control" id="userDisplayName" maxlength="50" placeholder="例如 李老师">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label" for="userRole">角色</label>
+                    <select class="form-select" id="userRole">
+                        <option value="REVIEWER">审核员</option>
+                        <option value="ADMIN">管理员</option>
+                    </select>
+                    <div class="form-text">管理员可以访问全部页面；审核员只能访问自己的审核工作台和审核记录。</div>
+                </div>
+                <div id="passwordField">
+                    <label class="form-label" for="userPassword">初始密码</label>
+                    <input class="form-control" id="userPassword" type="password" minlength="6" autocomplete="new-password" placeholder="至少 6 位">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">取消</button>
+                <button class="btn btn-primary" type="button" id="saveUserButton" onclick="saveUser()">保存</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="passwordModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">重置密码</h5>
+                <button type="button" class="btn-close-risk" data-bs-dismiss="modal" aria-label="关闭"><i class="bi bi-x-lg"></i></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="passwordUserId">
+                <div class="small text-muted mb-3" id="passwordUserName"></div>
+                <label class="form-label" for="newPassword">新密码</label>
+                <input class="form-control" id="newPassword" type="password" minlength="6" autocomplete="new-password" placeholder="至少 6 位">
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">取消</button>
+                <button class="btn btn-primary" type="button" onclick="resetPassword()">确认重置</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let systemUsers = [];
+
+function roleBadge(role) {
+    return role === 'ADMIN'
+        ? '<span class="badge bg-dark">管理员</span>'
+        : '<span class="badge bg-info text-dark">审核员</span>';
+}
+
+async function loadUsers() {
+    const tbody = document.getElementById('usersTable');
+    tbody.innerHTML = tableStateHtml(7, 'loading', '正在加载用户…');
+    try {
+        const data = await apiRequest('/api/users');
+        systemUsers = data.items;
+        document.getElementById('userTotal').textContent = systemUsers.length;
+        document.getElementById('adminTotal').textContent = systemUsers.filter(u => u.role === 'ADMIN').length;
+        document.getElementById('reviewerTotal').textContent = systemUsers.filter(u => u.role === 'REVIEWER').length;
+        document.getElementById('disabledTotal').textContent = systemUsers.filter(u => !u.is_active).length;
+        renderUsers();
+    } catch (error) {
+        tbody.innerHTML = tableStateHtml(7, 'error', error.message || '用户加载失败');
+        document.getElementById('userCount').textContent = '加载失败';
+    }
+}
+
+function renderUsers() {
+    const role = document.getElementById('roleFilter').value;
+    const keyword = document.getElementById('userKeyword').value.trim().toLowerCase();
+    const users = systemUsers.filter(user => {
+        const roleMatched = !role || user.role === role;
+        const textMatched = !keyword || user.username.toLowerCase().includes(keyword) || user.display_name.toLowerCase().includes(keyword);
+        return roleMatched && textMatched;
+    });
+    document.getElementById('userCount').textContent = `共 ${users.length} 个账号`;
+    const tbody = document.getElementById('usersTable');
+    if (!users.length) {
+        tbody.innerHTML = tableStateHtml(7, 'empty', '没有符合条件的用户');
+        return;
+    }
+    tbody.innerHTML = users.map(user => `
+        <tr>
+            <td><strong>${escapeHtml(user.username)}</strong>${user.user_id === Number(window.CURRENT_USER.userId || 0) ? '<span class="badge bg-light text-dark ms-2">当前</span>' : ''}</td>
+            <td>${escapeHtml(user.display_name)}</td>
+            <td>${roleBadge(user.role)}</td>
+            <td>${user.is_active ? '<span class="badge bg-success">启用</span>' : '<span class="badge bg-secondary">停用</span>'}</td>
+            <td>${formatDateTime(user.last_login_time)}</td>
+            <td>${formatDateTime(user.create_time)}</td>
+            <td><div class="action-cluster">
+                <button class="btn btn-outline-primary btn-sm" onclick="openEditUser(${user.user_id})"><i class="bi bi-pencil"></i> 编辑</button>
+                <button class="btn btn-outline-secondary btn-sm" onclick="openPasswordModal(${user.user_id})"><i class="bi bi-key"></i> 密码</button>
+                <button class="btn ${user.is_active ? 'btn-outline-danger' : 'btn-outline-success'} btn-sm" onclick="toggleUser(${user.user_id})">${user.is_active ? '停用' : '启用'}</button>
+            </div></td>
+        </tr>
+    `).join('');
+}
+
+function openCreateUser() {
+    document.getElementById('userModalTitle').textContent = '新增用户';
+    document.getElementById('editingUserId').value = '';
+    document.getElementById('userUsername').value = '';
+    document.getElementById('userUsername').disabled = false;
+    document.getElementById('userDisplayName').value = '';
+    document.getElementById('userRole').value = 'REVIEWER';
+    document.getElementById('userPassword').value = '';
+    document.getElementById('passwordField').classList.remove('d-none');
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('userModal')).show();
+}
+
+function openEditUser(userId) {
+    const user = systemUsers.find(item => item.user_id === userId);
+    if (!user) return;
+    document.getElementById('userModalTitle').textContent = '编辑用户';
+    document.getElementById('editingUserId').value = user.user_id;
+    document.getElementById('userUsername').value = user.username;
+    document.getElementById('userUsername').disabled = true;
+    document.getElementById('userDisplayName').value = user.display_name;
+    document.getElementById('userRole').value = user.role;
+    document.getElementById('passwordField').classList.add('d-none');
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('userModal')).show();
+}
+
+async function saveUser() {
+    const userId = document.getElementById('editingUserId').value;
+    const displayName = document.getElementById('userDisplayName').value.trim();
+    const role = document.getElementById('userRole').value;
+    const button = document.getElementById('saveUserButton');
+    if (!displayName) { showToast('请输入姓名', 'warning'); return; }
+    const payload = {display_name: displayName, role};
+    let url = '/api/users';
+    let method = 'POST';
+    if (userId) {
+        url += `/${userId}`;
+        method = 'PUT';
+    } else {
+        payload.username = document.getElementById('userUsername').value.trim();
+        payload.password = document.getElementById('userPassword').value;
+        if (!payload.username || payload.password.length < 6) { showToast('请输入账号，初始密码至少 6 位', 'warning'); return; }
+    }
+    button.disabled = true;
+    try {
+        await apiRequest(url, {method, body: JSON.stringify(payload)});
+        bootstrap.Modal.getInstance(document.getElementById('userModal')).hide();
+        showToast(userId ? '用户信息已更新' : '用户已创建');
+        await loadUsers();
+    } catch (error) {
+        showToast(error.message || '保存失败', 'danger');
+    } finally {
+        button.disabled = false;
+    }
+}
+
+async function toggleUser(userId) {
+    const user = systemUsers.find(item => item.user_id === userId);
+    if (!user || !confirm(`确认${user.is_active ? '停用' : '启用'}账号“${user.username}”吗？`)) return;
+    try {
+        await apiRequest(`/api/users/${userId}/toggle`, {method: 'PUT'});
+        showToast(`账号已${user.is_active ? '停用' : '启用'}`);
+        await loadUsers();
+    } catch (error) { showToast(error.message || '状态更新失败', 'danger'); }
+}
+
+function openPasswordModal(userId) {
+    const user = systemUsers.find(item => item.user_id === userId);
+    if (!user) return;
+    document.getElementById('passwordUserId').value = userId;
+    document.getElementById('passwordUserName').textContent = `正在为 ${user.display_name}（${user.username}）设置新密码`;
+    document.getElementById('newPassword').value = '';
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('passwordModal')).show();
+}
+
+async function resetPassword() {
+    const userId = document.getElementById('passwordUserId').value;
+    const password = document.getElementById('newPassword').value;
+    if (password.length < 6) { showToast('新密码至少 6 位', 'warning'); return; }
+    try {
+        await apiRequest(`/api/users/${userId}/reset-password`, {method: 'POST', body: JSON.stringify({password})});
+        bootstrap.Modal.getInstance(document.getElementById('passwordModal')).hide();
+        showToast('密码已重置');
+    } catch (error) { showToast(error.message || '密码重置失败', 'danger'); }
+}
+
+loadUsers();
+</script>
+{% endblock %}

@@ -1,0 +1,175 @@
+{% extends "base.html" %}
+{% block title %}AI 助手 - 教育风控系统{% endblock %}
+
+{% block extra_css %}
+<style>
+    .chat-card { overflow: hidden; }
+    .chat-card-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 17px 19px; border-bottom: 1px solid var(--line); background: rgba(255,255,255,.82); }
+    .agent-identity { display: flex; align-items: center; gap: 11px; }
+    .agent-avatar { width: 42px; height: 42px; display: inline-flex; align-items: center; justify-content: center; border-radius: 14px; background: var(--ink); color: var(--lime); font-size: 19px; }
+    .agent-name { font-size: 14px; font-weight: 800; }
+    .agent-status { display: flex; align-items: center; gap: 6px; margin-top: 2px; color: var(--muted); font-size: 10px; }
+    .chat-messages { height: calc(100vh - 470px); min-height: 270px; padding: 22px; background: #fbfcfc; }
+    .chat-row { display: flex; align-items: flex-start; gap: 9px; margin-bottom: 15px; }
+    .chat-row.user { justify-content: flex-end; }
+    .message-avatar { width: 29px; height: 29px; display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto; border-radius: 10px; background: #e6ece9; color: #5a6763; font-size: 12px; }
+    .chat-row.user .message-avatar { order: 2; background: var(--lime); color: #263022; }
+    .chat-bubble { max-width: min(78%, 650px); margin: 0; padding: 11px 14px; border-radius: 6px 16px 16px 16px; font-size: 13px; line-height: 1.7; box-shadow: 0 5px 16px rgba(45,58,55,.04); }
+    .chat-bubble.user { order: 1; border-radius: 16px 6px 16px 16px; }
+    .chat-composer { padding: 14px; border-top: 1px solid var(--line); background: white; }
+    .composer-inner { display: flex; gap: 8px; padding: 6px; border: 1px solid #dfe6e4; border-radius: 15px; background: #f9fbfa; }
+    .composer-inner:focus-within { border-color: #abd84a; box-shadow: 0 0 0 3px rgba(199,244,90,.18); }
+    .composer-inner .form-control { min-height: 42px; border: 0; background: transparent; }
+    .composer-inner .form-control:focus { box-shadow: none !important; }
+    .suggestion-card { padding: 18px; }
+    .suggestion-list { display: grid; gap: 8px; margin-top: 14px; }
+    .suggestion-button { display: flex; align-items: center; gap: 10px; width: 100%; padding: 11px 12px; border: 1px solid var(--line); border-radius: 13px; background: #f9fbfa; color: #4f5c58; text-align: left; transition: .18s ease; }
+    .suggestion-button:hover { border-color: #d1ddd9; background: #f2f8e8; color: var(--ink); transform: translateX(2px); }
+    .suggestion-button i { width: 29px; height: 29px; display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto; border-radius: 9px; background: white; color: var(--teal); }
+    .suggestion-title { display: block; font-size: 11px; font-weight: 800; }
+    .suggestion-copy { display: block; margin-top: 2px; color: var(--muted); font-size: 9px; }
+    .capability-list { display: grid; gap: 10px; margin-top: 13px; }
+    .capability-item { display: flex; align-items: center; gap: 9px; color: #59635f; font-size: 11px; }
+    .capability-item i { color: #4d9d69; }
+    @media (max-width: 991.98px) { .chat-messages { height: 480px; } }
+    @media (max-width: 575.98px) { .chat-messages { height: 430px; min-height: 360px; padding: 15px; } .chat-bubble { max-width: 88%; } }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-heading">
+    <div>
+        <div class="page-heading-kicker"><i class="bi bi-stars"></i> AI Risk Copilot</div>
+        <h4>AI 风控助手</h4>
+        <div class="page-heading-subtitle">用自然语言查询统计、案件和用户画像；助手只调用项目内已注册的风控工具，不直接修改核心规则。</div>
+    </div>
+    <div class="page-actions"><span class="soft-pill"><i class="bi bi-shield-check"></i> 工具调用可追踪</span></div>
+</div>
+
+<div class="row g-4">
+    <div class="col-xl-8">
+        <div class="card chat-card">
+            <div class="chat-card-header">
+                <div class="agent-identity">
+                    <span class="agent-avatar"><i class="bi bi-stars"></i></span>
+                    <div><div class="agent-name">EduGuard 智能分析员</div><div class="agent-status"><span class="status-dot"></span> {% if ai_enabled %}AI 对话模式{% else %}本地查询模式{% endif %}</div></div>
+                </div>
+                <button type="button" class="btn btn-outline-secondary btn-sm icon-btn" onclick="clearChat()" title="清空对话" aria-label="清空对话"><i class="bi bi-trash"></i></button>
+            </div>
+
+            <div class="chat-messages" id="chatMessages" aria-live="polite">
+                <div class="chat-row ai">
+                    <span class="message-avatar"><i class="bi bi-stars"></i></span>
+                    <div class="chat-bubble ai">{% if ai_enabled %}你好，我是教育风控 AI 助手。你可以让我查看今日统计、查询待审案件、分析指定用户画像，或者解释近期规则命中情况。<br><br>可以直接提问，也可以使用右侧的快捷问题。{% else %}当前没有配置大模型密钥，已自动进入本地查询模式。右侧四个快捷问题仍可直接查询 MySQL 风控数据；如需开放式 AI 问答，请配置 `LLM_API_KEY` 后重启系统。{% endif %}</div>
+                </div>
+            </div>
+
+            <div class="chat-composer">
+                <form id="chatForm" class="composer-inner">
+                    <input type="text" class="form-control" id="chatInput" placeholder="例如：查看今天的风控统计数据" autocomplete="off" aria-label="输入问题">
+                    <button type="submit" class="btn btn-primary icon-btn" id="sendBtn" title="发送" aria-label="发送消息"><i class="bi bi-send"></i></button>
+                </form>
+                <div class="text-muted mt-2 px-1" style="font-size:9px;">AI 输出用于辅助研判，关键处置仍应由风控人员确认。</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-4 d-flex flex-column gap-4">
+        <div class="card suggestion-card">
+            <div class="d-flex align-items-center justify-content-between"><div><h5 class="mb-1">快捷问题</h5><div class="text-muted small">点击后立即发送</div></div><i class="bi bi-lightning-charge text-muted"></i></div>
+            <div class="suggestion-list">
+                <button class="suggestion-button" onclick="sendQuick('查看今天的风控统计数据')"><i class="bi bi-speedometer2"></i><span><span class="suggestion-title">今日风险态势</span><span class="suggestion-copy">评估量、高风险与通过率</span></span><i class="bi bi-chevron-right ms-auto" style="background:transparent;"></i></button>
+                <button class="suggestion-button" onclick="sendQuick('查看所有待审核的案件')"><i class="bi bi-folder2-open"></i><span><span class="suggestion-title">待审案件</span><span class="suggestion-copy">打开人工复核任务清单</span></span><i class="bi bi-chevron-right ms-auto" style="background:transparent;"></i></button>
+                <button class="suggestion-button" onclick="sendQuick('分析用户 RISK009 的风险画像')"><i class="bi bi-person-bounding-box"></i><span><span class="suggestion-title">用户风险画像</span><span class="suggestion-copy">以 RISK009 为示例分析</span></span><i class="bi bi-chevron-right ms-auto" style="background:transparent;"></i></button>
+                <button class="suggestion-button" onclick="sendQuick('分析最近的规则命中效果')"><i class="bi bi-sliders2"></i><span><span class="suggestion-title">规则效果分析</span><span class="suggestion-copy">查看高频命中与命中率</span></span><i class="bi bi-chevron-right ms-auto" style="background:transparent;"></i></button>
+            </div>
+        </div>
+
+        <div class="card suggestion-card">
+            <h5 class="mb-1">助手能力</h5>
+            <div class="text-muted small">基于项目内风控工具</div>
+            <div class="capability-list">
+                <div class="capability-item"><i class="bi bi-check-circle-fill"></i> 查询风险统计与趋势</div>
+                <div class="capability-item"><i class="bi bi-check-circle-fill"></i> 检索案件与用户画像</div>
+                <div class="capability-item"><i class="bi bi-check-circle-fill"></i> 分析规则命中效果</div>
+                <div class="capability-item"><i class="bi bi-check-circle-fill"></i> 辅助解释风险结果</div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let sessionId = null;
+
+function formatChatMessage(content) {
+    return escapeHtml(content)
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+        .replace(/`(.*?)`/g, '<code>$1</code>')
+        .replace(/\n/g, '<br>');
+}
+
+function addMessage(content, role) {
+    const container = document.getElementById('chatMessages');
+    const row = document.createElement('div');
+    row.className = `chat-row ${role}`;
+    const icon = role === 'user' ? 'bi-person' : 'bi-stars';
+    row.innerHTML = `<span class="message-avatar"><i class="bi ${icon}"></i></span><div class="chat-bubble ${role}">${formatChatMessage(content)}</div>`;
+    container.appendChild(row);
+    container.scrollTop = container.scrollHeight;
+}
+
+async function sendMessage(message) {
+    const text = String(message || '').trim();
+    if (!text) return;
+    addMessage(text, 'user');
+    document.getElementById('chatInput').value = '';
+    const button = document.getElementById('sendBtn');
+    setButtonBusy(button, true, '');
+
+    const loadingRow = document.createElement('div');
+    loadingRow.className = 'chat-row ai';
+    loadingRow.id = 'chatLoading';
+    loadingRow.innerHTML = '<span class="message-avatar"><i class="bi bi-stars"></i></span><div class="chat-bubble ai"><span class="spinner-border spinner-border-sm me-1"></span> 正在分析…</div>';
+    document.getElementById('chatMessages').appendChild(loadingRow);
+
+    try {
+        const data = await apiRequest('/api/agent/chat', {
+            method: 'POST',
+            body: JSON.stringify({ message: text, session_id: sessionId }),
+        });
+        sessionId = data.session_id;
+        loadingRow.remove();
+        addMessage(data.reply || '暂未获得有效回复。', 'ai');
+    } catch (error) {
+        loadingRow.remove();
+        addMessage(`请求未完成：${error.message || '请检查大模型配置后重试'}`, 'ai');
+        showToast(error.message || 'AI 助手请求失败', 'danger');
+    } finally {
+        setButtonBusy(button, false);
+        document.getElementById('chatInput').focus();
+    }
+}
+
+function sendQuick(message) {
+    sendMessage(message);
+}
+
+async function clearChat() {
+    try {
+        if (sessionId) await apiRequest(`/api/agent/clear?session_id=${encodeURIComponent(sessionId)}`, { method: 'POST' });
+    } catch (error) {
+        console.warn('清空服务端会话失败:', error);
+    }
+    sessionId = null;
+    document.getElementById('chatMessages').innerHTML = '<div class="chat-row ai"><span class="message-avatar"><i class="bi bi-stars"></i></span><div class="chat-bubble ai">对话已清空。你可以开始一个新的风险分析问题。</div></div>';
+    showToast('对话已清空', 'info');
+}
+
+document.getElementById('chatForm').addEventListener('submit', function(event) {
+    event.preventDefault();
+    sendMessage(document.getElementById('chatInput').value);
+});
+</script>
+{% endblock %}

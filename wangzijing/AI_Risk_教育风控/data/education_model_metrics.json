@@ -1,0 +1,79 @@
+{
+  "n_train": 2500,
+  "n_pos": 884,
+  "n_neg": 1616,
+  "pos_ratio": 0.3536,
+  "scale_pos_weight": 1.8281,
+  "raw_scale_pos_weight": 1.8281,
+  "best_iteration": 59,
+  "accuracy": 0.9796,
+  "precision": 0.9717,
+  "recall": 0.9706,
+  "f1": 0.9711,
+  "auc": 0.9974,
+  "model_path": "D:\\Codex_project\\AI_Risk_教育风控\\app\\engine\\xgb_model.json",
+  "baseline_accuracy": 0.6464,
+  "is_fake_convergence": false,
+  "n_val": 500,
+  "val_accuracy": 0.99,
+  "val_f1": 0.986,
+  "val_auc": 0.9907,
+  "best_f1_threshold": 0.6,
+  "feature_count": 25,
+  "seed": 20260811,
+  "scenario_counts": {
+    "凌晨大额标记": 198,
+    "同设备多账号": 133,
+    "新设备大额报名": 112,
+    "极高退费率": 144,
+    "正常学历认证": 213,
+    "正常报名": 1012,
+    "正常退费": 197,
+    "超高金额报名": 57,
+    "身份连续认证失败": 62,
+    "连环退费": 189,
+    "零学时大额退费": 183
+  },
+  "top_features": [
+    {
+      "feature": "user_refund_amount",
+      "gain": 60.8482
+    },
+    {
+      "feature": "user_refund_count",
+      "gain": 53.291
+    },
+    {
+      "feature": "addr_province_count",
+      "gain": 38.9784
+    },
+    {
+      "feature": "user_complaint_count",
+      "gain": 30.4695
+    },
+    {
+      "feature": "order_total_amount",
+      "gain": 27.3919
+    },
+    {
+      "feature": "user_postsale_count",
+      "gain": 25.039
+    },
+    {
+      "feature": "order_sku_count",
+      "gain": 21.5247
+    },
+    {
+      "feature": "order_pay_interval_sec",
+      "gain": 20.3343
+    },
+    {
+      "feature": "order_item_count",
+      "gain": 10.1262
+    },
+    {
+      "feature": "user_postsale_rate",
+      "gain": 6.6353
+    }
+  ]
+}

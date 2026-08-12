@@ -1,0 +1,255 @@
+{% extends "base.html" %}
+{% block title %}黑名单管理 - 教育风控系统{% endblock %}
+{% set can_manage_blacklist = request.state.current_user and request.state.current_user.role == 'ADMIN' %}
+{% block content %}
+<div class="page-heading">
+    <div>
+        <div class="page-heading-kicker"><i class="bi bi-shield-x"></i> Blocklist Control</div>
+        <h4>黑名单管理</h4>
+        <div class="page-heading-subtitle">命中黑名单的事件将在规则与模型计算前被优先拦截；敏感身份信息仅保存 SHA-256 哈希。</div>
+    </div>
+    <div class="page-actions">
+        <span class="soft-pill"><i class="bi bi-lock"></i> 敏感数据哈希化</span>
+        {% if can_manage_blacklist %}
+        <button class="btn btn-primary btn-sm" onclick="showAddModal()"><i class="bi bi-plus-circle me-1"></i> 新增黑名单</button>
+        {% else %}
+        <span class="soft-pill"><i class="bi bi-eye"></i> 审核员只读</span>
+        {% endif %}
+    </div>
+</div>
+
+<!-- 统计卡片: 4 种教育行业黑名单 -->
+<div class="mini-stat-grid cols-5" id="bl-stats">
+    <div class="mini-stat-card is-info"><div class="mini-stat-top"><span class="mini-stat-label">用户</span><span class="mini-stat-icon"><i class="bi bi-person-x"></i></span></div><div class="mini-stat-value" id="bl-stat-user">-</div></div>
+    <div class="mini-stat-card is-warning"><div class="mini-stat-top"><span class="mini-stat-label">学号哈希</span><span class="mini-stat-icon"><i class="bi bi-mortarboard"></i></span></div><div class="mini-stat-value" id="bl-stat-student">-</div></div>
+    <div class="mini-stat-card is-danger"><div class="mini-stat-top"><span class="mini-stat-label">身份证哈希</span><span class="mini-stat-icon"><i class="bi bi-person-vcard"></i></span></div><div class="mini-stat-value" id="bl-stat-idcard">-</div></div>
+    <div class="mini-stat-card"><div class="mini-stat-top"><span class="mini-stat-label">设备指纹</span><span class="mini-stat-icon"><i class="bi bi-phone"></i></span></div><div class="mini-stat-value" id="bl-stat-device">-</div></div>
+    <div class="mini-stat-card is-muted"><div class="mini-stat-top"><span class="mini-stat-label">全部记录</span><span class="mini-stat-icon"><i class="bi bi-shield-fill-x"></i></span></div><div class="mini-stat-value" id="bl-stat-total">-</div></div>
+</div>
+
+<!-- 筛选 + 分页大小 -->
+<div class="filter-panel">
+  <div class="filter-fields">
+    <div class="filter-field"><label class="filter-label" for="filterType">黑名单类型</label><select class="form-select form-select-sm" id="filterType" onchange="loadList(1)">
+        <option value="">全部类型</option>
+        <option value="用户">用户</option>
+        <option value="学号">学号</option>
+        <option value="身份证">身份证</option>
+        <option value="设备指纹">设备指纹</option>
+    </select></div>
+    <div class="filter-field"><label class="filter-label" for="pageSize">每页显示</label><select class="form-select form-select-sm" id="pageSize" onchange="onPageSizeChange()">
+        <option value="20">20 条</option>
+        <option value="50">50 条</option>
+        <option value="100">100 条</option>
+    </select></div>
+  </div>
+  <span class="result-count" id="listCount">正在加载…</span>
+</div>
+
+<!-- 黑名单列表 -->
+<div class="card data-card">
+    <div class="data-card-head"><div><h5 class="data-card-title">拦截名单</h5><div class="data-card-meta">到期记录将不再命中，永久记录无过期时间</div></div><i class="bi bi-shield-lock text-muted"></i></div>
+    <div class="table-responsive">
+        <table class="table table-hover mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>ID</th>
+                    <th>类型</th>
+                    <th>值</th>
+                    <th>原因</th>
+                    <th>过期时间</th>
+                    <th>创建时间</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody id="bl-table"><tr class="table-state"><td colspan="7"><div class="table-state-box"><span class="spinner-border spinner-border-sm"></span><span>正在加载黑名单…</span></div></td></tr></tbody>
+        </table>
+    </div>
+</div>
+
+<nav class="pagination-bottom"><ul class="pagination justify-content-center mb-0" id="pagination"></ul></nav>
+
+<!-- 新增黑名单 模态框 -->
+<div class="modal fade" id="addModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">新增黑名单</h5>
+                <button type="button" class="btn-close-risk" data-bs-dismiss="modal" title="关闭" aria-label="Close">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label">类型 <span class="text-danger">*</span></label>
+                    <select class="form-select" id="addType">
+                        <option value="用户">用户 (user_id)</option>
+                        <option value="学号">学号哈希</option>
+                        <option value="身份证">身份证哈希</option>
+                        <option value="设备指纹">设备指纹哈希</option>
+                    </select>
+                    <div class="form-text">用户填写 user_id；其余类型必须填写系统中保存的 SHA-256 哈希，不填写明文。</div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">值 <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" id="addValue" placeholder="例如: EDU001 或 64位哈希值">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">原因</label>
+                    <input type="text" class="form-control" id="addReason" placeholder="例如: 多次恶意退费 / 批量账号共用设备">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">过期时间 (留空 = 永久)</label>
+                    <input type="datetime-local" class="form-control" id="addExpire">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button class="btn btn-primary" id="addSubmitBtn" onclick="submitAdd()">确认添加</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let currentPage = 1;
+const PAGE_SIZE_KEY = 'bl_pageSize';
+const CAN_MANAGE_BLACKLIST = {{ 'true' if can_manage_blacklist else 'false' }};
+
+function blacklistActionHtml(item) {
+    if (!CAN_MANAGE_BLACKLIST) return '<span class="text-muted small">只读</span>';
+    return `<button class="btn btn-outline-danger btn-sm" onclick="removeBl(${item.blacklist_id}, '${escapeHtml(item.blacklist_value)}')"><i class="bi bi-trash"></i> 移除</button>`;
+}
+
+// 从 localStorage 恢复 pageSize, 默认 20
+(function initPageSize() {
+    const saved = localStorage.getItem(PAGE_SIZE_KEY) || '20';
+    document.getElementById('pageSize').value = saved;
+})();
+
+function onPageSizeChange() {
+    localStorage.setItem(PAGE_SIZE_KEY, document.getElementById('pageSize').value);
+    loadList(1);
+}
+
+// 四类教育行业黑名单徽章颜色
+function typeBadge(t) {
+    const cls = {'用户':'bg-primary','学号':'bg-warning text-dark','身份证':'bg-danger','设备指纹':'bg-info text-dark'}[t] || 'bg-secondary';
+    return `<span class="badge ${cls}">${t}</span>`;
+}
+
+// 加载统计 (拉 page_size=100 汇总; 100 条封顶, 教学项目先求简单)
+async function loadStats() {
+    try {
+        const data = await apiRequest('/api/blacklist?page=1&page_size=100');
+        const cnt = {用户: 0, 学号: 0, 身份证: 0, 设备指纹: 0};
+        data.items.forEach(it => { if (cnt[it.blacklist_type] !== undefined) cnt[it.blacklist_type]++; });
+        document.getElementById('bl-stat-user').textContent = cnt.用户;
+        document.getElementById('bl-stat-student').textContent = cnt.学号;
+        document.getElementById('bl-stat-idcard').textContent = cnt.身份证;
+        document.getElementById('bl-stat-device').textContent = cnt.设备指纹;
+        document.getElementById('bl-stat-total').textContent = data.total;
+    } catch (error) {
+        ['bl-stat-user','bl-stat-student','bl-stat-idcard','bl-stat-device','bl-stat-total'].forEach(id => document.getElementById(id).textContent = '--');
+        showToast(error.message || '黑名单统计加载失败', 'danger');
+    }
+}
+
+// 加载列表 (前端过滤 type, 因为后端没 type 筛选参数)
+async function loadList(page) {
+    currentPage = page || 1;
+    const filterType = document.getElementById('filterType').value;
+    const pageSize = parseInt(document.getElementById('pageSize').value);
+    const tbody = document.getElementById('bl-table');
+    tbody.innerHTML = tableStateHtml(7, 'loading', '正在加载黑名单…');
+    try {
+        const data = await apiRequest(`/api/blacklist?page=${currentPage}&page_size=${pageSize}`);
+        let items = data.items;
+        if (filterType) items = items.filter(it => it.blacklist_type === filterType);
+        document.getElementById('listCount').textContent = filterType ? `当前页筛出 ${items.length} 条` : `共 ${data.total} 条 · 当前 ${items.length} 条`;
+        if (items.length === 0) {
+            tbody.innerHTML = tableStateHtml(7, 'empty', '暂无符合当前筛选条件的黑名单');
+        } else {
+            tbody.innerHTML = items.map(it => `
+            <tr>
+                <td>${it.blacklist_id}</td>
+                <td>${typeBadge(it.blacklist_type)}</td>
+                <td><code class="table-id" title="${escapeHtml(it.blacklist_value)}">${shortId(it.blacklist_value, 22)}</code></td>
+                <td>${it.reason ? escapeHtml(it.reason) : '<span class="text-muted small">未填写</span>'}</td>
+                <td>${it.expire_time ? formatDateTime(it.expire_time) : '<span class="badge bg-light text-dark">永久</span>'}</td>
+                <td>${formatDateTime(it.create_time)}</td>
+                <td>${blacklistActionHtml(it)}</td>
+            </tr>
+            `).join('');
+        }
+        const totalPages = Math.ceil(data.total / pageSize);
+        document.getElementById('pagination').innerHTML = buildPaginationHtml(currentPage, totalPages, pageSize, 'loadList');
+    } catch (error) {
+        tbody.innerHTML = tableStateHtml(7, 'error', error.message || '黑名单加载失败');
+        document.getElementById('listCount').textContent = '加载失败';
+        showToast(error.message || '黑名单加载失败', 'danger');
+    }
+}
+
+// 新增模态框
+function showAddModal() {
+    document.getElementById('addType').value = '用户';
+    document.getElementById('addValue').value = '';
+    document.getElementById('addReason').value = '';
+    document.getElementById('addExpire').value = '';
+    new bootstrap.Modal(document.getElementById('addModal')).show();
+}
+
+// 提交新增
+async function submitAdd() {
+    const type = document.getElementById('addType').value;
+    const value = document.getElementById('addValue').value.trim();
+    const reason = document.getElementById('addReason').value.trim();
+    const expireRaw = document.getElementById('addExpire').value;
+    if (!value) { showToast('请填写黑名单值', 'warning'); document.getElementById('addValue').focus(); return; }
+
+    // datetime-local 没有时区, 直接拼秒 + 用 ISO 格式
+    // 浏览器: "2026-08-15T10:30" → 后端需要完整 ISO (含秒, 不含时区会被当本地时间)
+    const expire_time = expireRaw ? expireRaw + ':00' : null;
+
+    const body = {
+        blacklist_type: type,
+        blacklist_value: value,
+        reason: reason || null,
+        expire_time: expire_time,
+    };
+    const button = document.getElementById('addSubmitBtn');
+    setButtonBusy(button, true, '添加中…');
+    try {
+        await apiRequest('/api/blacklist', { method: 'POST', body: JSON.stringify(body) });
+        bootstrap.Modal.getInstance(document.getElementById('addModal')).hide();
+        loadList(currentPage);
+        loadStats();
+        showToast('黑名单已添加');
+    } catch (error) {
+        showToast(error.message || '黑名单添加失败', 'danger');
+    } finally {
+        setButtonBusy(button, false);
+    }
+}
+
+// 移除黑名单
+async function removeBl(blacklistId, value) {
+    if (!confirm(`确定要移除黑名单 "${value}" 吗?`)) return;
+    try {
+        await apiRequest(`/api/blacklist/${blacklistId}`, { method: 'DELETE' });
+        loadList(currentPage);
+        loadStats();
+        showToast('黑名单已移除');
+    } catch (error) {
+        showToast(error.message || '黑名单移除失败', 'danger');
+    }
+}
+
+loadStats();
+loadList();
+</script>
+{% endblock %}

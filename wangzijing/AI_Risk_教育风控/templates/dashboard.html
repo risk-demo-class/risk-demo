@@ -1,0 +1,249 @@
+{% extends "base.html" %}
+{% block title %}风险仪表盘 - 智慧教育风控{% endblock %}
+
+{% block extra_css %}
+<style>
+    .dashboard-chart-wrap { position: relative; height: 310px; }
+    .metric-link { position: relative; z-index: 2; color: inherit; }
+    .metric-link:hover { color: inherit; }
+    .metric-link:hover > .card { transform: translateY(-2px); box-shadow: var(--shadow-md) !important; }
+    .metric-link > .card { transition: transform .18s ease, box-shadow .18s ease; }
+    .metric-trend { display: inline-flex; align-items: center; gap: 4px; margin-top: 6px; color: rgba(31,38,36,.65); font-size: 10px; }
+    .engine-flow { display: flex; align-items: center; gap: 5px; margin-top: 16px; }
+    .engine-step { padding: 5px 7px; border-radius: 8px; background: rgba(255,255,255,.14); font-size: 9px; font-weight: 700; }
+    .engine-flow i { color: rgba(255,255,255,.58); font-size: 10px; }
+    .rule-rank { width: 29px; height: 29px; display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto; border-radius: 10px; font-size: 10px; font-weight: 850; }
+    .rule-progress { height: 4px; margin-top: 6px; overflow: hidden; border-radius: 999px; background: #edf1f0; }
+    .rule-progress span { display: block; height: 100%; border-radius: inherit; background: var(--lime-strong); }
+    .quick-workflows { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-bottom: 22px; }
+    .workflow-link { display: flex; align-items: center; gap: 11px; padding: 13px 14px; border: 1px solid var(--line); border-radius: 15px; background: rgba(255,255,255,.72); color: #46514e; transition: .18s ease; }
+    .workflow-link:hover { border-color: #d5dfdc; background: white; color: var(--ink); transform: translateY(-1px); }
+    .workflow-icon { width: 35px; height: 35px; display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto; border-radius: 11px; background: #edf3f0; color: #4f5c58; }
+    .workflow-title { font-size: 12px; font-weight: 800; }
+    .workflow-copy { margin-top: 2px; color: var(--muted); font-size: 9px; }
+    @media (max-width: 767.98px) {
+        .quick-workflows { grid-template-columns: 1fr; }
+        .dashboard-chart-wrap { height: 270px; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-heading">
+    <div>
+        <div class="page-heading-kicker"><i class="bi bi-activity"></i> Risk Overview</div>
+        <h4>风险态势总览</h4>
+        <div class="page-heading-subtitle">统一监测课程报名、退费申请与学历认证，快速识别异常事件并进入人工复核流程。</div>
+    </div>
+    <div class="page-actions">
+        <span class="live-pill"><span class="status-dot"></span> 风控引擎运行中</span>
+        <a class="btn btn-primary btn-sm" href="/risk-check"><i class="bi bi-search me-1"></i> 发起风险检查</a>
+    </div>
+</div>
+
+<div class="row g-3 mb-3" id="stat-cards">
+    <div class="col-xl-3 col-md-6">
+        <a class="metric-link" href="/assessments">
+            <div class="card metric-card metric-violet h-100">
+                <div class="d-flex align-items-center gap-2">
+                    <span class="metric-icon"><i class="bi bi-clipboard-data"></i></span>
+                    <span class="metric-label">今日评估</span>
+                </div>
+                <div class="metric-value skeleton" id="total-today">000</div>
+                <div class="metric-note">三类教育事件合计</div>
+                <div class="metric-trend"><i class="bi bi-arrow-up-right"></i> 查看评估明细</div>
+            </div>
+        </a>
+    </div>
+    <div class="col-xl-3 col-md-6">
+        <a class="metric-link" href="/assessments">
+            <div class="card metric-card metric-blue h-100">
+                <div class="d-flex align-items-center gap-2">
+                    <span class="metric-icon"><i class="bi bi-exclamation-triangle"></i></span>
+                    <span class="metric-label">高风险事件</span>
+                </div>
+                <div class="metric-value skeleton" id="high-risk-today">000</div>
+                <div class="metric-note">高与极高风险总量</div>
+                <div class="metric-trend"><i class="bi bi-shield-exclamation"></i> 关注异常变化</div>
+            </div>
+        </a>
+    </div>
+    <div class="col-xl-3 col-md-6">
+        <a class="metric-link" href="/cases">
+            <div class="card metric-card metric-mint h-100">
+                <div class="d-flex align-items-center gap-2">
+                    <span class="metric-icon"><i class="bi bi-folder-check"></i></span>
+                    <span class="metric-label">待审案件</span>
+                </div>
+                <div class="metric-value skeleton" id="pending-cases">000</div>
+                <div class="metric-note">等待人工复核</div>
+                <div class="metric-trend"><i class="bi bi-person-check"></i> 进入案件工作台</div>
+            </div>
+        </a>
+    </div>
+    <div class="col-xl-3 col-md-6">
+        <a class="metric-link" href="/assessments">
+            <div class="card metric-card metric-peach h-100">
+                <div class="d-flex align-items-center gap-2">
+                    <span class="metric-icon"><i class="bi bi-check2-circle"></i></span>
+                    <span class="metric-label">今日通过率</span>
+                </div>
+                <div class="metric-value skeleton" id="pass-rate">000</div>
+                <div class="metric-note">正常事件占比</div>
+                <div class="metric-trend"><i class="bi bi-graph-up"></i> 观察决策质量</div>
+            </div>
+        </a>
+    </div>
+</div>
+
+<div class="quick-workflows" aria-label="常用工作流">
+    <a class="workflow-link" href="/risk-check">
+        <span class="workflow-icon" style="background:#ece7ff;color:#6458a3;"><i class="bi bi-shield-check"></i></span>
+        <span><span class="workflow-title d-block">单笔风险检查</span><span class="workflow-copy d-block">输入用户和业务 ID 立即评估</span></span>
+        <i class="bi bi-chevron-right ms-auto"></i>
+    </a>
+    <a class="workflow-link" href="/rules">
+        <span class="workflow-icon" style="background:#e4f3ff;color:#41779c;"><i class="bi bi-sliders2"></i></span>
+        <span><span class="workflow-title d-block">策略规则中心</span><span class="workflow-copy d-block">管理 EDU001–EDU008</span></span>
+        <i class="bi bi-chevron-right ms-auto"></i>
+    </a>
+    <a class="workflow-link" href="/chat">
+        <span class="workflow-icon" style="background:#e4f7ed;color:#337c53;"><i class="bi bi-stars"></i></span>
+        <span><span class="workflow-title d-block">AI 风控分析</span><span class="workflow-copy d-block">用自然语言查询风险数据</span></span>
+        <i class="bi bi-chevron-right ms-auto"></i>
+    </a>
+</div>
+
+<div class="row g-4">
+    <div class="col-xl-8">
+        <div class="card p-4 h-100">
+            <div class="d-flex align-items-start justify-content-between gap-3 mb-3">
+                <div>
+                    <h5 class="mb-1">近 7 天评估趋势</h5>
+                    <div class="text-muted small">对比每日总评估量与高风险事件变化</div>
+                </div>
+                <span class="soft-pill"><i class="bi bi-arrow-repeat"></i><span id="dashboard-updated">正在同步</span></span>
+            </div>
+            <div class="dashboard-chart-wrap"><canvas id="trendChart" aria-label="近7天评估趋势图"></canvas></div>
+        </div>
+    </div>
+    <div class="col-xl-4 d-flex flex-column gap-4">
+        <div class="engine-card">
+            <span class="engine-badge"><i class="bi bi-lightning-charge-fill"></i> 双轨融合引擎</span>
+            <div class="engine-title">规则 + XGBoost</div>
+            <div class="engine-meta">8 条教育规则 · 25 维特征 · 黑名单前置拦截</div>
+            <div class="engine-flow" aria-label="风控决策流程">
+                <span class="engine-step">业务校验</span><i class="bi bi-chevron-right"></i>
+                <span class="engine-step">规则/模型</span><i class="bi bi-chevron-right"></i>
+                <span class="engine-step">决策处置</span>
+            </div>
+        </div>
+        <div class="card p-4 flex-grow-1">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <div>
+                    <h5 class="mb-1">规则命中 TOP5</h5>
+                    <div class="text-muted small">最近评估中最活跃的风险信号</div>
+                </div>
+                <a href="/rules" class="topbar-icon" style="width:34px;height:34px;border-radius:11px;" title="查看全部规则" aria-label="查看全部规则"><i class="bi bi-arrow-up-right"></i></a>
+            </div>
+            <ul class="list-group list-group-flush" id="top-rules">
+                <li class="list-group-item"><span class="skeleton d-block" style="height:34px;">加载中</span></li>
+                <li class="list-group-item"><span class="skeleton d-block" style="height:34px;">加载中</span></li>
+                <li class="list-group-item"><span class="skeleton d-block" style="height:34px;">加载中</span></li>
+            </ul>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let dashboardChart = null;
+
+function buildSevenDayTrend(rows) {
+    const byDate = new Map((rows || []).map(row => [row.date, row]));
+    const result = [];
+    for (let offset = 6; offset >= 0; offset--) {
+        const date = new Date();
+        date.setHours(0, 0, 0, 0);
+        date.setDate(date.getDate() - offset);
+        const key = [date.getFullYear(), String(date.getMonth() + 1).padStart(2, '0'), String(date.getDate()).padStart(2, '0')].join('-');
+        const source = byDate.get(key) || {};
+        result.push({
+            date: `${date.getMonth() + 1}/${date.getDate()}`,
+            count: Number(source.count || 0),
+            high_risk_count: Number(source.high_risk_count || 0),
+        });
+    }
+    return result;
+}
+
+function finishMetric(id, value) {
+    const el = document.getElementById(id);
+    el.textContent = value;
+    el.classList.remove('skeleton');
+}
+
+async function loadDashboard() {
+    try {
+        const data = await apiRequest('/api/dashboard/overview');
+        finishMetric('total-today', data.today_assessments || 0);
+        finishMetric('high-risk-today', data.today_high_risk || 0);
+        finishMetric('pending-cases', data.pending_cases || 0);
+        finishMetric('pass-rate', `${Number(data.pass_rate || 0).toFixed(1)}%`);
+        document.getElementById('dashboard-updated').textContent = `更新于 ${new Date().toLocaleTimeString('zh-CN', {hour:'2-digit', minute:'2-digit'})}`;
+
+        const trend = buildSevenDayTrend(data.trend_7d || []);
+        const ctx = document.getElementById('trendChart').getContext('2d');
+        if (dashboardChart) dashboardChart.destroy();
+        dashboardChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: trend.map(t => t.date),
+                datasets: [
+                    { label: '总评估', data: trend.map(t => t.count), backgroundColor: '#c9befa', borderRadius: 8, borderSkipped: false, maxBarThickness: 30 },
+                    { label: '高风险', data: trend.map(t => t.high_risk_count), backgroundColor: '#86dcb3', borderRadius: 8, borderSkipped: false, maxBarThickness: 30 }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: { mode: 'index', intersect: false },
+                plugins: {
+                    legend: { position: 'top', align: 'end', labels: { usePointStyle: true, pointStyle: 'circle', boxWidth: 7, boxHeight: 7, color: '#65706d', font: { size: 11 } } },
+                    tooltip: { backgroundColor: '#202725', padding: 11, cornerRadius: 10, displayColors: true }
+                },
+                scales: {
+                    x: { grid: { display: false }, border: { display: false }, ticks: { color: '#7b8381' } },
+                    y: { beginAtZero: true, ticks: { precision: 0, color: '#7b8381' }, grid: { color: '#e9eeec' }, border: { display: false } }
+                }
+            }
+        });
+
+        const topRulesEl = document.getElementById('top-rules');
+        const topRules = data.top_rules || [];
+        if (topRules.length === 0) {
+            topRulesEl.innerHTML = '<li class="list-group-item"><div class="empty-state" style="min-height:130px;padding:18px 8px;"><span class="empty-state-icon" style="width:46px;height:46px;font-size:20px;"><i class="bi bi-bar-chart"></i></span><div class="empty-state-title">暂无规则命中</div><div class="empty-state-copy">执行风险检查后，这里会展示活跃规则。</div></div></li>';
+        } else {
+            const maxHits = Math.max(...topRules.map(r => Number(r.hit_count || 0)), 1);
+            const colors = ['#ece7ff','#e5efff','#e3f7ed','#fff0dc','#e2f4f5'];
+            topRulesEl.innerHTML = topRules.map((r, index) => `
+                <li class="list-group-item d-flex align-items-center gap-3">
+                    <span class="rule-rank" style="background:${colors[index]};">${index + 1}</span>
+                    <span class="min-w-0 flex-grow-1">
+                        <span class="d-flex justify-content-between gap-2"><span class="text-truncate small fw-semibold">${escapeHtml(r.rule_name)}</span><strong class="small">${Number(r.hit_count || 0)}</strong></span>
+                        <span class="rule-progress"><span style="width:${Math.max(8, Number(r.hit_count || 0) / maxHits * 100)}%"></span></span>
+                    </span>
+                </li>
+            `).join('');
+        }
+    } catch (error) {
+        ['total-today','high-risk-today','pending-cases','pass-rate'].forEach(id => finishMetric(id, '--'));
+        document.getElementById('dashboard-updated').textContent = '同步失败';
+        document.getElementById('top-rules').innerHTML = '<li class="list-group-item text-muted py-4 text-center"><i class="bi bi-wifi-off me-2"></i>数据加载失败</li>';
+        showToast(error.message || '仪表盘加载失败', 'danger');
+    }
+}
+loadDashboard();
+</script>
+{% endblock %}

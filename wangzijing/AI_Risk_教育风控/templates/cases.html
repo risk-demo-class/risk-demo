@@ -1,0 +1,327 @@
+{% extends "base.html" %}
+{% set is_admin = request.state.current_user and request.state.current_user.role == 'ADMIN' %}
+{% set history_mode = view_mode|default('active') == 'history' %}
+{% block title %}{% if history_mode %}审核记录{% else %}案件管理{% endif %} - 教育风控系统{% endblock %}
+{% block content %}
+<div class="page-heading">
+    <div>
+        <div class="page-heading-kicker"><i class="bi bi-folder2-open"></i> Review Workspace</div>
+        <h4>{% if history_mode %}审核记录{% elif is_admin %}案件管理{% else %}审核工作台{% endif %}</h4>
+        <div class="page-heading-subtitle">
+            {% if history_mode %}查看当前账号已经完成的案件及审核意见。
+            {% elif is_admin %}查看全部案件，将待办分配给启用中的审核员；审核结论由审核员完成。
+            {% else %}这里只显示分配给你的待审案件，其他审核员的案件不会出现在列表中。{% endif %}
+        </div>
+    </div>
+    <div class="page-actions">
+        {% if is_admin %}
+        <a class="btn btn-outline-primary btn-sm" href="/assessments"><i class="bi bi-bar-chart-line me-1"></i> 全部评估</a>
+        <a class="btn btn-primary btn-sm" href="/risk-check"><i class="bi bi-plus-circle me-1"></i> 新风险检查</a>
+        {% elif history_mode %}
+        <a class="btn btn-primary btn-sm" href="/cases"><i class="bi bi-inbox me-1"></i> 返回工作台</a>
+        {% else %}
+        <a class="btn btn-outline-primary btn-sm" href="/assessments"><i class="bi bi-bar-chart-line me-1"></i> 评估历史</a>
+        {% endif %}
+    </div>
+</div>
+
+<!-- 统计卡片 -->
+<div class="mini-stat-grid" id="case-stats">
+    <div class="mini-stat-card"><div class="mini-stat-top"><span class="mini-stat-label">全部案件</span><span class="mini-stat-icon"><i class="bi bi-archive"></i></span></div><div class="mini-stat-value" id="cs-total">-</div></div>
+    <div class="mini-stat-card is-warning"><div class="mini-stat-top"><span class="mini-stat-label">待审核</span><span class="mini-stat-icon"><i class="bi bi-hourglass-split"></i></span></div><div class="mini-stat-value" id="cs-pending">-</div></div>
+    <div class="mini-stat-card is-info"><div class="mini-stat-top"><span class="mini-stat-label">审核中</span><span class="mini-stat-icon"><i class="bi bi-person-workspace"></i></span></div><div class="mini-stat-value" id="cs-reviewing">-</div></div>
+    <div class="mini-stat-card is-success"><div class="mini-stat-top"><span class="mini-stat-label">已通过</span><span class="mini-stat-icon"><i class="bi bi-check2-circle"></i></span></div><div class="mini-stat-value" id="cs-approved">-</div></div>
+    <div class="mini-stat-card is-danger"><div class="mini-stat-top"><span class="mini-stat-label">已拒绝</span><span class="mini-stat-icon"><i class="bi bi-x-octagon"></i></span></div><div class="mini-stat-value" id="cs-rejected">-</div></div>
+    <div class="mini-stat-card is-muted"><div class="mini-stat-top"><span class="mini-stat-label">已关闭</span><span class="mini-stat-icon"><i class="bi bi-archive-fill"></i></span></div><div class="mini-stat-value" id="cs-closed">-</div></div>
+</div>
+
+<!-- 筛选 -->
+<div class="filter-panel">
+    <div class="filter-fields">
+        <div class="filter-field"><label class="filter-label" for="filterStatus">案件状态</label><select class="form-select form-select-sm" id="filterStatus" onchange="loadCases()">
+            {% if history_mode %}<option value="__history__" selected>全部已完成</option>{% else %}<option value="__active__" selected>仅待办（待审核 + 审核中）</option>{% endif %}
+            <option value="">全部状态</option><option value="待审核">待审核</option><option value="审核中">审核中</option><option value="已通过">已通过</option><option value="已拒绝">已拒绝</option><option value="已关闭">已关闭</option>
+        </select></div>
+        <div class="filter-field"><label class="filter-label" for="pageSize">每页显示</label><select class="form-select form-select-sm" id="pageSize" onchange="onPageSizeChange()"><option value="5">5 条</option><option value="10">10 条</option><option value="20">20 条</option><option value="50">50 条</option><option value="100">100 条</option></select></div>
+    </div>
+    <span class="result-count" id="casesCount">正在加载…</span>
+</div>
+
+<!-- 案件列表 -->
+<div class="card data-card">
+    <div class="data-card-head"><div><h5 class="data-card-title">{% if history_mode %}已完成审核{% else %}人工复核队列{% endif %}</h5><div class="data-card-meta">{% if history_mode %}只显示已通过、已拒绝和已关闭案件{% else %}默认仅显示尚未完成处置的案件{% endif %}</div></div><span class="live-pill"><span class="status-dot"></span> {% if history_mode %}可回溯{% else %}工作台{% endif %}</span></div>
+    <div class="table-responsive">
+        <table class="table table-hover mb-0">
+            <thead class="table-light">
+                <tr><th>案件ID</th><th>用户ID</th><th>分类</th><th>评分</th><th>等级</th><th>状态</th>{% if is_admin %}<th>审核员</th>{% endif %}<th>创建时间</th><th>操作</th></tr>
+            </thead>
+            <tbody id="cases-table"><tr class="table-state"><td colspan="{% if is_admin %}9{% else %}8{% endif %}"><div class="table-state-box"><span class="spinner-border spinner-border-sm"></span><span>正在加载案件…</span></div></td></tr></tbody>
+        </table>
+    </div>
+</div>
+
+<!-- 案件操作说明 -->
+<style>
+/* 案件列表操作列: 详情 + 重做检查 */
+.col-actions .btn { margin-right: 4px; }
+</style>
+
+<nav class="pagination-bottom"><ul class="pagination justify-content-center mb-0" id="pagination"></ul></nav>
+
+<!-- 案件详情模态框 -->
+<div class="modal fade" id="caseModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header"><h5 class="modal-title">案件详情</h5><button type="button" class="btn-close-risk" data-bs-dismiss="modal" title="关闭" aria-label="Close"><i class="bi bi-x-lg"></i></button></div>
+            <div class="modal-body" id="caseDetailBody">加载中...</div>
+            <div class="modal-footer" id="caseActions"></div>
+        </div>
+    </div>
+</div>
+
+<!-- 管理员案件分配 -->
+<div class="modal fade" id="assignModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header"><h5 class="modal-title">分配审核员</h5><button type="button" class="btn-close-risk" data-bs-dismiss="modal" aria-label="关闭"><i class="bi bi-x-lg"></i></button></div>
+            <div class="modal-body">
+                <input type="hidden" id="assignCaseId">
+                <div class="info-banner mb-3"><i class="bi bi-info-circle"></i><div>分配后案件进入“审核中”，审核员只能在自己的工作台看到该案件。</div></div>
+                <label class="form-label" for="assigneeSelect">选择启用中的审核员</label>
+                <select class="form-select" id="assigneeSelect"></select>
+                <div class="form-text" id="assigneeHint"></div>
+            </div>
+            <div class="modal-footer"><button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">取消</button><button class="btn btn-primary" type="button" id="assignSubmit" onclick="submitAssignment()">确认分配</button></div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let currentPage = 1;
+const IS_ADMIN = {{ 'true' if is_admin else 'false' }};
+const HISTORY_MODE = {{ 'true' if history_mode else 'false' }};
+const CASE_COLUMN_COUNT = IS_ADMIN ? 9 : 8;
+// 使用新版存储键，让此前保存在浏览器里的“100 条”不会继续覆盖新的演示默认值。
+const PAGE_SIZE_KEY = 'cases_pageSize_v2';
+const DEFAULT_PAGE_SIZE = '5';
+const ALLOWED_PAGE_SIZES = new Set(['5', '10', '20', '50', '100']);
+
+// 从 localStorage 恢复 pageSize；首次进入默认每页 5 条，少量演示数据也能翻页。
+(function initPageSize() {
+    const saved = localStorage.getItem(PAGE_SIZE_KEY);
+    document.getElementById('pageSize').value = ALLOWED_PAGE_SIZES.has(saved) ? saved : DEFAULT_PAGE_SIZE;
+})();
+
+// 用户切换 pageSize 时保存到 localStorage
+function onPageSizeChange() {
+    localStorage.setItem(PAGE_SIZE_KEY, document.getElementById('pageSize').value);
+    loadCases(1);
+}
+
+function riskBadge(level) {
+    const cls = {'低':'badge-risk-low','中':'badge-risk-mid','高':'badge-risk-high','极高':'badge-risk-critical'}[level] || 'bg-secondary';
+    return `<span class="badge ${cls}">${level}</span>`;
+}
+
+function statusBadge(status) {
+    const cls = {'待审核':'bg-warning','审核中':'bg-info','已通过':'bg-success','已拒绝':'bg-danger','已关闭':'bg-secondary'}[status] || 'bg-secondary';
+    return `<span class="badge ${cls}">${status}</span>`;
+}
+
+async function loadStats() {
+    try {
+        const s = await apiRequest('/api/cases/statistics');
+        document.getElementById('cs-total').textContent = s.total;
+        document.getElementById('cs-pending').textContent = s.pending;
+        document.getElementById('cs-reviewing').textContent = s.reviewing;
+        document.getElementById('cs-approved').textContent = s.approved;
+        document.getElementById('cs-rejected').textContent = s.rejected;
+        document.getElementById('cs-closed').textContent = s.closed;
+    } catch (error) {
+        ['cs-total','cs-pending','cs-reviewing','cs-approved','cs-rejected','cs-closed'].forEach(id => document.getElementById(id).textContent = '--');
+        showToast(error.message || '案件统计加载失败', 'danger');
+    }
+}
+
+async function loadCases(page) {
+    currentPage = page || 1;
+    const status = document.getElementById('filterStatus').value;
+    const pageSize = document.getElementById('pageSize').value;
+    let url = `/api/cases?page=${currentPage}&page_size=${pageSize}`;
+    if (status === '__active__') {
+        url += '&active_only=true';
+    } else if (status === '__history__') {
+        url += '&history_only=true';
+    } else if (status) {
+        url += `&status=${encodeURIComponent(status)}`;
+    }
+    const tbody = document.getElementById('cases-table');
+    tbody.innerHTML = tableStateHtml(CASE_COLUMN_COUNT, 'loading', '正在加载案件…');
+    try {
+        const data = await apiRequest(url);
+        document.getElementById('casesCount').textContent = `共 ${data.total} 条 · 当前 ${data.items.length} 条`;
+        if (data.items.length === 0) {
+            tbody.innerHTML = tableStateHtml(CASE_COLUMN_COUNT, 'empty', HISTORY_MODE ? '还没有已完成的审核记录' : '当前筛选条件下没有待处理案件');
+        } else {
+            tbody.innerHTML = data.items.map(c => `
+            <tr>
+                <td><code class="table-id" title="${escapeHtml(c.case_id)}">${shortId(c.case_id)}</code></td>
+                <td><strong>${escapeHtml(c.user_id)}</strong></td>
+                <td>${escapeHtml(c.case_category || '-')}</td>
+                <td><strong>${c.final_score ?? '-'}</strong></td>
+                <td>${riskBadgeHtml(c.risk_level || '低')}</td>
+                <td>${statusBadge(c.case_status)}</td>
+                ${IS_ADMIN ? `<td>${c.assignee_name ? `<strong>${escapeHtml(c.assignee_name)}</strong><div class="small text-muted">${formatDateTime(c.assign_time)}</div>` : '<span class="text-muted">未分配</span>'}</td>` : ''}
+                <td>${formatDateTime(c.create_time)}</td>
+                <td class="col-actions">
+                    <div class="action-cluster"><button class="btn btn-outline-primary btn-sm" onclick="viewCase('${c.case_id}')"><i class="bi bi-eye me-1"></i>详情</button>
+                    ${IS_ADMIN && !['已通过','已拒绝','已关闭'].includes(c.case_status) ? `<button class="btn btn-primary btn-sm" onclick="openAssignModal('${c.case_id}', ${c.assignee_id || 'null'})"><i class="bi bi-person-plus"></i> ${c.assignee_id ? '改派' : '分配'}</button>` : ''}</div>
+                </td>
+            </tr>
+            `).join('');
+        }
+        const totalPages = Math.ceil(data.total / pageSize);
+        document.getElementById('pagination').innerHTML = buildPaginationHtml(currentPage, totalPages, pageSize, 'loadCases');
+    } catch (error) {
+        tbody.innerHTML = tableStateHtml(CASE_COLUMN_COUNT, 'error', error.message || '案件加载失败');
+        document.getElementById('casesCount').textContent = '加载失败';
+        showToast(error.message || '案件加载失败', 'danger');
+    }
+}
+
+async function viewCase(caseId) {
+    let c;
+    try {
+        c = await apiRequest(`/api/cases/${caseId}`);
+    } catch (error) {
+        showToast(error.message || '案件详情加载失败', 'danger');
+        return;
+    }
+    const body = document.getElementById('caseDetailBody');
+    const canReview = ['待审核', '审核中'].includes(c.case_status) && (IS_ADMIN || Boolean(c.assignee_id));
+    body.innerHTML = `
+        <div class="row">
+            <div class="col-md-6">
+                <h6>基本信息</h6>
+                <table class="table table-sm">
+                    <tr><td class="text-muted">案件 ID</td><td><code>${escapeHtml(c.case_id)}</code></td></tr>
+                    <tr><td class="text-muted">用户 ID</td><td>${escapeHtml(c.user_id)}</td></tr>
+                    <tr><td class="text-muted">评分</td><td><strong>${c.final_score ?? '-'}</strong></td></tr>
+                    <tr><td class="text-muted">等级</td><td>${riskBadge(c.risk_level || '低')}</td></tr>
+                    <tr><td class="text-muted">决策</td><td>${decisionBadgeHtml(c.decision)}</td></tr>
+                    <tr><td class="text-muted">状态</td><td>${statusBadge(c.case_status)}</td></tr>
+                    <tr><td class="text-muted">分类</td><td>${escapeHtml(c.case_category || '-')}</td></tr>
+                    <tr><td class="text-muted">创建时间</td><td>${formatDateTime(c.create_time)}</td></tr>
+                    <tr><td class="text-muted">当前审核员</td><td>${c.assignee_name ? escapeHtml(c.assignee_name) : '<span class="text-muted">未分配</span>'}</td></tr>
+                    ${c.reviewer ? `<tr><td class="text-muted">审核人</td><td>${escapeHtml(c.reviewer)}</td></tr>` : ''}
+                    ${c.review_comment ? `<tr><td class="text-muted">审核意见</td><td>${escapeHtml(c.review_comment)}</td></tr>` : ''}
+                </table>
+                <!-- 【P4-L4 2026-08-08】ML 评分 (XGBoost, sigmoid 校准) -->
+                <h6 class="mt-3">ML 评分 <small class="text-muted">(XGBoost)</small></h6>
+                <div class="ml-score-block p-2 bg-light rounded">
+                    ${c.ml_score != null
+                        ? renderMLScoreBlock(c.ml_score, c.ml_decision)
+                        : '<span class="text-muted">未加载模型</span>'}
+                </div>
+            </div>
+            <div class="col-md-6">
+                <h6>命中规则</h6>
+                ${c.triggered_rules.length > 0 ? `<table class="table table-sm">
+                    <thead><tr><th>规则</th><th>等级</th><th>分值</th></tr></thead>
+                    <tbody>${c.triggered_rules.map(r => `<tr><td>${escapeHtml(r.rule_name)}</td><td>${riskBadgeHtml(r.risk_level)}</td><td>${r.risk_score}</td></tr>`).join('')}</tbody>
+                </table>` : '<p class="text-muted">无命中规则</p>'}
+                ${c.user_profile ? `<h6 class="mt-3">用户画像</h6>
+                <table class="table table-sm">
+                    <tr><td class="text-muted">风险评分</td><td>${c.user_profile.risk_score}</td></tr>
+                    <tr><td class="text-muted">总订单</td><td>${c.user_profile.total_orders}</td></tr>
+                    <tr><td class="text-muted">退款率</td><td>${(c.user_profile.refund_rate * 100).toFixed(1)}%</td></tr>
+                    <tr><td class="text-muted">认证失败次数</td><td>${c.user_profile.complaint_count}</td></tr>
+                </table>` : ''}
+            </div>
+        </div>
+        ${canReview ? `
+        <hr>
+        <h6>审核操作</h6>
+        <div class="row">
+            <div class="col-md-4">
+                <label class="form-label">当前审核人</label>
+                <input type="text" class="form-control" id="reviewer" value="${escapeHtml(window.CURRENT_USER?.displayName || window.CURRENT_USER?.username || '')}" readonly>
+            </div>
+            <div class="col-md-8">
+                <label class="form-label">审核意见</label>
+                <input type="text" class="form-control" id="reviewComment">
+            </div>
+        </div>
+        ${IS_ADMIN ? `<div class="form-check mt-3"><input class="form-check-input" type="checkbox" id="addBlacklist"><label class="form-check-label" for="addBlacklist">拒绝时将用户加入黑名单</label></div>` : ''}
+        ` : ''}
+    `;
+
+    const actions = document.getElementById('caseActions');
+    if (canReview) {
+        actions.innerHTML = `
+            <button class="btn btn-success" onclick="reviewCase('${c.case_id}','已通过')">通过</button>
+            <button class="btn btn-danger" onclick="reviewCase('${c.case_id}','已拒绝')">拒绝</button>
+            <button class="btn btn-secondary" onclick="reviewCase('${c.case_id}','已关闭')">关闭</button>
+        `;
+    } else {
+        actions.innerHTML = '<button class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>';
+    }
+    new bootstrap.Modal(document.getElementById('caseModal')).show();
+}
+
+async function reviewCase(caseId, decision) {
+    const data = {
+        decision: decision,
+        reviewer: document.getElementById('reviewer')?.value || 'admin',
+        review_comment: document.getElementById('reviewComment')?.value || '',
+        add_to_blacklist: document.getElementById('addBlacklist')?.checked || false,
+    };
+    try {
+        await apiRequest(`/api/cases/${caseId}/review`, { method: 'POST', body: JSON.stringify(data) });
+        bootstrap.Modal.getInstance(document.getElementById('caseModal')).hide();
+        loadCases(currentPage);
+        loadStats();
+        showToast(`案件已${decision.replace('已', '')}`);
+    } catch (error) {
+        showToast(error.message || '审核失败', 'danger');
+    }
+}
+
+async function openAssignModal(caseId, selectedId) {
+    try {
+        const data = await apiRequest('/api/users?role=REVIEWER');
+        const reviewers = data.items.filter(user => user.is_active);
+        if (!reviewers.length) { showToast('请先在用户管理中创建并启用审核员', 'warning'); return; }
+        document.getElementById('assignCaseId').value = caseId;
+        document.getElementById('assigneeSelect').innerHTML = reviewers.map(user => `<option value="${user.user_id}" ${user.user_id === selectedId ? 'selected' : ''}>${escapeHtml(user.display_name)}（${escapeHtml(user.username)}）</option>`).join('');
+        document.getElementById('assigneeHint').textContent = selectedId ? '重新分配后，原审核员将无法继续访问该案件。' : '案件分配后会出现在该审核员的工作台。';
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('assignModal')).show();
+    } catch (error) { showToast(error.message || '审核员加载失败', 'danger'); }
+}
+
+async function submitAssignment() {
+    const caseId = document.getElementById('assignCaseId').value;
+    const assigneeId = Number(document.getElementById('assigneeSelect').value);
+    const selectedText = document.getElementById('assigneeSelect').selectedOptions[0]?.textContent || '审核员';
+    const button = document.getElementById('assignSubmit');
+    button.disabled = true;
+    try {
+        await apiRequest(`/api/cases/${caseId}/assign`, {method: 'POST', body: JSON.stringify({assignee_id: assigneeId})});
+        bootstrap.Modal.getInstance(document.getElementById('assignModal')).hide();
+        showToast(`案件已分配给 ${selectedText}`);
+        loadCases(currentPage);
+        loadStats();
+    } catch (error) {
+        showToast(error.message || '分配失败', 'danger');
+    } finally {
+        button.disabled = false;
+    }
+}
+
+loadStats();
+loadCases();
+</script>
+{% endblock %}
