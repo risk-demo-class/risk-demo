@@ -1,0 +1,2 @@
+{% extends 'base.html' %}{% block title %}风险案件管理{% endblock %}{% block content %}<div class="panel"><table><tr><th>案件号</th><th>评估号</th><th>状态</th><th>负责人</th><th>创建时间</th></tr>{% for x in rows %}<tr><td>{{x.case_id}}</td><td>{{x.assessment_id}}</td><td>{{x.status}}</td><td>{{x.assignee}}</td><td>{{x.created_at}}</td></tr>{% endfor %}</table></div>{% endblock %}
+
