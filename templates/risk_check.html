@@ -1,5 +1,33 @@
 {% extends "base.html" %}
 {% block title %}风险检查 - 华信银行信贷风控平台{% endblock %}
+{% block extra_css %}
+<style>
+/* 字段级校验错误提示 */
+.field-error {
+    color: #dc3545;
+    font-size: .8rem;
+    margin-top: 4px;
+    display: none;
+}
+.form-control.is-invalid { border-color: #dc3545; }
+/* 评分→等级刻度条 */
+.score-scale { margin: .75rem 0 .25rem; }
+.score-track {
+    position: relative; height: 10px; border-radius: 5px;
+    background: #e9ecef; overflow: visible;
+}
+.score-seg { height: 100%; float: left; }
+.score-seg:first-child { border-radius: 5px 0 0 5px; }
+.score-seg:last-child { border-radius: 0 5px 5px 0; }
+.score-marker {
+    position: absolute; top: -4px; width: 4px; height: 18px;
+    background: #212529; border-radius: 2px; transform: translateX(-50%);
+    box-shadow: 0 0 0 2px #fff;
+}
+.score-labels { font-size: .7rem; color: #6c757d; margin-top: 2px; }
+.score-levels { font-size: .75rem; margin-top: 2px; }
+</style>
+{% endblock %}
 {% block content %}
 <h4 class="mb-4">风险检查</h4>
 
@@ -8,7 +36,7 @@
     <div class="col-md-5">
         <div class="card stat-card p-4">
             <h6>发起风控检查</h6>
-            <form id="checkForm">
+            <form id="checkForm" novalidate>
                 <div class="mb-3">
                     <label class="form-label"><span class="text-danger">*</span> 事件类型</label>
                     <select class="form-select" id="ck_event_type" required>
@@ -21,10 +49,12 @@
                 <div class="mb-3">
                     <label class="form-label"><span class="text-danger">*</span> 用户ID</label>
                     <input type="text" class="form-control" id="ck_user_id" placeholder="如: 1001" required>
+                    <div class="field-error" id="ck_user_id_error"></div>
                 </div>
                 <div class="mb-3">
                     <label class="form-label"><span class="text-danger">*</span> 业务ID (贷款申请ID/还款ID)</label>
                     <input type="text" class="form-control" id="ck_source_id" placeholder="如: LN000001" required>
+                    <div class="field-error" id="ck_source_id_error"></div>
                 </div>
                 <div class="mb-3">
                     <label class="form-label">贷款申请ID (可选, 贷款申请/放款时自动填充)</label>
@@ -41,6 +71,7 @@
     <div class="col-md-7">
         <div class="card stat-card p-4" id="resultPanel" style="display:none;">
             <h6>检查结果</h6>
+            <div id="checkError"></div>
             <div id="resultContent"></div>
         </div>
         <div class="card stat-card p-4" id="emptyPanel">
@@ -63,6 +94,62 @@ function riskBadge(level) {
 function decisionBadge(d) {
     const cls = {'通过':'bg-success','标记':'bg-info','人工审核':'bg-warning','拒绝':'bg-danger'}[d] || 'bg-secondary';
     return `<span class="badge ${cls}">${d}</span>`;
+}
+
+/* ============ 字段级校验 (用户ID / 业务ID) ============ */
+const validators = {
+    ck_user_id: {
+        check: v => {
+            if (!v.trim()) return '请输入用户ID';
+            if (!/^[0-9A-Za-z]+$/.test(v.trim())) return '用户ID仅支持数字与字母';
+            return '';
+        },
+        msg: '如: 1001'
+    },
+    ck_source_id: {
+        check: v => {
+            if (!v.trim()) return '请输入业务ID';
+            const eventType = (document.getElementById('ck_event_type') || {}).value;
+            const val = v.trim();
+            if (eventType === '客户投诉') {
+                // 客户投诉的 source_id 是 complaint_record.record_id (自增整数)
+                if (!/^\d+$/.test(val)) return '客户投诉业务ID为数字记录ID';
+            } else if (eventType === '还款') {
+                // 还款的 source_id 是 repayment_record.repayment_id (rp+ULID)
+                if (!/^rp/i.test(val)) return '还款业务ID以 rp 前缀开头';
+            } else if (!/^LN/i.test(val)) {
+                // 贷款申请/放款：loan_id (LN 前缀)
+                return '业务ID需以 LN 前缀开头';
+            }
+            return '';
+        },
+        msg: '如: LN000001'
+    }
+};
+
+function validateField(id) {
+    const el = document.getElementById(id);
+    const errEl = document.getElementById(id + '_error');
+    const rule = validators[id];
+    const err = rule.check(el.value);
+    const ok = err === '';
+    el.classList.toggle('is-invalid', !ok);
+    errEl.textContent = err;
+    errEl.style.display = ok ? 'none' : 'block';
+    return ok;
+}
+
+function bindFieldValidation() {
+    Object.keys(validators).forEach(id => {
+        const el = document.getElementById(id);
+        ['blur', 'input'].forEach(evt => {
+            el.addEventListener(evt, () => validateField(id));
+        });
+    });
+}
+
+function validateAllFields() {
+    return Object.keys(validators).map(validateField).every(Boolean);
 }
 
 // 接收从案件列表跳过来的预填数据 (重做检查功能)
@@ -90,16 +177,75 @@ function decisionBadge(d) {
     }
 })();
 
+/* ============ 评分→等级刻度条 ============ */
+function scoreScale(score, level) {
+    const color = {'低':'#dcfce7','中':'#fef9c3','高':'#fed7aa','极高':'#fecaca'}[level] || '#e9ecef';
+    const s = Math.max(0, Math.min(100, Number(score) || 0));
+    return `
+        <div class="score-scale">
+            <div class="score-track">
+                <div class="score-seg" style="width:30%;background:#dcfce7;"></div>
+                <div class="score-seg" style="width:30%;background:#fef9c3;"></div>
+                <div class="score-seg" style="width:20%;background:#fed7aa;"></div>
+                <div class="score-seg" style="width:20%;background:#fecaca;"></div>
+                <div class="score-marker" style="left:${s}%;background:${color};"></div>
+            </div>
+            <div class="score-labels d-flex justify-content-between">
+                <span>0</span><span>30</span><span>60</span><span>80</span><span>100</span>
+            </div>
+            <div class="score-levels d-flex justify-content-between">
+                <span class="text-success">低</span><span class="text-warning">中</span>
+                <span class="text-warning">高</span><span class="text-danger">极高</span>
+            </div>
+            <small class="text-muted">风险评分 ${s} 分, 综合评级 ${level}</small>
+        </div>`;
+}
+
+/* ============ 命中规则表 (含规则说明 + 可展开的特征值) ============ */
+function ruleDetailHTML(r, features) {
+    // 从 features 取规则相关特征值 (同名 key 高亮), 用于回答"为什么命中"
+    const feats = features || {};
+    const rows = Object.keys(feats).map(k => {
+        const v = feats[k];
+        const valHtml = `<code>${JSON.stringify(v, null, 0)}</code>`;
+        return `<tr><td class="text-muted">${k}</td><td>${valHtml}</td></tr>`;
+    }).join('');
+    const featsHtml = rows
+        ? `<table class="table table-sm mb-0"><thead><tr><th>特征</th><th>值</th></tr></thead><tbody>${rows}</tbody></table>`
+        : '<span class="text-muted">无特征数据</span>';
+    return `
+        <details class="mt-2">
+            <summary class="text-muted small">命中详情 · 为什么命中</summary>
+            <div class="mt-2 p-2 bg-light rounded">
+                <div><small class="text-muted">规则ID</small><br><code>${r.rule_id}</code></div>
+                <div class="mt-2"><small class="text-muted">相关特征值</small><br>${featsHtml}</div>
+            </div>
+        </details>`;
+}
+
+/* ============ 统一错误区渲染 ============ */
+function showError(msg) {
+    const box = document.getElementById('checkError');
+    box.innerHTML = `<div class="alert alert-danger py-2 mb-3">${msg}</div>`;
+}
+function clearError() {
+    document.getElementById('checkError').innerHTML = '';
+}
+
 document.getElementById('checkForm').addEventListener('submit', async function(e) {
     e.preventDefault();
+    // 提交前统一校验, 阻止非法提交
+    const valid = validateAllFields();
+    if (!valid) return;
+
     const btn = document.getElementById('checkBtn');
     btn.disabled = true;
     btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> 检查中...';
 
     const data = {
         event_type: document.getElementById('ck_event_type').value,
-        user_id: document.getElementById('ck_user_id').value,
-        source_id: document.getElementById('ck_source_id').value,
+        user_id: document.getElementById('ck_user_id').value.trim(),
+        source_id: document.getElementById('ck_source_id').value.trim(),
         order_id: document.getElementById('ck_order_id').value || null,
     };
 
@@ -110,14 +256,16 @@ document.getElementById('checkForm').addEventListener('submit', async function(e
         const result = await res.json();
 
         if (!res.ok) {
-            document.getElementById('resultContent').innerHTML = `<div class="alert alert-danger">${result.detail || '检查失败'}</div>`;
+            showError(result.detail || '检查失败');
         } else {
+            clearError();
             const decisionColor = {'通过':'success','标记':'warning','人工审核':'info','拒绝':'danger'}[result.decision] || 'secondary';
             document.getElementById('resultContent').innerHTML = `
                 <div class="alert alert-${decisionColor} mb-3">
                     <strong>决策: ${result.decision}</strong> | 评分: <strong>${result.final_score}</strong> | 等级: ${riskBadge(result.risk_level)}
                 </div>
-                <div class="row mb-3">
+                ${scoreScale(result.final_score, result.risk_level)}
+                <div class="row mb-3 mt-1">
                     <div class="col-md-6">
                         <small class="text-muted">评估ID</small><br><code>${result.assessment_id}</code>
                     </div>
@@ -128,7 +276,7 @@ document.getElementById('checkForm').addEventListener('submit', async function(e
                 ${result.triggered_rules.length > 0 ? `
                 <h6 class="mt-3">命中规则</h6>
                 <table class="table table-sm">
-                    <thead><tr><th>规则</th><th>分类</th><th>等级</th><th>分值</th><th>动作</th></tr></thead>
+                    <thead><tr><th>规则</th><th>分类</th><th>等级</th><th>分值</th><th>动作</th><th>规则说明</th></tr></thead>
                     <tbody>${result.triggered_rules.map(r => `
                         <tr>
                             <td>${r.rule_name}</td>
@@ -136,6 +284,10 @@ document.getElementById('checkForm').addEventListener('submit', async function(e
                             <td>${riskBadge(r.risk_level)}</td>
                             <td>${r.risk_score}</td>
                             <td>${r.action}</td>
+                            <td>
+                                ${r.description ? r.description : `<code>${r.rule_id}</code>`}
+                                ${ruleDetailHTML(r, result.features)}
+                            </td>
                         </tr>
                     `).join('')}</tbody>
                 </table>` : '<p class="text-success mt-3">未命中任何规则</p>'}
@@ -150,18 +302,36 @@ document.getElementById('checkForm').addEventListener('submit', async function(e
                     <summary class="text-muted">特征详情</summary>
                     <pre class="mt-2 bg-light p-2 rounded" style="max-height:300px;overflow:auto;">${JSON.stringify(result.features, null, 2)}</pre>
                 </details>
+                <hr class="my-3">
+                <div class="d-flex flex-wrap gap-2">
+                    <a class="btn btn-outline-primary btn-sm" href="/assessments?user_id=${encodeURIComponent(result.user_id || data.user_id)}">
+                        <i class="bi bi-person-lines-fill"></i> 查看该客户评估
+                    </a>
+                    <button type="button" class="btn btn-outline-secondary btn-sm" id="redoBtn">
+                        <i class="bi bi-arrow-repeat"></i> 重做检查
+                    </button>
+                </div>
             `;
+            // 重做检查: 用同一参数再次提交
+            document.getElementById('redoBtn').addEventListener('click', () => {
+                document.getElementById('checkForm').dispatchEvent(new Event('submit', {cancelable:true}));
+            });
         }
         document.getElementById('resultPanel').style.display = 'block';
         document.getElementById('emptyPanel').style.display = 'none';
+        // 自动滚动到结果区, 窄屏/长结果时立即看到结论
+        document.getElementById('resultPanel').scrollIntoView({behavior:'smooth'});
     } catch(e) {
-        document.getElementById('resultContent').innerHTML = `<div class="alert alert-danger">请求失败: ${e.message}</div>`;
+        showError(`请求失败: ${e.message}`);
         document.getElementById('resultPanel').style.display = 'block';
         document.getElementById('emptyPanel').style.display = 'none';
+        document.getElementById('resultPanel').scrollIntoView({behavior:'smooth'});
     } finally {
         btn.disabled = false;
         btn.innerHTML = '<i class="bi bi-search"></i> 执行检查';
     }
 });
+
+bindFieldValidation();
 </script>
 {% endblock %}

@@ -79,3 +79,16 @@ def test_chat_bank_copy():
     html = _read("chat.html")
     assert "客户" in html or "贷款申请" in html or "逾期" in html, "Agent 页应有银行语义"
     assert "对用户/订单" not in html, "不应残留'对用户/订单'提示词"
+
+
+def test_risk_check_source_id_event_aware():
+    """risk_check.html: 业务ID校验按事件类型区分 (回归: 还款 rp 前缀 / 客户投诉数字)."""
+    html = _read("risk_check.html")
+    # 客户投诉 → 数字记录ID
+    assert "客户投诉业务ID为数字记录ID" in html, "客户投诉应校验数字记录ID"
+    # 还款 → rp 前缀 (repayment_id = rp+ULID, 不能并入 LN/REP 分支)
+    assert "还款业务ID以 rp 前缀开头" in html, "还款应校验 rp 前缀"
+    # 贷款申请/放款 → LN 前缀
+    assert "业务ID需以 LN 前缀开头" in html, "贷款申请/放款应校验 LN 前缀"
+    # 不应残留会把 rp01.. 拦截的旧 REP 分支
+    assert "LN|REP" not in html, "不应残留 LN|REP 合并前缀校验"

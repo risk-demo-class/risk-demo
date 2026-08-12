@@ -30,6 +30,8 @@
         <option value="50">50 条</option>
         <option value="100">100 条</option>
     </select>
+    <input type="text" class="form-control form-control-sm w-auto" id="filterUserId" placeholder="客户ID (回车过滤)" title="按客户ID过滤当前页; 完整 user_id 查询参数列为后续项" onkeydown="if(event.key==='Enter'){applyUserIdFilter(true);}">
+    <span class="text-muted small ms-2" id="filterHint"></span>
     <span class="text-muted small ms-2" id="casesCount"></span>
 </div>
 
@@ -38,7 +40,7 @@
     <div class="table-responsive">
         <table class="table table-hover mb-0">
             <thead class="table-light">
-                <tr><th>案件ID</th><th>客户ID</th><th>分类</th><th>评分</th><th>等级</th><th>状态</th><th>创建时间</th><th>操作</th></tr>
+                <tr><th>案件ID</th><th>客户ID</th><th>分类</th><th>评分</th><th>等级</th><th id="thStatus" style="cursor:pointer;user-select:none" onclick="toggleStatusSort()" title="点击排序">状态 ⇅</th><th>创建时间</th><th>操作</th></tr>
             </thead>
             <tbody id="cases-table"></tbody>
         </table>
@@ -58,8 +60,23 @@
     <div class="modal-dialog modal-xl">
         <div class="modal-content">
             <div class="modal-header"><h5 class="modal-title">案件详情</h5><button type="button" class="btn-close-risk" data-bs-dismiss="modal" title="关闭" aria-label="Close"><i class="bi bi-x-lg"></i></button></div>
+            <div class="alert alert-danger mx-3 mt-3 mb-0 py-2 d-none" id="caseError" role="alert"></div>
             <div class="modal-body" id="caseDetailBody">加载中...</div>
             <div class="modal-footer" id="caseActions"></div>
+        </div>
+    </div>
+</div>
+
+<!-- 审核操作确认模态框 -->
+<div class="modal fade" id="reviewConfirmModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header"><h5 class="modal-title">确认审核操作</h5><button type="button" class="btn-close-risk" data-bs-dismiss="modal" title="关闭" aria-label="Close"><i class="bi bi-x-lg"></i></button></div>
+            <div class="modal-body" id="reviewConfirmBody"></div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-primary" id="reviewConfirmOk"><i class="bi bi-check-lg me-1"></i>确认</button>
+            </div>
         </div>
     </div>
 </div>
@@ -69,7 +86,9 @@
 {% block extra_js %}
 <script>
 let currentPage = 1;
+let currentItems = [];
 const PAGE_SIZE_KEY = 'cases_pageSize';
+const REVIEWER_KEY = 'cases_reviewer';
 
 // 从 localStorage 恢复 pageSize, 默认 20
 (function initPageSize() {
@@ -91,6 +110,50 @@ function riskBadge(level) {
 function statusBadge(status) {
     const cls = {'待审核':'bg-warning','审核中':'bg-info','已通过':'bg-success','已拒绝':'bg-danger','已关闭':'bg-secondary'}[status] || 'bg-secondary';
     return `<span class="badge ${cls}">${status}</span>`;
+}
+
+// SLA 标识: 按创建时间计算等待时长 (前端计算, 不改 API)
+const SLA_STATUSES = {'待审核': 1, '审核中': 1};
+function slaBadge(c) {
+    if (!SLA_STATUSES[c.case_status] || !c.create_time) return '';
+    const hours = (Date.now() - new Date(c.create_time).getTime()) / 3600000;
+    if (hours > 72) return '<span class="badge bg-danger ms-1">严重超时</span>';
+    if (hours > 24) return '<span class="badge bg-warning text-dark ms-1">超24h</span>';
+    return '';
+}
+
+// 案件ID 复制 (navigator.clipboard, 失败降级 execCommand)
+function copyCaseId(id, el) {
+    const ok = () => {
+        const ico = el.querySelector('.copy-ico');
+        if (ico) { ico.className = 'bi bi-check-lg text-success'; }
+        setTimeout(() => { if (ico) ico.className = 'bi bi-clipboard text-muted'; }, 1500);
+    };
+    const fallback = () => {
+        const ta = document.createElement('textarea');
+        ta.value = id;
+        ta.style.position = 'fixed'; ta.style.top = '0'; ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.select();
+        try { document.execCommand('copy'); ok(); }
+        catch (e) { alert('复制失败, 请手动选择复制'); }
+        document.body.removeChild(ta);
+    };
+    if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(id).then(ok).catch(fallback);
+    } else {
+        fallback();
+    }
+}
+
+// 状态列排序 (前端对当前页排序)
+const STATUS_ORDER = {'待审核': 0, '审核中': 1, '已通过': 2, '已拒绝': 3, '已关闭': 4};
+let statusSortDir = null; // 'asc' | 'desc' | null (再次点击取消排序)
+function toggleStatusSort() {
+    statusSortDir = statusSortDir === 'asc' ? 'desc' : (statusSortDir === 'desc' ? null : 'asc');
+    document.getElementById('thStatus').innerHTML =
+        `状态 ${statusSortDir === 'asc' ? '▲' : statusSortDir === 'desc' ? '▼' : '⇅'}`;
+    loadCases(currentPage);
 }
 
 async function loadStats() {
@@ -118,18 +181,37 @@ async function loadCases(page) {
     const data = await res.json();
     document.getElementById('casesCount').textContent =
         `共 ${data.total} 条, 当前 ${data.items.length} 条/页`;
+    currentItems = data.items;
+    // 状态列排序 (前端排序当前页)
+    if (statusSortDir) {
+        currentItems = [...currentItems].sort((a, b) => {
+            const va = STATUS_ORDER[a.case_status] ?? 99;
+            const vb = STATUS_ORDER[b.case_status] ?? 99;
+            return statusSortDir === 'asc' ? va - vb : vb - va;
+        });
+    }
+    renderCases(currentItems);
+    // 客户ID过滤 (前端过滤当前页, 后端 user_id 参数列为后续项)
+    applyUserIdFilter(true);
+    // 分页 (P4-L4 2026-08-08 通用分页组件)
+    const totalPages = Math.ceil(data.total / pageSize);
+    document.getElementById('pagination').innerHTML =
+        buildPaginationHtml(currentPage, totalPages, pageSize, 'loadCases');
+}
+
+function renderCases(items) {
     const tbody = document.getElementById('cases-table');
-    if (data.items.length === 0) {
+    if (items.length === 0) {
         tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted">暂无案件</td></tr>';
     } else {
-        tbody.innerHTML = data.items.map(c => `
+        tbody.innerHTML = items.map(c => `
             <tr>
-                <td><code>${c.case_id.substring(0,16)}...</code></td>
+                <td title="点击复制案件ID: ${c.case_id}" style="cursor:pointer" onclick="copyCaseId('${c.case_id}', this)"><code>${c.case_id}</code> <i class="copy-ico bi bi-clipboard text-muted"></i></td>
                 <td>${c.user_id}</td>
                 <td>${c.case_category || '-'}</td>
                 <td><strong>${c.final_score ?? '-'}</strong></td>
                 <td>${riskBadge(c.risk_level || '低')}</td>
-                <td>${statusBadge(c.case_status)}</td>
+                <td>${statusBadge(c.case_status)}${slaBadge(c)}</td>
                 <td>${c.create_time ? new Date(c.create_time).toLocaleString('zh-CN') : '-'}</td>
                 <td class="col-actions">
                     <button class="btn btn-outline-primary btn-sm" onclick="viewCase('${c.case_id}')">详情</button>
@@ -142,13 +224,25 @@ async function loadCases(page) {
             </tr>
         `).join('');
     }
-    // 分页 (P4-L4 2026-08-08 通用分页组件)
-    const totalPages = Math.ceil(data.total / pageSize);
-    document.getElementById('pagination').innerHTML =
-        buildPaginationHtml(currentPage, totalPages, pageSize, 'loadCases');
+}
+
+// 客户ID 过滤当前页
+function applyUserIdFilter(showHint) {
+    const q = document.getElementById('filterUserId').value.trim();
+    const hint = document.getElementById('filterHint');
+    let items = currentItems;
+    if (q) items = currentItems.filter(c => String(c.user_id).includes(q));
+    renderCases(items);
+    if (showHint && q) {
+        hint.textContent = `已按客户ID「${q}」过滤当前页, 命中 ${items.length} 条 (后端 user_id 参数为后续项)`;
+    } else if (!q) {
+        hint.textContent = '';
+    }
 }
 
 async function viewCase(caseId) {
+    const eb = document.getElementById('caseError');
+    if (eb) { eb.textContent = ''; eb.classList.add('d-none'); }
     const res = await fetch(`/api/cases/${caseId}`);
     const c = await res.json();
     const body = document.getElementById('caseDetailBody');
@@ -165,8 +259,8 @@ async function viewCase(caseId) {
                     <tr><td class="text-muted">状态</td><td>${statusBadge(c.case_status)}</td></tr>
                     <tr><td class="text-muted">分类</td><td>${c.case_category || '-'}</td></tr>
                     <tr><td class="text-muted">创建时间</td><td>${c.create_time ? new Date(c.create_time).toLocaleString('zh-CN') : '-'}</td></tr>
-                    ${c.reviewer ? `<tr><td class="text-muted">审核人</td><td>${c.reviewer}</td></tr>` : ''}
-                    ${c.review_comment ? `<tr><td class="text-muted">审核意见</td><td>${c.review_comment}</td></tr>` : ''}
+                    ${c.reviewer ? `<tr class="table-light"><td class="text-muted">审核人</td><td><strong>${c.reviewer}</strong></td></tr>` : ''}
+                    ${c.review_comment ? `<tr class="table-light"><td class="text-muted">审核意见</td><td>${c.review_comment}</td></tr>` : ''}
                 </table>
                 <!-- 【P4-L4 2026-08-08】ML 评分 (XGBoost, sigmoid 校准) -->
                 <h6 class="mt-3">ML 评分 <small class="text-muted">(XGBoost)</small></h6>
@@ -198,7 +292,7 @@ async function viewCase(caseId) {
         <div class="row">
             <div class="col-md-4">
                 <label class="form-label">审核人</label>
-                <input type="text" class="form-control" id="reviewer" value="admin">
+                <input type="text" class="form-control" id="reviewer" value="" placeholder="请输入审核人">
             </div>
             <div class="col-md-8">
                 <label class="form-label">审核意见</label>
@@ -212,6 +306,9 @@ async function viewCase(caseId) {
             </div>
         </div>` : ''}
     `;
+
+    const reviewerEl = document.getElementById('reviewer');
+    if (reviewerEl) reviewerEl.value = localStorage.getItem(REVIEWER_KEY) || 'admin';
 
     const actions = document.getElementById('caseActions');
     if (c.case_status === '待审核') {
@@ -227,21 +324,56 @@ async function viewCase(caseId) {
 }
 
 async function reviewCase(caseId, decision) {
-    const data = {
-        decision: decision,
-        reviewer: document.getElementById('reviewer')?.value || 'admin',
-        review_comment: document.getElementById('reviewComment')?.value || '',
-        add_to_blacklist: document.getElementById('addBlacklist')?.checked || false,
+    const reviewer = document.getElementById('reviewer')?.value.trim() || localStorage.getItem(REVIEWER_KEY) || 'admin';
+    const reviewComment = document.getElementById('reviewComment')?.value || '';
+    const addBl = document.getElementById('addBlacklist')?.checked || false;
+    // 二次确认: 展示案件ID、目标状态、是否加黑名单
+    document.getElementById('reviewConfirmBody').innerHTML = `
+        <p class="mb-2">即将对案件执行审核操作, 请确认:</p>
+        <ul class="mb-0">
+            <li>案件ID: <code>${caseId}</code></li>
+            <li>目标状态: <strong>${decision}</strong></li>
+            <li>加入黑名单: ${addBl ? '<strong class="text-danger">是</strong>' : '否'}</li>
+            <li>审核人: <strong>${reviewer}</strong></li>
+        </ul>`;
+    const confirmModal = new bootstrap.Modal(document.getElementById('reviewConfirmModal'));
+    const okBtn = document.getElementById('reviewConfirmOk');
+    okBtn.disabled = false;
+    okBtn.innerHTML = '<i class="bi bi-check-lg me-1"></i>确认';
+    okBtn.onclick = async () => {
+        // 按钮 loading + disabled, 防重复提交
+        okBtn.disabled = true;
+        okBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>提交中...';
+        await doReview(caseId, decision, {
+            reviewer, review_comment: reviewComment, add_to_blacklist: addBl,
+        });
     };
+    confirmModal.show();
+}
+
+async function doReview(caseId, decision, data) {
     const res = await fetch(`/api/cases/${caseId}/review`, {
         method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(data)
     });
     if (res.ok) {
-        bootstrap.Modal.getInstance(document.getElementById('caseModal')).hide();
+        // 提交成功, 记忆审核人
+        if (data.reviewer) localStorage.setItem(REVIEWER_KEY, data.reviewer);
+        bootstrap.Modal.getInstance(document.getElementById('caseModal'))?.hide();
+        bootstrap.Modal.getInstance(document.getElementById('reviewConfirmModal'))?.hide();
         loadCases(currentPage);
         loadStats();
     } else {
-        alert('审核失败');
+        // 失败: 关闭确认框, 在详情模态框顶部展示错误提示条
+        bootstrap.Modal.getInstance(document.getElementById('reviewConfirmModal'))?.hide();
+        let msg = '审核失败';
+        try {
+            const err = await res.json();
+            if (err.detail) msg = err.detail;
+            if (err.status !== undefined) msg += ` (status: ${err.status})`;
+        } catch (e) { msg += ` (HTTP ${res.status})`; }
+        const eb = document.getElementById('caseError');
+        eb.textContent = msg;
+        eb.classList.remove('d-none');
     }
 }
 
@@ -251,12 +383,15 @@ function recheckCase(caseId, sourceId, userId, eventType) {
         alert('该案件没有记录业务ID, 无法重做检查');
         return;
     }
-    sessionStorage.setItem('risk_check_prefill', JSON.stringify({
+    // 同时写入 sessionStorage 与 localStorage, 供 risk_check 读取 (sessionStorage 优先, localStorage 兜底)
+    const prefill = JSON.stringify({
         case_id: caseId,
         event_type: eventType || '贷款申请',
         user_id: userId,
         source_id: sourceId,
-    }));
+    });
+    sessionStorage.setItem('risk_check_prefill', prefill);
+    localStorage.setItem('risk_check_prefill', prefill);
     window.location.href = '/risk-check';
 }
 

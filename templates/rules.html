@@ -12,13 +12,9 @@
 <div class="mb-3 d-flex gap-2 align-items-center flex-wrap">
     <select class="form-select form-select-sm w-auto" id="filterCategory" onchange="loadRules(1)">
         <option value="">全部分类</option>
-        <option value="欺诈风险">欺诈风险</option>
-        <option value="信用风险">信用风险</option>
-        <option value="反洗钱">反洗钱</option>
-        <option value="账户风险">账户风险</option>
-        <option value="贷后风险">贷后风险</option>
-        <option value="合规风险">合规风险</option>
     </select>
+    <input type="text" class="form-control form-control-sm w-auto" id="rulesSearch"
+        placeholder="按名称/ID 搜索当前页" onkeydown="onSearchKey(event)">
     <span class="text-muted small">每页</span>
     <select class="form-select form-select-sm w-auto" id="pageSize" onchange="onPageSizeChange()">
         <option value="20">20 条</option>
@@ -55,11 +51,18 @@
                     <button type="button" class="btn-close-risk" data-bs-dismiss="modal" title="关闭" aria-label="Close"><i class="bi bi-x-lg"></i></button>
                 </div>
             <div class="modal-body">
+                <div class="alert alert-danger py-2 d-none" id="ruleError" role="alert"></div>
                 <form id="ruleForm">
                     <div class="row mb-3">
                         <div class="col-md-4">
                             <label class="form-label">规则ID</label>
-                            <input type="text" class="form-control" id="f_rule_id" required>
+                            <div class="input-group">
+                                <input type="text" class="form-control" id="f_rule_id" required>
+                                <button type="button" class="btn btn-outline-secondary" id="btnGenRuleId"
+                                    onclick="generateRuleId()" title="基于当前列表最大编号建议">
+                                    <i class="bi bi-magic"></i> 生成
+                                </button>
+                            </div>
                         </div>
                         <div class="col-md-4">
                             <label class="form-label">规则名称</label>
@@ -67,14 +70,7 @@
                         </div>
                         <div class="col-md-4">
                             <label class="form-label">分类</label>
-                            <select class="form-select" id="f_category" required>
-                                <option value="欺诈风险">欺诈风险</option>
-                                <option value="信用风险">信用风险</option>
-                                <option value="反洗钱">反洗钱</option>
-                                <option value="账户风险">账户风险</option>
-                                <option value="贷后风险">贷后风险</option>
-                                <option value="合规风险">合规风险</option>
-                            </select>
+                            <select class="form-select" id="f_category" required></select>
                         </div>
                     </div>
                     <div class="row mb-3">
@@ -112,9 +108,24 @@
                         </div>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">条件表达式 (JSON)</label>
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <label class="form-label mb-0">条件表达式 (JSON)</label>
+                            <div class="d-inline-flex gap-1 align-items-center">
+                                <select class="form-select form-select-sm w-auto" id="f_feature_fields"
+                                    onchange="insertFeatureField(this)">
+                                    <option value="">常用特征字段…</option>
+                                </select>
+                                <button type="button" class="btn btn-outline-primary btn-sm" onclick="formatCondition()">
+                                    <i class="bi bi-braces"></i> 格式化
+                                </button>
+                                <button type="button" class="btn btn-outline-secondary btn-sm" onclick="validateCondition()">
+                                    <i class="bi bi-check-lg"></i> 校验
+                                </button>
+                            </div>
+                        </div>
                         <textarea class="form-control" id="f_condition" rows="4" required
                             placeholder='{"field": "cust_loans_7d", "op": ">=", "value": 3}'></textarea>
+                        <div class="form-text text-danger d-none" id="conditionError"></div>
                     </div>
                     <div class="row mb-3">
                         <div class="col-md-3">
@@ -130,7 +141,10 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
-                <button type="button" class="btn btn-primary" onclick="saveRule()">保存</button>
+                <button type="button" class="btn btn-primary" id="btnSaveRule" onclick="saveRule()">
+                    <span class="spinner-border spinner-border-sm d-none me-1" id="saveSpinner" aria-hidden="true"></span>
+                    <span id="saveLabel">保存</span>
+                </button>
             </div>
         </div>
     </div>
@@ -143,11 +157,85 @@
 let currentPage = 1;
 let editingRuleId = null;
 const PAGE_SIZE_KEY = 'rules_pageSize';
+let currentPageItems = [];   // 当前页原始数据 (前端搜索用)
+
+// 分类单源化: 新增分类只改这里, 初始化时同时填充筛选与表单下拉
+const RULE_CATEGORIES = ['欺诈风险', '信用风险', '反洗钱', '账户风险', '贷后风险', '合规风险'];
+
+// 常用特征字段 (插入片段)
+const FEATURE_FIELDS = [
+    { label: 'cust_loans_7d (近7日放款次数)', snippet: '{"field": "cust_loans_7d", "op": ">=", "value": 3}' },
+    { label: 'loan_amount (贷款金额)', snippet: '{"field": "loan_amount", "op": ">=", "value": 10000}' },
+    { label: 'loan_debt_ratio (负债率%)', snippet: '{"field": "loan_debt_ratio", "op": ">=", "value": 70}' },
+    { label: 'cust_credit_score (信用评分)', snippet: '{"field": "cust_credit_score", "op": "<=", "value": 600}' },
+    { label: 'recent_overdue_flag (近期逾期标记)', snippet: '{"field": "recent_overdue_flag", "op": "==", "value": 1}' },
+    { label: 'blacklist_flag (黑名单标记)', snippet: '{"field": "blacklist_flag", "op": "==", "value": 1}' },
+    { label: 'apply_count_7d (近7日申请次数)', snippet: '{"field": "apply_count_7d", "op": ">=", "value": 5}' },
+];
+
+const toastTimer = {};
+
+function showToast(msg, type = 'success') {
+    const bg = type === 'error' ? 'bg-danger' : (type === 'warning' ? 'bg-warning' : 'bg-success');
+    const el = document.createElement('div');
+    el.className = `toast align-items-center text-white ${bg} border-0`;
+    el.innerHTML = `<div class="d-flex"><div class="toast-body">${msg}</div>
+        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button></div>`;
+    document.body.appendChild(el);
+    const t = new bootstrap.Toast(el, { delay: 3500 });
+    t.show();
+    el.addEventListener('hidden.bs.toast', () => el.remove());
+}
+
+function showRuleError(msg) {
+    const el = document.getElementById('ruleError');
+    el.textContent = msg;
+    el.classList.remove('d-none');
+}
+function clearRuleError() {
+    document.getElementById('ruleError').classList.add('d-none');
+    document.getElementById('conditionError').classList.add('d-none');
+}
+function showConditionError(msg) {
+    document.getElementById('conditionError').textContent = msg;
+    document.getElementById('conditionError').classList.remove('d-none');
+}
+
+// JSON 解析定位行号
+function jsonLineOf(text, lineOffsetStart = 1) {
+    try {
+        JSON.parse(text);
+        return null;
+    } catch (e) {
+        const m = e.message.match(/position\s+(\d+)/i);
+        if (m) {
+            const pos = parseInt(m[1], 10);
+            let line = 1;
+            for (let i = 0; i < pos && i < text.length; i++) {
+                if (text[i] === '\n') line++;
+            }
+            return line + lineOffsetStart - 1;
+        }
+        return null;
+    }
+}
 
 // 从 localStorage 恢复 pageSize, 默认 20
 (function initPageSize() {
     const saved = localStorage.getItem(PAGE_SIZE_KEY) || '20';
     document.getElementById('pageSize').value = saved;
+})();
+
+// 初始化分类下拉 (单源)
+(function initCategories() {
+    const filter = document.getElementById('filterCategory');
+    const form = document.getElementById('f_category');
+    filter.innerHTML = '<option value="">全部分类</option>' + RULE_CATEGORIES.map(c => `<option value="${c}">${c}</option>`).join('');
+    form.innerHTML = RULE_CATEGORIES.map(c => `<option value="${c}">${c}</option>`).join('');
+
+    const fields = document.getElementById('f_feature_fields');
+    fields.innerHTML = '<option value="">常用特征字段…</option>' + FEATURE_FIELDS.map((f, i) =>
+        `<option value="${i}">${f.label}</option>`).join('');
 })();
 
 // 用户切换 pageSize 时保存到 localStorage
@@ -161,21 +249,12 @@ function riskBadge(level) {
     return `<span class="badge ${cls}">${level}</span>`;
 }
 
-async function loadRules(page) {
-    currentPage = page || 1;
-    const category = document.getElementById('filterCategory').value;
-    const pageSize = document.getElementById('pageSize').value;
-    const params = new URLSearchParams({page: currentPage, page_size: pageSize});
-    if (category) params.set('category', category);
-    const res = await fetch('/api/rules?' + params);
-    const data = await res.json();
-    document.getElementById('rulesCount').textContent =
-        `共 ${data.total} 条, 当前 ${data.items.length} 条/页`;
+function renderRules(items, label) {
     const tbody = document.getElementById('rules-table');
-    if (data.items.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="10" class="text-center text-muted">暂无规则</td></tr>';
+    if (items.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="10" class="text-center text-muted">${label || '暂无规则'}</td></tr>`;
     } else {
-        tbody.innerHTML = data.items.map(r => `
+        tbody.innerHTML = items.map(r => `
             <tr>
                 <td><code>${r.rule_id}</code></td>
                 <td>${r.rule_name}</td>
@@ -188,7 +267,7 @@ async function loadRules(page) {
                 <td>
                     <div class="form-check form-switch">
                         <input class="form-check-input" type="checkbox" ${r.is_enabled ? 'checked' : ''}
-                            onchange="toggleRule('${r.rule_id}')">
+                            onchange="toggleRule('${r.rule_id}', this)">
                     </div>
                 </td>
                 <td>
@@ -202,11 +281,100 @@ async function loadRules(page) {
             </tr>
         `).join('');
     }
+}
+
+async function loadRules(page) {
+    currentPage = page || 1;
+    const category = document.getElementById('filterCategory').value;
+    const pageSize = document.getElementById('pageSize').value;
+    const params = new URLSearchParams({page: currentPage, page_size: pageSize});
+    if (category) params.set('category', category);
+    const res = await fetch('/api/rules?' + params);
+    const data = await res.json();
+    currentPageItems = data.items;
+    document.getElementById('rulesCount').textContent =
+        `共 ${data.total} 条, 当前 ${data.items.length} 条/页`;
+    renderRules(data.items, '暂无规则');
     // 分页 (P4-L4 2026-08-08: 用通用分页组件 app.js::buildPaginationHtml, 与评估/案件一致)
-    // 智能省略号, 总页数 > 7 时显示 ...
     const totalPages = Math.ceil(data.total / pageSize);
     document.getElementById('pagination').innerHTML =
         buildPaginationHtml(currentPage, totalPages, pageSize, 'loadRules');
+}
+
+// ===== 前端搜索 (回车触发, 对当前页数据过滤; 后端 name 参数暂不支持) =====
+function onSearchKey(event) {
+    if (event.key === 'Enter') applySearch();
+}
+function applySearch() {
+    const kw = document.getElementById('rulesSearch').value.trim().toLowerCase();
+    if (!kw) {
+        renderRules(currentPageItems, '暂无规则');
+        document.getElementById('rulesCount').textContent =
+            `共 ${currentPageItems.length} 条, 当前 ${currentPageItems.length} 条/页`;
+        return;
+    }
+    const filtered = currentPageItems.filter(r =>
+        (r.rule_name || '').toLowerCase().includes(kw) ||
+        (r.rule_id || '').toLowerCase().includes(kw));
+    document.getElementById('rulesCount').textContent = `匹配 ${filtered.length} 条 (前端搜索, 当前页)`;
+    renderRules(filtered, '未找到匹配「' + document.getElementById('rulesSearch').value.trim() + '」的规则');
+}
+
+// ===== 条件表达式编辑增强 =====
+function formatCondition() {
+    const ta = document.getElementById('f_condition');
+    try {
+        ta.value = JSON.stringify(JSON.parse(ta.value), null, 2);
+        showConditionError('');
+        document.getElementById('conditionError').classList.add('d-none');
+    } catch (e) {
+        const line = jsonLineOf(ta.value);
+        showConditionError(`格式化失败: 第 ${line} 行存在 JSON 语法错误 (${e.message})`);
+    }
+}
+function validateCondition() {
+    const ta = document.getElementById('f_condition');
+    try {
+        JSON.parse(ta.value);
+        document.getElementById('conditionError').classList.add('d-none');
+        showToast('条件表达式校验通过', 'success');
+    } catch (e) {
+        const line = jsonLineOf(ta.value);
+        showConditionError(`JSON 语法错误: 第 ${line || '?'} 行 (${e.message})`);
+    }
+}
+function insertFeatureField(sel) {
+    const idx = sel.value;
+    if (idx === '') return;
+    document.getElementById('f_condition').value = FEATURE_FIELDS[parseInt(idx, 10)].snippet;
+    sel.value = '';
+}
+
+// ===== 规则ID 生成建议 =====
+async function generateRuleId() {
+    if (editingRuleId) { showToast('编辑模式无需生成 ID', 'warning'); return; }
+    try {
+        const res = await fetch('/api/rules?page=1&page_size=100&category=');
+        const data = await res.json();
+        let maxNum = 0;
+        (data.items || []).forEach(r => {
+            const m = /^R?0*(\d+)$/i.exec(String(r.rule_id || ''));
+            if (m) maxNum = Math.max(maxNum, parseInt(m[1], 10));
+        });
+        const next = maxNum + 1;
+        document.getElementById('f_rule_id').value = 'R' + String(next).padStart(3, '0');
+        showToast(`已按当前最大编号生成建议 ID: R${String(next).padStart(3, '0')}`, 'success');
+    } catch (e) {
+        showToast('生成 ID 失败: ' + (e.message || '网络错误'), 'error');
+    }
+}
+
+// ===== 提交前重复 ID 预检 (仅新建模式) =====
+async function checkRuleIdUnique(ruleId) {
+    const res = await fetch('/api/rules?page=1&page_size=1000&category=');
+    if (!res.ok) return null;             // 预检失败交由后端兜底
+    const data = await res.json();
+    return !(data.items || []).some(r => r.rule_id === ruleId);
 }
 
 function showCreateModal() {
@@ -214,6 +382,8 @@ function showCreateModal() {
     document.getElementById('ruleModalTitle').textContent = '新建规则';
     document.getElementById('ruleForm').reset();
     document.getElementById('f_rule_id').disabled = false;
+    document.getElementById('btnGenRuleId').classList.remove('d-none');
+    clearRuleError();
     new bootstrap.Modal(document.getElementById('ruleModal')).show();
 }
 
@@ -224,6 +394,7 @@ async function editRule(ruleId) {
     document.getElementById('ruleModalTitle').textContent = '编辑规则';
     document.getElementById('f_rule_id').value = r.rule_id;
     document.getElementById('f_rule_id').disabled = true;
+    document.getElementById('btnGenRuleId').classList.add('d-none');
     document.getElementById('f_rule_name').value = r.rule_name;
     document.getElementById('f_category').value = r.rule_category;
     document.getElementById('f_event_type').value = r.event_type;
@@ -233,19 +404,33 @@ async function editRule(ruleId) {
     document.getElementById('f_condition').value = JSON.stringify(r.rule_condition, null, 2);
     document.getElementById('f_priority').value = r.priority;
     document.getElementById('f_description').value = r.description || '';
+    clearRuleError();
     new bootstrap.Modal(document.getElementById('ruleModal')).show();
 }
 
 async function saveRule() {
+    clearRuleError();
     let condition;
     try {
         condition = JSON.parse(document.getElementById('f_condition').value);
     } catch (e) {
-        alert('条件表达式JSON格式错误');
+        const line = jsonLineOf(document.getElementById('f_condition').value);
+        showConditionError(`条件表达式 JSON 格式错误: 第 ${line || '?'} 行 (${e.message})`);
         return;
     }
+    const ruleId = document.getElementById('f_rule_id').value.trim();
+
+    // 新建模式: 提交前预检重复 ID (编辑模式跳过)
+    if (!editingRuleId) {
+        const unique = await checkRuleIdUnique(ruleId);
+        if (unique === false) {
+            showRuleError(`规则ID「${ruleId}」已存在，请更换或点击「生成」`);
+            return;
+        }
+    }
+
     const data = {
-        rule_id: document.getElementById('f_rule_id').value,
+        rule_id: ruleId,
         rule_name: document.getElementById('f_rule_name').value,
         rule_category: document.getElementById('f_category').value,
         event_type: document.getElementById('f_event_type').value,
@@ -256,26 +441,78 @@ async function saveRule() {
         priority: parseInt(document.getElementById('f_priority').value) || 0,
         description: document.getElementById('f_description').value,
     };
-    const url = editingRuleId ? `/api/rules/${editingRuleId}` : '/api/rules';
-    const method = editingRuleId ? 'PUT' : 'POST';
-    const res = await fetch(url, { method, headers: {'Content-Type':'application/json'}, body: JSON.stringify(data) });
-    if (res.ok) {
-        bootstrap.Modal.getInstance(document.getElementById('ruleModal')).hide();
-        loadRules(currentPage);
-    } else {
-        const err = await res.json();
-        alert(err.detail || '保存失败');
+
+    // 防重复提交: 禁用按钮 + spinner
+    const btn = document.getElementById('btnSaveRule');
+    const label = document.getElementById('saveLabel');
+    btn.disabled = true;
+    document.getElementById('saveSpinner').classList.remove('d-none');
+    label.textContent = '保存中…';
+
+    try {
+        const url = editingRuleId ? `/api/rules/${editingRuleId}` : '/api/rules';
+        const method = editingRuleId ? 'PUT' : 'POST';
+        const res = await fetch(url, { method, headers: {'Content-Type':'application/json'}, body: JSON.stringify(data) });
+        if (res.ok) {
+            bootstrap.Modal.getInstance(document.getElementById('ruleModal')).hide();
+            loadRules(currentPage);
+        } else {
+            let detail = '保存失败';
+            try {
+                const err = await res.json();
+                if (err.detail) detail = (typeof err.detail === 'string' ? err.detail : JSON.stringify(err.detail));
+            } catch (_) {}
+            showRuleError(`保存失败 (HTTP ${res.status}): ${detail}`);
+        }
+    } catch (e) {
+        showRuleError(`保存失败: 网络错误 (${e.message || '未知错误'})`);
+    } finally {
+        btn.disabled = false;
+        document.getElementById('saveSpinner').classList.add('d-none');
+        label.textContent = '保存';
     }
 }
 
-async function toggleRule(ruleId) {
-    await fetch(`/api/rules/${ruleId}/toggle`, { method: 'PUT' });
+async function toggleRule(ruleId, checkbox) {
+    const prevState = checkbox.checked;
+    try {
+        const res = await fetch(`/api/rules/${ruleId}/toggle`, { method: 'PUT' });
+        if (!res.ok) {
+            let detail = '切换失败';
+            try {
+                const err = await res.json();
+                if (err.detail) detail = typeof err.detail === 'string' ? err.detail : JSON.stringify(err.detail);
+            } catch (_) {}
+            checkbox.checked = prevState;   // 失败回滚
+            showToast(`切换失败 (HTTP ${res.status}): ${detail}`, 'error');
+        } else {
+            const data = await res.json();
+            showToast(data.detail || '状态已更新', 'success');
+        }
+    } catch (e) {
+        checkbox.checked = prevState;       // 网络错误回滚
+        showToast('切换失败: ' + (e.message || '网络错误'), 'error');
+    }
 }
 
 async function deleteRule(ruleId) {
     if (!confirm('确定要删除这条规则吗？')) return;
-    await fetch(`/api/rules/${ruleId}`, { method: 'DELETE' });
-    loadRules(currentPage);
+    try {
+        const res = await fetch(`/api/rules/${ruleId}`, { method: 'DELETE' });
+        if (!res.ok) {
+            let detail = '删除失败';
+            try {
+                const err = await res.json();
+                if (err.detail) detail = typeof err.detail === 'string' ? err.detail : JSON.stringify(err.detail);
+            } catch (_) {}
+            showToast(`删除失败 (HTTP ${res.status}): ${detail}`, 'error');
+            return;                          // 失败不刷新列表
+        }
+        showToast('删除成功', 'success');
+        loadRules(currentPage);              // 仅成功才刷新
+    } catch (e) {
+        showToast('删除失败: ' + (e.message || '网络错误'), 'error');
+    }
 }
 
 loadRules();

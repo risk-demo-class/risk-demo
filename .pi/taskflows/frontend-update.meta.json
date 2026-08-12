@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "purpose": "华信银行信贷风控平台前端 UI/UX 更新：探索→方案→人工审批→按页面并行实施→测试评审→汇总报告",
+  "tags": [
+    "frontend",
+    "ui-ux",
+    "audit-fanout",
+    "approval"
+  ],
+  "phaseSignature": "agent→agent→approval→map→script→gate→reduce",
+  "phaseCount": 7,
+  "agentUsage": [
+    "doc-writer",
+    "executor-ui",
+    "planner",
+    "reviewer",
+    "scout"
+  ],
+  "generality": 0.47,
+  "reuseCount": 0,
+  "lastUsedAt": null,
+  "createdAt": 1786516580132,
+  "version": 1,
+  "embedding": null,
+  "embeddedAt": null
+}

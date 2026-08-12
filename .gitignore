@@ -41,3 +41,6 @@ ml_models/
 
 # until-done 工作文件 (扩展运行状态, 不入仓库)
 .until-done/
+
+# taskflow 运行状态 (保存的流定义保留入库)
+.pi/taskflows/runs/
