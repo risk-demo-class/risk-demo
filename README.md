@@ -184,7 +184,7 @@ INFO:     Uvicorn running on http://0.0.0.0:8000
 
 打开 **http://localhost:8000/** 即可看到仪表盘。🎉
 
-> 💡 **一条龙命令**：也可用 `python scripts/one_command.py` 一键跑完「初始化 → 业务数据 → PD 训练数据 → 训练 → 回填 → 启动指引」6 步，支持 `--skip-init` / `--skip-train` / `--only-start` 分段跳过。
+> 💡 **全流程一键命令**：也可用 `python scripts/one_command.py` 一键跑完「初始化 → 业务数据 → PD 训练数据 → 训练 → 回填 → 启动指引」6 步，支持 `--skip-init` / `--skip-train` / `--only-start` 分段跳过。
 
 ---
 
@@ -223,7 +223,7 @@ AI_Risk/
 │   ├── backfill_ml_score.py  # 回填 ml_score
 │   ├── gen_risk_data.py      # 造风控评估数据（--balance-pos 正例控制）
 │   ├── gen_risk_data_with_dates.py  # 带日期范围造数（仪表盘趋势）
-│   ├── one_command.py        # 6 步一条龙命令
+│   ├── one_command.py        # 6 步全流程一键命令
 │   ├── migrate_2026_08_07.py # 老环境升级迁移
 │   └── main.py               # 直接启动（跳过自检，开发用）
 ├── sql/                      # DDL / 初始化 / 迁移 SQL
