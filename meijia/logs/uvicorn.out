@@ -1,0 +1,59 @@
+nohup: ignoring input
+教育风控系统: http://127.0.0.1:8000
+2026-08-12 11:20:28 [INFO] uvicorn.error: Started server process [93060]
+2026-08-12 11:20:28 [INFO] uvicorn.error: Waiting for application startup.
+2026-08-12 11:20:28 [INFO] app.engine.ml_model: XGBoost 模型加载成功: /home/major/my_risk_proj/app/engine/xgb_model.json, features=25
+2026-08-12 11:20:28 [INFO] app.scheduler: [scheduled] 启动: 间隔 15 分钟 (案件超时 + 告警检查)
+2026-08-12 11:20:28 [WARNING] app.service.alert: ALERT [P1 BUSINESS] 待审核案件积压 | 当前 75 个待审核案件, 超过阈值 50, 请及时处理 (metric=pending_case_count, value=75.0, threshold=50.0)
+2026-08-12 11:20:28 [INFO] app.scheduler: [scheduled] 本轮: 关案 0, 告警 1, 错误 0
+2026-08-12 11:20:28 [INFO] uvicorn.error: Application startup complete.
+2026-08-12 11:20:28 [INFO] uvicorn.error: Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+2026-08-12 11:20:38 [INFO] uvicorn.access: 127.0.0.1:48642 - "GET /api/dashboard/overview HTTP/1.1" 200
+2026-08-12 11:20:38 [INFO] uvicorn.access: 127.0.0.1:48640 - "POST /api/risk/check HTTP/1.1" 200
+2026-08-12 11:20:38 [INFO] uvicorn.access: 127.0.0.1:48652 - "POST /api/risk/check HTTP/1.1" 200
+2026-08-12 11:20:43 [INFO] uvicorn.access: 127.0.0.1:46514 - "POST /api/risk/check HTTP/1.1" 200
+2026-08-12 11:20:53 [INFO] uvicorn.access: 127.0.0.1:45420 - "GET /api/assessments?page_size=2 HTTP/1.1" 200
+2026-08-12 11:21:21 [INFO] uvicorn.access: 127.0.0.1:6688 - "GET /chat HTTP/1.1" 200
+2026-08-12 11:21:21 [INFO] uvicorn.access: 127.0.0.1:6688 - "GET /static/app.js HTTP/1.1" 304
+2026-08-12 11:21:21 [INFO] uvicorn.access: 127.0.0.1:6688 - "GET /api/health HTTP/1.1" 200
+2026-08-12 11:21:22 [INFO] uvicorn.access: 127.0.0.1:6688 - "GET / HTTP/1.1" 200
+2026-08-12 11:21:22 [INFO] uvicorn.access: 127.0.0.1:6688 - "GET /api/health HTTP/1.1" 200
+2026-08-12 11:21:22 [INFO] uvicorn.access: 127.0.0.1:14310 - "GET /api/dashboard/overview HTTP/1.1" 200
+2026-08-12 11:21:23 [INFO] uvicorn.access: 127.0.0.1:14310 - "GET / HTTP/1.1" 200
+2026-08-12 11:21:23 [INFO] uvicorn.access: 127.0.0.1:14310 - "GET /api/health HTTP/1.1" 200
+2026-08-12 11:21:23 [INFO] uvicorn.access: 127.0.0.1:6688 - "GET /api/dashboard/overview HTTP/1.1" 200
+2026-08-12 11:21:23 [INFO] uvicorn.access: 127.0.0.1:6688 - "GET /risk-check HTTP/1.1" 200
+2026-08-12 11:21:23 [INFO] uvicorn.access: 127.0.0.1:6688 - "GET /api/health HTTP/1.1" 200
+2026-08-12 11:21:24 [INFO] uvicorn.access: 127.0.0.1:6688 - "GET / HTTP/1.1" 200
+2026-08-12 11:21:24 [INFO] uvicorn.access: 127.0.0.1:6688 - "GET /api/health HTTP/1.1" 200
+2026-08-12 11:21:24 [INFO] uvicorn.access: 127.0.0.1:14310 - "GET /api/dashboard/overview HTTP/1.1" 200
+2026-08-12 11:21:27 [INFO] uvicorn.access: 127.0.0.1:14310 - "GET /risk-check HTTP/1.1" 200
+2026-08-12 11:21:27 [INFO] uvicorn.access: 127.0.0.1:14310 - "GET /api/health HTTP/1.1" 200
+2026-08-12 11:21:28 [INFO] uvicorn.access: 127.0.0.1:14310 - "GET /risk-check HTTP/1.1" 200
+2026-08-12 11:21:28 [INFO] uvicorn.access: 127.0.0.1:14310 - "GET /api/health HTTP/1.1" 200
+2026-08-12 11:21:28 [INFO] uvicorn.access: 127.0.0.1:14310 - "GET /rules HTTP/1.1" 200
+2026-08-12 11:21:28 [INFO] uvicorn.access: 127.0.0.1:14310 - "GET /api/health HTTP/1.1" 200
+2026-08-12 11:21:28 [INFO] uvicorn.access: 127.0.0.1:6688 - "GET /api/rules HTTP/1.1" 200
+2026-08-12 11:21:29 [INFO] uvicorn.access: 127.0.0.1:6688 - "GET /assessments HTTP/1.1" 200
+2026-08-12 11:21:29 [INFO] uvicorn.access: 127.0.0.1:6688 - "GET /api/health HTTP/1.1" 200
+2026-08-12 11:21:29 [INFO] uvicorn.access: 127.0.0.1:14310 - "GET /api/assessments?page_size=50 HTTP/1.1" 200
+2026-08-12 11:21:36 [INFO] uvicorn.access: 127.0.0.1:5552 - "GET /api/assessments?page_size=50&decision=%E6%A0%87%E8%AE%B0 HTTP/1.1" 200
+2026-08-12 11:21:41 [INFO] uvicorn.access: 127.0.0.1:5552 - "GET /api/assessments?page_size=50&decision=%E4%BA%BA%E5%B7%A5%E5%AE%A1%E6%A0%B8 HTTP/1.1" 200
+2026-08-12 11:21:42 [INFO] uvicorn.access: 127.0.0.1:5552 - "GET /api/assessments?page_size=50&decision=%E9%80%9A%E8%BF%87 HTTP/1.1" 200
+2026-08-12 11:21:43 [INFO] uvicorn.access: 127.0.0.1:5552 - "GET /api/assessments?page_size=50 HTTP/1.1" 200
+2026-08-12 11:21:44 [INFO] uvicorn.access: 127.0.0.1:5552 - "GET /api/assessments/ASMT-9643a701eb4e4ea99190 HTTP/1.1" 200
+2026-08-12 11:21:53 [INFO] uvicorn.access: 127.0.0.1:5609 - "GET /api/assessments/ASMT-9643a701eb4e4ea99190 HTTP/1.1" 200
+2026-08-12 11:22:02 [INFO] uvicorn.access: 127.0.0.1:3666 - "GET /api/assessments/ASMT-8bf141ea6f9445c888b6 HTTP/1.1" 200
+2026-08-12 11:22:06 [INFO] uvicorn.access: 127.0.0.1:3666 - "GET /api/assessments/ASMT-03371715ff15472aa4dc HTTP/1.1" 200
+2026-08-12 11:22:10 [INFO] uvicorn.access: 127.0.0.1:3666 - "GET /api/assessments/ASMT-8bf141ea6f9445c888b6 HTTP/1.1" 200
+2026-08-12 11:22:13 [INFO] uvicorn.access: 127.0.0.1:3666 - "GET /api/assessments/ASMT-9643a701eb4e4ea99190 HTTP/1.1" 200
+2026-08-12 11:22:17 [INFO] uvicorn.access: 127.0.0.1:3666 - "GET /api/assessments/ASMT-8bf141ea6f9445c888b6 HTTP/1.1" 200
+2026-08-12 11:22:21 [INFO] uvicorn.access: 127.0.0.1:3666 - "GET /cases HTTP/1.1" 200
+2026-08-12 11:22:21 [INFO] uvicorn.access: 127.0.0.1:3666 - "GET /api/health HTTP/1.1" 200
+2026-08-12 11:22:21 [INFO] uvicorn.access: 127.0.0.1:9878 - "GET /api/cases/statistics HTTP/1.1" 200
+2026-08-12 11:22:21 [INFO] uvicorn.access: 127.0.0.1:3539 - "GET /api/cases?page_size=50&status= HTTP/1.1" 200
+2026-08-12 11:22:30 [INFO] uvicorn.access: 127.0.0.1:5657 - "GET /risk-check HTTP/1.1" 200
+2026-08-12 11:22:30 [INFO] uvicorn.access: 127.0.0.1:5657 - "GET /api/health HTTP/1.1" 200
+2026-08-12 11:22:31 [INFO] uvicorn.access: 127.0.0.1:5657 - "GET / HTTP/1.1" 200
+2026-08-12 11:22:31 [INFO] uvicorn.access: 127.0.0.1:5657 - "GET /api/health HTTP/1.1" 200
+2026-08-12 11:22:31 [INFO] uvicorn.access: 127.0.0.1:7009 - "GET /api/dashboard/overview HTTP/1.1" 200

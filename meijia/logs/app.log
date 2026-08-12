@@ -1,0 +1,363 @@
+2026-08-12 11:08:25 [INFO] app.engine.ml_model: XGBoost 模型加载成功: /home/major/my_risk_proj/app/engine/xgb_model.json, features=25
+2026-08-12 11:08:25 [INFO] app.scheduler: [scheduled] 启动: 间隔 15 分钟 (案件超时 + 告警检查)
+2026-08-12 11:08:25 [WARNING] app.service.alert: ALERT [P1 BUSINESS] 待审核案件积压 | 当前 79 个待审核案件, 超过阈值 50, 请及时处理 (metric=pending_case_count, value=79.0, threshold=50.0)
+2026-08-12 11:08:25 [INFO] app.scheduler: [scheduled] 本轮: 关案 0, 告警 1, 错误 0
+2026-08-12 11:08:25 [WARNING] app.service.alert: ALERT [P1 BUSINESS] 待审核案件积压 | 当前 79 个待审核案件, 超过阈值 50, 请及时处理 (metric=pending_case_count, value=79.0, threshold=50.0)
+2026-08-12 11:08:25 [INFO] httpx: HTTP Request: POST http://testserver/api/alerts/check "HTTP/1.1 200 OK"
+2026-08-12 11:08:25 [INFO] httpx: HTTP Request: GET http://testserver/api/alerts "HTTP/1.1 200 OK"
+2026-08-12 11:08:25 [INFO] httpx: HTTP Request: GET http://testserver/api/action-logs "HTTP/1.1 200 OK"
+2026-08-12 11:08:26 [INFO] app.scheduler: [scheduled] 停止
+2026-08-12 11:08:26 [INFO] app.scheduler: [scheduled] stop_scheduler() 完成
+2026-08-12 11:08:26 [INFO] app.engine.ml_model: XGBoost 模型加载成功: /home/major/my_risk_proj/app/engine/xgb_model.json, features=25
+2026-08-12 11:08:26 [INFO] app.scheduler: [scheduled] 启动: 间隔 15 分钟 (案件超时 + 告警检查)
+2026-08-12 11:08:26 [WARNING] app.service.alert: ALERT [P1 BUSINESS] 待审核案件积压 | 当前 79 个待审核案件, 超过阈值 50, 请及时处理 (metric=pending_case_count, value=79.0, threshold=50.0)
+2026-08-12 11:08:26 [INFO] app.scheduler: [scheduled] 本轮: 关案 0, 告警 1, 错误 0
+2026-08-12 11:08:26 [INFO] httpx: HTTP Request: GET http://testserver/api/rules "HTTP/1.1 200 OK"
+2026-08-12 11:08:26 [INFO] app.service.action_log: action_log: TOGGLE_RULE by admin on rule(R002)
+2026-08-12 11:08:26 [INFO] httpx: HTTP Request: PUT http://testserver/api/rules/R002/toggle "HTTP/1.1 200 OK"
+2026-08-12 11:08:26 [INFO] app.service.action_log: action_log: TOGGLE_RULE by admin on rule(R002)
+2026-08-12 11:08:26 [INFO] httpx: HTTP Request: PUT http://testserver/api/rules/R002/toggle "HTTP/1.1 200 OK"
+2026-08-12 11:08:26 [INFO] httpx: HTTP Request: GET http://testserver/api/action-logs?action_type=TOGGLE_RULE&page_size=50 "HTTP/1.1 200 OK"
+2026-08-12 11:08:27 [INFO] app.scheduler: [scheduled] 停止
+2026-08-12 11:08:27 [INFO] app.scheduler: [scheduled] stop_scheduler() 完成
+2026-08-12 11:08:27 [WARNING] app.engine.ml_model: 样本量 200 < 推荐最小 500, 模型可能欠拟合/过拟合, 建议积累更多评估数据后重训
+2026-08-12 11:08:27 [INFO] app.engine.ml_model: XGBoost 模型已保存: /tmp/pytest-of-major/pytest-7/test_train_and_save_smoke0/model.json (n=200, pos=101)
+2026-08-12 11:08:27 [INFO] httpx: HTTP Request: GET http://testserver/ "HTTP/1.1 200 OK"
+2026-08-12 11:08:27 [INFO] httpx: HTTP Request: GET http://testserver/risk-check "HTTP/1.1 200 OK"
+2026-08-12 11:08:27 [INFO] httpx: HTTP Request: GET http://testserver/rules "HTTP/1.1 200 OK"
+2026-08-12 11:08:27 [INFO] httpx: HTTP Request: GET http://testserver/assessments "HTTP/1.1 200 OK"
+2026-08-12 11:08:27 [INFO] httpx: HTTP Request: GET http://testserver/cases "HTTP/1.1 200 OK"
+2026-08-12 11:08:27 [INFO] httpx: HTTP Request: GET http://testserver/blacklist "HTTP/1.1 200 OK"
+2026-08-12 11:08:27 [INFO] httpx: HTTP Request: GET http://testserver/users "HTTP/1.1 200 OK"
+2026-08-12 11:08:27 [INFO] httpx: HTTP Request: GET http://testserver/api/health "HTTP/1.1 200 OK"
+2026-08-12 11:08:27 [INFO] httpx: HTTP Request: GET http://testserver/api/rules "HTTP/1.1 200 OK"
+2026-08-12 11:08:27 [INFO] httpx: HTTP Request: POST http://testserver/api/risk/check "HTTP/1.1 422 Unprocessable Entity"
+2026-08-12 11:08:27 [INFO] httpx: HTTP Request: GET http://testserver/api/rules "HTTP/1.1 200 OK"
+2026-08-12 11:08:27 [INFO] httpx: HTTP Request: PUT http://testserver/api/rules/R002 "HTTP/1.1 422 Unprocessable Entity"
+2026-08-12 11:08:27 [INFO] httpx: HTTP Request: PUT http://testserver/api/rules/R002 "HTTP/1.1 409 Conflict"
+2026-08-12 11:08:53 [INFO] app.engine.ml_model: XGBoost 模型加载成功: /home/major/my_risk_proj/app/engine/xgb_model.json, features=25
+2026-08-12 11:08:53 [INFO] app.scheduler: [scheduled] 启动: 间隔 15 分钟 (案件超时 + 告警检查)
+2026-08-12 11:08:53 [WARNING] app.service.alert: ALERT [P1 BUSINESS] 待审核案件积压 | 当前 79 个待审核案件, 超过阈值 50, 请及时处理 (metric=pending_case_count, value=79.0, threshold=50.0)
+2026-08-12 11:08:53 [INFO] app.scheduler: [scheduled] 本轮: 关案 0, 告警 1, 错误 0
+2026-08-12 11:08:53 [WARNING] app.service.alert: ALERT [P1 BUSINESS] 待审核案件积压 | 当前 79 个待审核案件, 超过阈值 50, 请及时处理 (metric=pending_case_count, value=79.0, threshold=50.0)
+2026-08-12 11:08:53 [INFO] httpx: HTTP Request: POST http://testserver/api/alerts/check "HTTP/1.1 200 OK"
+2026-08-12 11:08:53 [INFO] httpx: HTTP Request: GET http://testserver/api/alerts "HTTP/1.1 200 OK"
+2026-08-12 11:08:53 [INFO] httpx: HTTP Request: GET http://testserver/api/action-logs "HTTP/1.1 200 OK"
+2026-08-12 11:08:54 [INFO] app.scheduler: [scheduled] 停止
+2026-08-12 11:08:54 [INFO] app.scheduler: [scheduled] stop_scheduler() 完成
+2026-08-12 11:08:54 [INFO] app.engine.ml_model: XGBoost 模型加载成功: /home/major/my_risk_proj/app/engine/xgb_model.json, features=25
+2026-08-12 11:08:54 [INFO] app.scheduler: [scheduled] 启动: 间隔 15 分钟 (案件超时 + 告警检查)
+2026-08-12 11:08:54 [WARNING] app.service.alert: ALERT [P1 BUSINESS] 待审核案件积压 | 当前 79 个待审核案件, 超过阈值 50, 请及时处理 (metric=pending_case_count, value=79.0, threshold=50.0)
+2026-08-12 11:08:54 [INFO] app.scheduler: [scheduled] 本轮: 关案 0, 告警 1, 错误 0
+2026-08-12 11:08:54 [INFO] httpx: HTTP Request: GET http://testserver/api/rules "HTTP/1.1 200 OK"
+2026-08-12 11:08:54 [INFO] app.service.action_log: action_log: TOGGLE_RULE by tester on rule(R002)
+2026-08-12 11:08:54 [INFO] httpx: HTTP Request: PUT http://testserver/api/rules/R002/toggle "HTTP/1.1 200 OK"
+2026-08-12 11:08:54 [INFO] app.service.action_log: action_log: TOGGLE_RULE by tester on rule(R002)
+2026-08-12 11:08:54 [INFO] httpx: HTTP Request: PUT http://testserver/api/rules/R002/toggle "HTTP/1.1 200 OK"
+2026-08-12 11:08:54 [INFO] httpx: HTTP Request: GET http://testserver/api/action-logs?action_type=TOGGLE_RULE&page_size=50 "HTTP/1.1 200 OK"
+2026-08-12 11:08:55 [INFO] app.scheduler: [scheduled] 停止
+2026-08-12 11:08:55 [INFO] app.scheduler: [scheduled] stop_scheduler() 完成
+2026-08-12 11:09:02 [INFO] app.engine.ml_model: XGBoost 模型加载成功: /home/major/my_risk_proj/app/engine/xgb_model.json, features=25
+2026-08-12 11:09:02 [INFO] app.scheduler: [scheduled] 启动: 间隔 15 分钟 (案件超时 + 告警检查)
+2026-08-12 11:09:02 [WARNING] app.service.alert: ALERT [P1 BUSINESS] 待审核案件积压 | 当前 79 个待审核案件, 超过阈值 50, 请及时处理 (metric=pending_case_count, value=79.0, threshold=50.0)
+2026-08-12 11:09:02 [INFO] app.scheduler: [scheduled] 本轮: 关案 0, 告警 1, 错误 0
+2026-08-12 11:09:02 [WARNING] app.service.alert: ALERT [P1 BUSINESS] 待审核案件积压 | 当前 79 个待审核案件, 超过阈值 50, 请及时处理 (metric=pending_case_count, value=79.0, threshold=50.0)
+2026-08-12 11:09:02 [INFO] httpx: HTTP Request: POST http://testserver/api/alerts/check "HTTP/1.1 200 OK"
+2026-08-12 11:09:02 [INFO] httpx: HTTP Request: GET http://testserver/api/alerts "HTTP/1.1 200 OK"
+2026-08-12 11:09:02 [INFO] httpx: HTTP Request: GET http://testserver/api/action-logs "HTTP/1.1 200 OK"
+2026-08-12 11:09:03 [INFO] app.scheduler: [scheduled] 停止
+2026-08-12 11:09:03 [INFO] app.scheduler: [scheduled] stop_scheduler() 完成
+2026-08-12 11:09:03 [INFO] app.engine.ml_model: XGBoost 模型加载成功: /home/major/my_risk_proj/app/engine/xgb_model.json, features=25
+2026-08-12 11:09:03 [INFO] app.scheduler: [scheduled] 启动: 间隔 15 分钟 (案件超时 + 告警检查)
+2026-08-12 11:09:03 [WARNING] app.service.alert: ALERT [P1 BUSINESS] 待审核案件积压 | 当前 79 个待审核案件, 超过阈值 50, 请及时处理 (metric=pending_case_count, value=79.0, threshold=50.0)
+2026-08-12 11:09:03 [INFO] app.scheduler: [scheduled] 本轮: 关案 0, 告警 1, 错误 0
+2026-08-12 11:09:03 [INFO] httpx: HTTP Request: GET http://testserver/api/rules "HTTP/1.1 200 OK"
+2026-08-12 11:09:03 [INFO] app.service.action_log: action_log: TOGGLE_RULE by tester on rule(R002)
+2026-08-12 11:09:03 [INFO] httpx: HTTP Request: PUT http://testserver/api/rules/R002/toggle "HTTP/1.1 200 OK"
+2026-08-12 11:09:03 [INFO] app.service.action_log: action_log: TOGGLE_RULE by tester on rule(R002)
+2026-08-12 11:09:03 [INFO] httpx: HTTP Request: PUT http://testserver/api/rules/R002/toggle "HTTP/1.1 200 OK"
+2026-08-12 11:09:03 [INFO] httpx: HTTP Request: GET http://testserver/api/action-logs?action_type=TOGGLE_RULE&page_size=50 "HTTP/1.1 200 OK"
+2026-08-12 11:09:04 [INFO] app.scheduler: [scheduled] 停止
+2026-08-12 11:09:04 [INFO] app.scheduler: [scheduled] stop_scheduler() 完成
+2026-08-12 11:09:04 [WARNING] app.engine.ml_model: 样本量 200 < 推荐最小 500, 模型可能欠拟合/过拟合, 建议积累更多评估数据后重训
+2026-08-12 11:09:04 [INFO] app.engine.ml_model: XGBoost 模型已保存: /tmp/pytest-of-major/pytest-8/test_train_and_save_smoke0/model.json (n=200, pos=101)
+2026-08-12 11:09:04 [INFO] httpx: HTTP Request: GET http://testserver/ "HTTP/1.1 200 OK"
+2026-08-12 11:09:04 [INFO] httpx: HTTP Request: GET http://testserver/risk-check "HTTP/1.1 200 OK"
+2026-08-12 11:09:04 [INFO] httpx: HTTP Request: GET http://testserver/rules "HTTP/1.1 200 OK"
+2026-08-12 11:09:04 [INFO] httpx: HTTP Request: GET http://testserver/assessments "HTTP/1.1 200 OK"
+2026-08-12 11:09:04 [INFO] httpx: HTTP Request: GET http://testserver/cases "HTTP/1.1 200 OK"
+2026-08-12 11:09:04 [INFO] httpx: HTTP Request: GET http://testserver/blacklist "HTTP/1.1 200 OK"
+2026-08-12 11:09:04 [INFO] httpx: HTTP Request: GET http://testserver/users "HTTP/1.1 200 OK"
+2026-08-12 11:09:04 [INFO] httpx: HTTP Request: GET http://testserver/api/health "HTTP/1.1 200 OK"
+2026-08-12 11:09:04 [INFO] httpx: HTTP Request: GET http://testserver/api/rules "HTTP/1.1 200 OK"
+2026-08-12 11:09:04 [INFO] httpx: HTTP Request: POST http://testserver/api/risk/check "HTTP/1.1 422 Unprocessable Entity"
+2026-08-12 11:09:04 [INFO] httpx: HTTP Request: GET http://testserver/api/rules "HTTP/1.1 200 OK"
+2026-08-12 11:09:04 [INFO] httpx: HTTP Request: PUT http://testserver/api/rules/R002 "HTTP/1.1 422 Unprocessable Entity"
+2026-08-12 11:09:04 [INFO] httpx: HTTP Request: PUT http://testserver/api/rules/R002 "HTTP/1.1 409 Conflict"
+2026-08-12 11:09:19 [INFO] app.engine.ml_model: XGBoost 模型加载成功: /home/major/my_risk_proj/app/engine/xgb_model.json, features=25
+2026-08-12 11:09:19 [INFO] app.scheduler: [scheduled] 启动: 间隔 15 分钟 (案件超时 + 告警检查)
+2026-08-12 11:09:19 [WARNING] app.service.alert: ALERT [P1 BUSINESS] 待审核案件积压 | 当前 79 个待审核案件, 超过阈值 50, 请及时处理 (metric=pending_case_count, value=79.0, threshold=50.0)
+2026-08-12 11:09:19 [INFO] app.scheduler: [scheduled] 本轮: 关案 0, 告警 1, 错误 0
+2026-08-12 11:09:19 [WARNING] app.service.alert: ALERT [P1 BUSINESS] 待审核案件积压 | 当前 79 个待审核案件, 超过阈值 50, 请及时处理 (metric=pending_case_count, value=79.0, threshold=50.0)
+2026-08-12 11:09:19 [INFO] httpx: HTTP Request: POST http://testserver/api/alerts/check "HTTP/1.1 200 OK"
+2026-08-12 11:09:19 [INFO] httpx: HTTP Request: GET http://testserver/api/alerts?status=PENDING&limit=5 "HTTP/1.1 200 OK"
+2026-08-12 11:09:19 [INFO] httpx: HTTP Request: POST http://testserver/api/alerts/17/resolve?handler=tester "HTTP/1.1 200 OK"
+2026-08-12 11:09:19 [INFO] httpx: HTTP Request: GET http://testserver/api/rules "HTTP/1.1 200 OK"
+2026-08-12 11:09:19 [INFO] app.service.action_log: action_log: TOGGLE_RULE by e2e-user on rule(R002)
+2026-08-12 11:09:19 [INFO] httpx: HTTP Request: PUT http://testserver/api/rules/R002/toggle "HTTP/1.1 200 OK"
+2026-08-12 11:09:19 [INFO] app.service.action_log: action_log: TOGGLE_RULE by e2e-user on rule(R002)
+2026-08-12 11:09:19 [INFO] httpx: HTTP Request: PUT http://testserver/api/rules/R002/toggle "HTTP/1.1 200 OK"
+2026-08-12 11:09:19 [INFO] httpx: HTTP Request: GET http://testserver/api/action-logs?action_type=TOGGLE_RULE&page_size=50 "HTTP/1.1 200 OK"
+2026-08-12 11:09:19 [INFO] httpx: HTTP Request: GET http://testserver/api/health "HTTP/1.1 200 OK"
+2026-08-12 11:09:20 [INFO] app.scheduler: [scheduled] 停止
+2026-08-12 11:09:20 [INFO] app.scheduler: [scheduled] stop_scheduler() 完成
+2026-08-12 11:09:36 [INFO] app.engine.ml_model: XGBoost 模型加载成功: /home/major/my_risk_proj/app/engine/xgb_model.json, features=25
+2026-08-12 11:09:36 [INFO] app.scheduler: [scheduled] 启动: 间隔 15 分钟 (案件超时 + 告警检查)
+2026-08-12 11:09:36 [WARNING] app.service.alert: ALERT [P1 BUSINESS] 待审核案件积压 | 当前 79 个待审核案件, 超过阈值 50, 请及时处理 (metric=pending_case_count, value=79.0, threshold=50.0)
+2026-08-12 11:09:36 [INFO] app.scheduler: [scheduled] 本轮: 关案 0, 告警 1, 错误 0
+2026-08-12 11:09:36 [WARNING] app.service.alert: ALERT [P1 BUSINESS] 待审核案件积压 | 当前 79 个待审核案件, 超过阈值 50, 请及时处理 (metric=pending_case_count, value=79.0, threshold=50.0)
+2026-08-12 11:09:36 [INFO] httpx: HTTP Request: POST http://testserver/api/alerts/check "HTTP/1.1 200 OK"
+2026-08-12 11:09:36 [INFO] httpx: HTTP Request: GET http://testserver/api/alerts "HTTP/1.1 200 OK"
+2026-08-12 11:09:36 [INFO] httpx: HTTP Request: GET http://testserver/api/action-logs "HTTP/1.1 200 OK"
+2026-08-12 11:09:37 [INFO] app.scheduler: [scheduled] 停止
+2026-08-12 11:09:37 [INFO] app.scheduler: [scheduled] stop_scheduler() 完成
+2026-08-12 11:09:37 [INFO] app.engine.ml_model: XGBoost 模型加载成功: /home/major/my_risk_proj/app/engine/xgb_model.json, features=25
+2026-08-12 11:09:37 [INFO] app.scheduler: [scheduled] 启动: 间隔 15 分钟 (案件超时 + 告警检查)
+2026-08-12 11:09:37 [WARNING] app.service.alert: ALERT [P1 BUSINESS] 待审核案件积压 | 当前 79 个待审核案件, 超过阈值 50, 请及时处理 (metric=pending_case_count, value=79.0, threshold=50.0)
+2026-08-12 11:09:37 [INFO] app.scheduler: [scheduled] 本轮: 关案 0, 告警 1, 错误 0
+2026-08-12 11:09:37 [INFO] httpx: HTTP Request: GET http://testserver/api/rules "HTTP/1.1 200 OK"
+2026-08-12 11:09:37 [INFO] app.service.action_log: action_log: TOGGLE_RULE by tester on rule(R002)
+2026-08-12 11:09:37 [INFO] httpx: HTTP Request: PUT http://testserver/api/rules/R002/toggle "HTTP/1.1 200 OK"
+2026-08-12 11:09:37 [INFO] app.service.action_log: action_log: TOGGLE_RULE by tester on rule(R002)
+2026-08-12 11:09:37 [INFO] httpx: HTTP Request: PUT http://testserver/api/rules/R002/toggle "HTTP/1.1 200 OK"
+2026-08-12 11:09:37 [INFO] httpx: HTTP Request: GET http://testserver/api/action-logs?action_type=TOGGLE_RULE&page_size=50 "HTTP/1.1 200 OK"
+2026-08-12 11:09:38 [INFO] app.scheduler: [scheduled] 停止
+2026-08-12 11:09:38 [INFO] app.scheduler: [scheduled] stop_scheduler() 完成
+2026-08-12 11:09:38 [WARNING] app.engine.ml_model: 样本量 200 < 推荐最小 500, 模型可能欠拟合/过拟合, 建议积累更多评估数据后重训
+2026-08-12 11:09:38 [INFO] app.engine.ml_model: XGBoost 模型已保存: /tmp/pytest-of-major/pytest-9/test_train_and_save_smoke0/model.json (n=200, pos=101)
+2026-08-12 11:09:38 [INFO] httpx: HTTP Request: GET http://testserver/ "HTTP/1.1 200 OK"
+2026-08-12 11:09:38 [INFO] httpx: HTTP Request: GET http://testserver/risk-check "HTTP/1.1 200 OK"
+2026-08-12 11:09:38 [INFO] httpx: HTTP Request: GET http://testserver/rules "HTTP/1.1 200 OK"
+2026-08-12 11:09:38 [INFO] httpx: HTTP Request: GET http://testserver/assessments "HTTP/1.1 200 OK"
+2026-08-12 11:09:38 [INFO] httpx: HTTP Request: GET http://testserver/cases "HTTP/1.1 200 OK"
+2026-08-12 11:09:38 [INFO] httpx: HTTP Request: GET http://testserver/blacklist "HTTP/1.1 200 OK"
+2026-08-12 11:09:38 [INFO] httpx: HTTP Request: GET http://testserver/users "HTTP/1.1 200 OK"
+2026-08-12 11:09:38 [INFO] httpx: HTTP Request: GET http://testserver/api/health "HTTP/1.1 200 OK"
+2026-08-12 11:09:38 [INFO] httpx: HTTP Request: GET http://testserver/api/rules "HTTP/1.1 200 OK"
+2026-08-12 11:09:38 [INFO] httpx: HTTP Request: POST http://testserver/api/risk/check "HTTP/1.1 422 Unprocessable Entity"
+2026-08-12 11:09:38 [INFO] httpx: HTTP Request: GET http://testserver/api/rules "HTTP/1.1 200 OK"
+2026-08-12 11:09:38 [INFO] httpx: HTTP Request: PUT http://testserver/api/rules/R002 "HTTP/1.1 422 Unprocessable Entity"
+2026-08-12 11:09:38 [INFO] httpx: HTTP Request: PUT http://testserver/api/rules/R002 "HTTP/1.1 409 Conflict"
+2026-08-12 11:11:39 [INFO] uvicorn.error: Started server process [88403]
+2026-08-12 11:11:39 [INFO] uvicorn.error: Waiting for application startup.
+2026-08-12 11:11:39 [INFO] app.engine.ml_model: XGBoost 模型加载成功: /home/major/my_risk_proj/app/engine/xgb_model.json, features=25
+2026-08-12 11:11:39 [INFO] app.scheduler: [scheduled] 启动: 间隔 15 分钟 (案件超时 + 告警检查)
+2026-08-12 11:11:39 [WARNING] app.service.alert: ALERT [P1 BUSINESS] 待审核案件积压 | 当前 79 个待审核案件, 超过阈值 50, 请及时处理 (metric=pending_case_count, value=79.0, threshold=50.0)
+2026-08-12 11:11:39 [INFO] app.scheduler: [scheduled] 本轮: 关案 0, 告警 1, 错误 0
+2026-08-12 11:11:39 [INFO] uvicorn.error: Application startup complete.
+2026-08-12 11:11:39 [INFO] uvicorn.error: Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+2026-08-12 11:12:07 [INFO] uvicorn.access: 127.0.0.1:47382 - "GET /api/health HTTP/1.1" 200
+2026-08-12 11:12:07 [INFO] uvicorn.access: 127.0.0.1:47390 - "GET / HTTP/1.1" 200
+2026-08-12 11:12:07 [INFO] uvicorn.access: 127.0.0.1:47396 - "GET /chat HTTP/1.1" 200
+2026-08-12 11:12:07 [INFO] uvicorn.access: 127.0.0.1:47406 - "GET /api/dashboard/overview HTTP/1.1" 200
+2026-08-12 11:12:13 [INFO] uvicorn.access: 127.0.0.1:48706 - "GET /api/alerts?status=PENDING&limit=3 HTTP/1.1" 200
+2026-08-12 11:12:13 [INFO] uvicorn.access: 127.0.0.1:44620 - "GET /api/action-logs?page_size=3 HTTP/1.1" 200
+2026-08-12 11:12:13 [INFO] uvicorn.access: 127.0.0.1:44624 - "POST /api/agent/chat HTTP/1.1" 200
+2026-08-12 11:12:13 [INFO] uvicorn.access: 127.0.0.1:44636 - "POST /api/risk/check HTTP/1.1" 200
+2026-08-12 11:13:04 [INFO] uvicorn.access: 127.0.0.1:14181 - "GET / HTTP/1.1" 200
+2026-08-12 11:13:04 [INFO] uvicorn.access: 127.0.0.1:14181 - "GET /static/app.js HTTP/1.1" 304
+2026-08-12 11:13:04 [INFO] uvicorn.access: 127.0.0.1:14181 - "GET /api/health HTTP/1.1" 200
+2026-08-12 11:13:04 [INFO] uvicorn.access: 127.0.0.1:14790 - "GET /api/dashboard/overview HTTP/1.1" 200
+2026-08-12 11:13:05 [INFO] uvicorn.access: 127.0.0.1:14790 - "GET /blacklist HTTP/1.1" 200
+2026-08-12 11:13:05 [INFO] uvicorn.access: 127.0.0.1:14790 - "GET /api/health HTTP/1.1" 200
+2026-08-12 11:13:05 [INFO] uvicorn.access: 127.0.0.1:14181 - "GET /api/blacklist?page_size=100 HTTP/1.1" 200
+2026-08-12 11:13:06 [INFO] uvicorn.access: 127.0.0.1:14181 - "GET /users HTTP/1.1" 200
+2026-08-12 11:13:06 [INFO] uvicorn.access: 127.0.0.1:14181 - "GET /api/health HTTP/1.1" 200
+2026-08-12 11:13:06 [INFO] uvicorn.access: 127.0.0.1:14790 - "GET /api/users?limit=100&q= HTTP/1.1" 200
+2026-08-12 11:13:06 [INFO] uvicorn.access: 127.0.0.1:14790 - "GET /chat HTTP/1.1" 200
+2026-08-12 11:13:06 [INFO] uvicorn.access: 127.0.0.1:14790 - "GET /api/health HTTP/1.1" 200
+2026-08-12 11:13:08 [INFO] uvicorn.access: 127.0.0.1:14790 - "GET /users HTTP/1.1" 200
+2026-08-12 11:13:08 [INFO] uvicorn.access: 127.0.0.1:14790 - "GET /api/health HTTP/1.1" 200
+2026-08-12 11:13:08 [INFO] uvicorn.access: 127.0.0.1:14181 - "GET /api/users?limit=100&q= HTTP/1.1" 200
+2026-08-12 11:13:09 [INFO] uvicorn.access: 127.0.0.1:14181 - "GET /blacklist HTTP/1.1" 200
+2026-08-12 11:13:09 [INFO] uvicorn.access: 127.0.0.1:14181 - "GET /api/health HTTP/1.1" 200
+2026-08-12 11:13:09 [INFO] uvicorn.access: 127.0.0.1:14790 - "GET /api/blacklist?page_size=100 HTTP/1.1" 200
+2026-08-12 11:13:09 [INFO] uvicorn.access: 127.0.0.1:14790 - "GET /chat HTTP/1.1" 200
+2026-08-12 11:13:09 [INFO] uvicorn.access: 127.0.0.1:14790 - "GET /api/health HTTP/1.1" 200
+2026-08-12 11:13:19 [INFO] uvicorn.access: 127.0.0.1:5864 - "GET /assessments HTTP/1.1" 200
+2026-08-12 11:13:19 [INFO] uvicorn.access: 127.0.0.1:5864 - "GET /api/health HTTP/1.1" 200
+2026-08-12 11:13:19 [INFO] uvicorn.access: 127.0.0.1:3931 - "GET /api/assessments?page_size=50 HTTP/1.1" 200
+2026-08-12 11:13:26 [INFO] uvicorn.access: 127.0.0.1:4834 - "GET /rules HTTP/1.1" 200
+2026-08-12 11:13:26 [INFO] uvicorn.access: 127.0.0.1:4834 - "GET /api/health HTTP/1.1" 200
+2026-08-12 11:13:26 [INFO] uvicorn.access: 127.0.0.1:14782 - "GET /api/rules HTTP/1.1" 200
+2026-08-12 11:13:27 [INFO] uvicorn.access: 127.0.0.1:14782 - "GET /risk-check HTTP/1.1" 200
+2026-08-12 11:13:27 [INFO] uvicorn.access: 127.0.0.1:14782 - "GET /api/health HTTP/1.1" 200
+2026-08-12 11:13:28 [INFO] uvicorn.access: 127.0.0.1:14782 - "GET /cases HTTP/1.1" 200
+2026-08-12 11:13:28 [INFO] uvicorn.access: 127.0.0.1:4834 - "GET /api/cases/statistics HTTP/1.1" 200
+2026-08-12 11:13:28 [INFO] uvicorn.access: 127.0.0.1:14782 - "GET /api/health HTTP/1.1" 200
+2026-08-12 11:13:28 [INFO] uvicorn.access: 127.0.0.1:2203 - "GET /api/cases?page_size=50&status= HTTP/1.1" 200
+2026-08-12 11:13:29 [INFO] uvicorn.access: 127.0.0.1:2203 - "GET /assessments HTTP/1.1" 200
+2026-08-12 11:13:29 [INFO] uvicorn.access: 127.0.0.1:2203 - "GET /api/health HTTP/1.1" 200
+2026-08-12 11:13:29 [INFO] uvicorn.access: 127.0.0.1:14782 - "GET /api/assessments?page_size=50 HTTP/1.1" 200
+2026-08-12 11:13:34 [INFO] uvicorn.access: 127.0.0.1:14782 - "GET /blacklist HTTP/1.1" 200
+2026-08-12 11:13:34 [INFO] uvicorn.access: 127.0.0.1:14782 - "GET /api/health HTTP/1.1" 200
+2026-08-12 11:13:34 [INFO] uvicorn.access: 127.0.0.1:2203 - "GET /api/blacklist?page_size=100 HTTP/1.1" 200
+2026-08-12 11:13:35 [INFO] uvicorn.access: 127.0.0.1:2203 - "GET /cases HTTP/1.1" 200
+2026-08-12 11:13:35 [INFO] uvicorn.access: 127.0.0.1:2203 - "GET /api/health HTTP/1.1" 200
+2026-08-12 11:13:35 [INFO] uvicorn.access: 127.0.0.1:14782 - "GET /api/cases/statistics HTTP/1.1" 200
+2026-08-12 11:13:35 [INFO] uvicorn.access: 127.0.0.1:11407 - "GET /api/cases?page_size=50&status= HTTP/1.1" 200
+2026-08-12 11:16:32 [INFO] uvicorn.error: Shutting down
+2026-08-12 11:16:32 [INFO] uvicorn.error: Waiting for application shutdown.
+2026-08-12 11:16:33 [INFO] app.scheduler: [scheduled] 停止
+2026-08-12 11:16:33 [INFO] app.scheduler: [scheduled] stop_scheduler() 完成
+2026-08-12 11:16:33 [INFO] uvicorn.error: Application shutdown complete.
+2026-08-12 11:16:33 [INFO] uvicorn.error: Finished server process [88403]
+2026-08-12 11:16:38 [INFO] uvicorn.error: Started server process [90892]
+2026-08-12 11:16:38 [INFO] uvicorn.error: Waiting for application startup.
+2026-08-12 11:16:38 [INFO] app.engine.ml_model: XGBoost 模型加载成功: /home/major/my_risk_proj/app/engine/xgb_model.json, features=25
+2026-08-12 11:16:38 [INFO] app.scheduler: [scheduled] 启动: 间隔 15 分钟 (案件超时 + 告警检查)
+2026-08-12 11:16:38 [WARNING] app.service.alert: ALERT [P1 BUSINESS] 待审核案件积压 | 当前 79 个待审核案件, 超过阈值 50, 请及时处理 (metric=pending_case_count, value=79.0, threshold=50.0)
+2026-08-12 11:16:38 [INFO] app.scheduler: [scheduled] 本轮: 关案 0, 告警 1, 错误 0
+2026-08-12 11:16:38 [INFO] uvicorn.error: Application startup complete.
+2026-08-12 11:16:38 [INFO] uvicorn.error: Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+2026-08-12 11:16:47 [INFO] httpx: HTTP Request: POST https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions "HTTP/1.1 200 OK"
+2026-08-12 11:16:54 [INFO] httpx: HTTP Request: POST https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions "HTTP/1.1 200 OK"
+2026-08-12 11:16:54 [INFO] uvicorn.access: 127.0.0.1:45548 - "POST /api/agent/chat HTTP/1.1" 200
+2026-08-12 11:17:14 [INFO] httpx: HTTP Request: POST https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions "HTTP/1.1 200 OK"
+2026-08-12 11:17:21 [INFO] httpx: HTTP Request: POST https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions "HTTP/1.1 200 OK"
+2026-08-12 11:17:21 [INFO] uvicorn.access: 127.0.0.1:45540 - "POST /api/agent/chat HTTP/1.1" 200
+2026-08-12 11:18:09 [INFO] uvicorn.access: 127.0.0.1:13900 - "GET / HTTP/1.1" 200
+2026-08-12 11:18:09 [INFO] uvicorn.access: 127.0.0.1:13900 - "GET /static/app.css HTTP/1.1" 304
+2026-08-12 11:18:09 [INFO] uvicorn.access: 127.0.0.1:1415 - "GET /static/app.js HTTP/1.1" 304
+2026-08-12 11:18:09 [INFO] uvicorn.access: 127.0.0.1:1415 - "GET /api/health HTTP/1.1" 200
+2026-08-12 11:18:09 [INFO] uvicorn.access: 127.0.0.1:13900 - "GET /api/dashboard/overview HTTP/1.1" 200
+2026-08-12 11:18:09 [INFO] uvicorn.access: 127.0.0.1:13900 - "GET /chat HTTP/1.1" 200
+2026-08-12 11:18:09 [INFO] uvicorn.access: 127.0.0.1:13900 - "GET /api/health HTTP/1.1" 200
+2026-08-12 11:18:19 [INFO] httpx: HTTP Request: POST https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions "HTTP/1.1 200 OK"
+2026-08-12 11:18:19 [INFO] uvicorn.access: 127.0.0.1:13900 - "POST /api/agent/chat HTTP/1.1" 200
+2026-08-12 11:18:25 [INFO] uvicorn.access: 127.0.0.1:4858 - "GET /cases HTTP/1.1" 200
+2026-08-12 11:18:25 [INFO] uvicorn.access: 127.0.0.1:4858 - "GET /api/health HTTP/1.1" 200
+2026-08-12 11:18:25 [INFO] uvicorn.access: 127.0.0.1:12745 - "GET /api/cases/statistics HTTP/1.1" 200
+2026-08-12 11:18:25 [INFO] uvicorn.access: 127.0.0.1:10140 - "GET /api/cases?page_size=50&status= HTTP/1.1" 200
+2026-08-12 11:18:26 [INFO] uvicorn.access: 127.0.0.1:10140 - "GET /assessments HTTP/1.1" 200
+2026-08-12 11:18:26 [INFO] uvicorn.access: 127.0.0.1:10140 - "GET /api/health HTTP/1.1" 200
+2026-08-12 11:18:26 [INFO] uvicorn.access: 127.0.0.1:12745 - "GET /api/assessments?page_size=50 HTTP/1.1" 200
+2026-08-12 11:18:27 [INFO] uvicorn.access: 127.0.0.1:12745 - "GET /assessments HTTP/1.1" 200
+2026-08-12 11:18:27 [INFO] uvicorn.access: 127.0.0.1:12745 - "GET /api/health HTTP/1.1" 200
+2026-08-12 11:18:27 [INFO] uvicorn.access: 127.0.0.1:10140 - "GET /api/assessments?page_size=50 HTTP/1.1" 200
+2026-08-12 11:18:28 [INFO] uvicorn.access: 127.0.0.1:10140 - "GET /chat HTTP/1.1" 200
+2026-08-12 11:18:28 [INFO] uvicorn.access: 127.0.0.1:10140 - "GET /api/health HTTP/1.1" 200
+2026-08-12 11:18:30 [INFO] uvicorn.access: 127.0.0.1:10140 - "GET /blacklist HTTP/1.1" 200
+2026-08-12 11:18:30 [INFO] uvicorn.access: 127.0.0.1:10140 - "GET /api/health HTTP/1.1" 200
+2026-08-12 11:18:30 [INFO] uvicorn.access: 127.0.0.1:12745 - "GET /api/blacklist?page_size=100 HTTP/1.1" 200
+2026-08-12 11:18:30 [INFO] uvicorn.access: 127.0.0.1:12745 - "GET /users HTTP/1.1" 200
+2026-08-12 11:18:30 [INFO] uvicorn.access: 127.0.0.1:12745 - "GET /api/health HTTP/1.1" 200
+2026-08-12 11:18:30 [INFO] uvicorn.access: 127.0.0.1:10140 - "GET /api/users?limit=100&q= HTTP/1.1" 200
+2026-08-12 11:18:30 [INFO] uvicorn.access: 127.0.0.1:10140 - "GET /chat HTTP/1.1" 200
+2026-08-12 11:18:30 [INFO] uvicorn.access: 127.0.0.1:10140 - "GET /api/health HTTP/1.1" 200
+2026-08-12 11:18:31 [INFO] uvicorn.access: 127.0.0.1:10140 - "GET /cases HTTP/1.1" 200
+2026-08-12 11:18:31 [INFO] uvicorn.access: 127.0.0.1:12745 - "GET /api/cases/statistics HTTP/1.1" 200
+2026-08-12 11:18:31 [INFO] uvicorn.access: 127.0.0.1:10140 - "GET /api/health HTTP/1.1" 200
+2026-08-12 11:18:31 [INFO] uvicorn.access: 127.0.0.1:9873 - "GET /api/cases?page_size=50&status= HTTP/1.1" 200
+2026-08-12 11:18:32 [INFO] uvicorn.access: 127.0.0.1:9873 - "GET /assessments HTTP/1.1" 200
+2026-08-12 11:18:32 [INFO] uvicorn.access: 127.0.0.1:9873 - "GET /api/health HTTP/1.1" 200
+2026-08-12 11:18:32 [INFO] uvicorn.access: 127.0.0.1:10140 - "GET /api/assessments?page_size=50 HTTP/1.1" 200
+2026-08-12 11:18:32 [INFO] uvicorn.access: 127.0.0.1:10140 - "GET /rules HTTP/1.1" 200
+2026-08-12 11:18:32 [INFO] uvicorn.access: 127.0.0.1:10140 - "GET /api/health HTTP/1.1" 200
+2026-08-12 11:18:32 [INFO] uvicorn.access: 127.0.0.1:9873 - "GET /api/rules HTTP/1.1" 200
+2026-08-12 11:18:33 [INFO] uvicorn.access: 127.0.0.1:9873 - "GET /risk-check HTTP/1.1" 200
+2026-08-12 11:18:33 [INFO] uvicorn.access: 127.0.0.1:9873 - "GET /api/health HTTP/1.1" 200
+2026-08-12 11:18:33 [INFO] uvicorn.access: 127.0.0.1:9873 - "GET / HTTP/1.1" 200
+2026-08-12 11:18:33 [INFO] uvicorn.access: 127.0.0.1:9873 - "GET /api/health HTTP/1.1" 200
+2026-08-12 11:18:33 [INFO] uvicorn.access: 127.0.0.1:10140 - "GET /api/dashboard/overview HTTP/1.1" 200
+2026-08-12 11:18:38 [INFO] uvicorn.access: 127.0.0.1:10140 - "GET /risk-check HTTP/1.1" 200
+2026-08-12 11:18:38 [INFO] uvicorn.access: 127.0.0.1:10140 - "GET /api/health HTTP/1.1" 200
+2026-08-12 11:18:38 [INFO] uvicorn.access: 127.0.0.1:10140 - "GET /chat HTTP/1.1" 200
+2026-08-12 11:18:38 [INFO] uvicorn.access: 127.0.0.1:10140 - "GET /api/health HTTP/1.1" 200
+2026-08-12 11:18:47 [INFO] httpx: HTTP Request: POST https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions "HTTP/1.1 200 OK"
+2026-08-12 11:19:02 [INFO] httpx: HTTP Request: POST https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions "HTTP/1.1 200 OK"
+2026-08-12 11:19:02 [INFO] uvicorn.access: 127.0.0.1:3953 - "POST /api/agent/chat HTTP/1.1" 200
+2026-08-12 11:19:11 [INFO] uvicorn.access: 127.0.0.1:9965 - "GET /users HTTP/1.1" 200
+2026-08-12 11:19:11 [INFO] uvicorn.access: 127.0.0.1:9965 - "GET /api/health HTTP/1.1" 200
+2026-08-12 11:19:11 [INFO] uvicorn.access: 127.0.0.1:12781 - "GET /api/users?limit=100&q= HTTP/1.1" 200
+2026-08-12 11:19:12 [INFO] uvicorn.access: 127.0.0.1:12781 - "GET /api/users/RISK-STU-016/profile HTTP/1.1" 200
+2026-08-12 11:19:13 [INFO] uvicorn.access: 127.0.0.1:12781 - "GET /api/users/RISK-STU-023/profile HTTP/1.1" 200
+2026-08-12 11:19:14 [INFO] uvicorn.access: 127.0.0.1:12781 - "GET /api/users/TEACHER-01/profile HTTP/1.1" 200
+2026-08-12 11:19:15 [INFO] uvicorn.access: 127.0.0.1:12781 - "GET /assessments HTTP/1.1" 200
+2026-08-12 11:19:15 [INFO] uvicorn.access: 127.0.0.1:12781 - "GET /api/health HTTP/1.1" 200
+2026-08-12 11:19:15 [INFO] uvicorn.access: 127.0.0.1:9965 - "GET /api/assessments?page_size=50 HTTP/1.1" 200
+2026-08-12 11:19:16 [INFO] uvicorn.access: 127.0.0.1:9965 - "GET /cases HTTP/1.1" 200
+2026-08-12 11:19:16 [INFO] uvicorn.access: 127.0.0.1:12781 - "GET /api/cases/statistics HTTP/1.1" 200
+2026-08-12 11:19:16 [INFO] uvicorn.access: 127.0.0.1:9965 - "GET /api/health HTTP/1.1" 200
+2026-08-12 11:19:16 [INFO] uvicorn.access: 127.0.0.1:5990 - "GET /api/cases?page_size=50&status= HTTP/1.1" 200
+2026-08-12 11:19:17 [INFO] uvicorn.access: 127.0.0.1:5990 - "GET /blacklist HTTP/1.1" 200
+2026-08-12 11:19:17 [INFO] uvicorn.access: 127.0.0.1:5990 - "GET /api/health HTTP/1.1" 200
+2026-08-12 11:19:17 [INFO] uvicorn.access: 127.0.0.1:9965 - "GET /api/blacklist?page_size=100 HTTP/1.1" 200
+2026-08-12 11:19:19 [INFO] uvicorn.access: 127.0.0.1:9965 - "GET /rules HTTP/1.1" 200
+2026-08-12 11:19:19 [INFO] uvicorn.access: 127.0.0.1:9965 - "GET /api/health HTTP/1.1" 200
+2026-08-12 11:19:19 [INFO] uvicorn.access: 127.0.0.1:5990 - "GET /api/rules HTTP/1.1" 200
+2026-08-12 11:19:21 [INFO] uvicorn.access: 127.0.0.1:5990 - "GET /risk-check HTTP/1.1" 200
+2026-08-12 11:19:21 [INFO] uvicorn.access: 127.0.0.1:5990 - "GET /api/health HTTP/1.1" 200
+2026-08-12 11:20:23 [INFO] uvicorn.error: Shutting down
+2026-08-12 11:20:23 [INFO] uvicorn.error: Waiting for application shutdown.
+2026-08-12 11:20:23 [INFO] app.scheduler: [scheduled] 停止
+2026-08-12 11:20:23 [INFO] app.scheduler: [scheduled] stop_scheduler() 完成
+2026-08-12 11:20:23 [INFO] uvicorn.error: Application shutdown complete.
+2026-08-12 11:20:23 [INFO] uvicorn.error: Finished server process [90892]
+2026-08-12 11:20:28 [INFO] uvicorn.error: Started server process [93060]
+2026-08-12 11:20:28 [INFO] uvicorn.error: Waiting for application startup.
+2026-08-12 11:20:28 [INFO] app.engine.ml_model: XGBoost 模型加载成功: /home/major/my_risk_proj/app/engine/xgb_model.json, features=25
+2026-08-12 11:20:28 [INFO] app.scheduler: [scheduled] 启动: 间隔 15 分钟 (案件超时 + 告警检查)
+2026-08-12 11:20:28 [WARNING] app.service.alert: ALERT [P1 BUSINESS] 待审核案件积压 | 当前 75 个待审核案件, 超过阈值 50, 请及时处理 (metric=pending_case_count, value=75.0, threshold=50.0)
+2026-08-12 11:20:28 [INFO] app.scheduler: [scheduled] 本轮: 关案 0, 告警 1, 错误 0
+2026-08-12 11:20:28 [INFO] uvicorn.error: Application startup complete.
+2026-08-12 11:20:28 [INFO] uvicorn.error: Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+2026-08-12 11:20:38 [INFO] uvicorn.access: 127.0.0.1:48642 - "GET /api/dashboard/overview HTTP/1.1" 200
+2026-08-12 11:20:38 [INFO] uvicorn.access: 127.0.0.1:48640 - "POST /api/risk/check HTTP/1.1" 200
+2026-08-12 11:20:38 [INFO] uvicorn.access: 127.0.0.1:48652 - "POST /api/risk/check HTTP/1.1" 200
+2026-08-12 11:20:43 [INFO] uvicorn.access: 127.0.0.1:46514 - "POST /api/risk/check HTTP/1.1" 200
+2026-08-12 11:20:53 [INFO] uvicorn.access: 127.0.0.1:45420 - "GET /api/assessments?page_size=2 HTTP/1.1" 200
+2026-08-12 11:21:21 [INFO] uvicorn.access: 127.0.0.1:6688 - "GET /chat HTTP/1.1" 200
+2026-08-12 11:21:21 [INFO] uvicorn.access: 127.0.0.1:6688 - "GET /static/app.js HTTP/1.1" 304
+2026-08-12 11:21:21 [INFO] uvicorn.access: 127.0.0.1:6688 - "GET /api/health HTTP/1.1" 200
+2026-08-12 11:21:22 [INFO] uvicorn.access: 127.0.0.1:6688 - "GET / HTTP/1.1" 200
+2026-08-12 11:21:22 [INFO] uvicorn.access: 127.0.0.1:6688 - "GET /api/health HTTP/1.1" 200
+2026-08-12 11:21:22 [INFO] uvicorn.access: 127.0.0.1:14310 - "GET /api/dashboard/overview HTTP/1.1" 200
+2026-08-12 11:21:23 [INFO] uvicorn.access: 127.0.0.1:14310 - "GET / HTTP/1.1" 200
+2026-08-12 11:21:23 [INFO] uvicorn.access: 127.0.0.1:14310 - "GET /api/health HTTP/1.1" 200
+2026-08-12 11:21:23 [INFO] uvicorn.access: 127.0.0.1:6688 - "GET /api/dashboard/overview HTTP/1.1" 200
+2026-08-12 11:21:23 [INFO] uvicorn.access: 127.0.0.1:6688 - "GET /risk-check HTTP/1.1" 200
+2026-08-12 11:21:23 [INFO] uvicorn.access: 127.0.0.1:6688 - "GET /api/health HTTP/1.1" 200
+2026-08-12 11:21:24 [INFO] uvicorn.access: 127.0.0.1:6688 - "GET / HTTP/1.1" 200
+2026-08-12 11:21:24 [INFO] uvicorn.access: 127.0.0.1:6688 - "GET /api/health HTTP/1.1" 200
+2026-08-12 11:21:24 [INFO] uvicorn.access: 127.0.0.1:14310 - "GET /api/dashboard/overview HTTP/1.1" 200
+2026-08-12 11:21:27 [INFO] uvicorn.access: 127.0.0.1:14310 - "GET /risk-check HTTP/1.1" 200
+2026-08-12 11:21:27 [INFO] uvicorn.access: 127.0.0.1:14310 - "GET /api/health HTTP/1.1" 200
+2026-08-12 11:21:28 [INFO] uvicorn.access: 127.0.0.1:14310 - "GET /risk-check HTTP/1.1" 200
+2026-08-12 11:21:28 [INFO] uvicorn.access: 127.0.0.1:14310 - "GET /api/health HTTP/1.1" 200
+2026-08-12 11:21:28 [INFO] uvicorn.access: 127.0.0.1:14310 - "GET /rules HTTP/1.1" 200
+2026-08-12 11:21:28 [INFO] uvicorn.access: 127.0.0.1:14310 - "GET /api/health HTTP/1.1" 200
+2026-08-12 11:21:28 [INFO] uvicorn.access: 127.0.0.1:6688 - "GET /api/rules HTTP/1.1" 200
+2026-08-12 11:21:29 [INFO] uvicorn.access: 127.0.0.1:6688 - "GET /assessments HTTP/1.1" 200
+2026-08-12 11:21:29 [INFO] uvicorn.access: 127.0.0.1:6688 - "GET /api/health HTTP/1.1" 200
+2026-08-12 11:21:29 [INFO] uvicorn.access: 127.0.0.1:14310 - "GET /api/assessments?page_size=50 HTTP/1.1" 200
+2026-08-12 11:21:36 [INFO] uvicorn.access: 127.0.0.1:5552 - "GET /api/assessments?page_size=50&decision=%E6%A0%87%E8%AE%B0 HTTP/1.1" 200
+2026-08-12 11:21:41 [INFO] uvicorn.access: 127.0.0.1:5552 - "GET /api/assessments?page_size=50&decision=%E4%BA%BA%E5%B7%A5%E5%AE%A1%E6%A0%B8 HTTP/1.1" 200
+2026-08-12 11:21:42 [INFO] uvicorn.access: 127.0.0.1:5552 - "GET /api/assessments?page_size=50&decision=%E9%80%9A%E8%BF%87 HTTP/1.1" 200
+2026-08-12 11:21:43 [INFO] uvicorn.access: 127.0.0.1:5552 - "GET /api/assessments?page_size=50 HTTP/1.1" 200
+2026-08-12 11:21:44 [INFO] uvicorn.access: 127.0.0.1:5552 - "GET /api/assessments/ASMT-9643a701eb4e4ea99190 HTTP/1.1" 200
+2026-08-12 11:21:53 [INFO] uvicorn.access: 127.0.0.1:5609 - "GET /api/assessments/ASMT-9643a701eb4e4ea99190 HTTP/1.1" 200
+2026-08-12 11:22:02 [INFO] uvicorn.access: 127.0.0.1:3666 - "GET /api/assessments/ASMT-8bf141ea6f9445c888b6 HTTP/1.1" 200
+2026-08-12 11:22:06 [INFO] uvicorn.access: 127.0.0.1:3666 - "GET /api/assessments/ASMT-03371715ff15472aa4dc HTTP/1.1" 200
+2026-08-12 11:22:10 [INFO] uvicorn.access: 127.0.0.1:3666 - "GET /api/assessments/ASMT-8bf141ea6f9445c888b6 HTTP/1.1" 200
+2026-08-12 11:22:13 [INFO] uvicorn.access: 127.0.0.1:3666 - "GET /api/assessments/ASMT-9643a701eb4e4ea99190 HTTP/1.1" 200
+2026-08-12 11:22:17 [INFO] uvicorn.access: 127.0.0.1:3666 - "GET /api/assessments/ASMT-8bf141ea6f9445c888b6 HTTP/1.1" 200
+2026-08-12 11:22:21 [INFO] uvicorn.access: 127.0.0.1:3666 - "GET /cases HTTP/1.1" 200
+2026-08-12 11:22:21 [INFO] uvicorn.access: 127.0.0.1:3666 - "GET /api/health HTTP/1.1" 200
+2026-08-12 11:22:21 [INFO] uvicorn.access: 127.0.0.1:9878 - "GET /api/cases/statistics HTTP/1.1" 200
+2026-08-12 11:22:21 [INFO] uvicorn.access: 127.0.0.1:3539 - "GET /api/cases?page_size=50&status= HTTP/1.1" 200
+2026-08-12 11:22:30 [INFO] uvicorn.access: 127.0.0.1:5657 - "GET /risk-check HTTP/1.1" 200
+2026-08-12 11:22:30 [INFO] uvicorn.access: 127.0.0.1:5657 - "GET /api/health HTTP/1.1" 200
+2026-08-12 11:22:31 [INFO] uvicorn.access: 127.0.0.1:5657 - "GET / HTTP/1.1" 200
+2026-08-12 11:22:31 [INFO] uvicorn.access: 127.0.0.1:5657 - "GET /api/health HTTP/1.1" 200
+2026-08-12 11:22:31 [INFO] uvicorn.access: 127.0.0.1:7009 - "GET /api/dashboard/overview HTTP/1.1" 200

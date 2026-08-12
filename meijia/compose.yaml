@@ -1,0 +1,30 @@
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: risk-proj-mysql
+    restart: unless-stopped
+    environment:
+      TZ: Asia/Shanghai
+      MYSQL_ROOT_PASSWORD: ${RISK_MYSQL_ROOT_PASSWORD:-risk_proj_root}
+      MYSQL_DATABASE: risk_proj
+      MYSQL_USER: ${RISK_MYSQL_USER:-risk_user}
+      MYSQL_PASSWORD: ${RISK_MYSQL_PASSWORD:-risk_pass}
+    ports:
+      - "${RISK_MYSQL_PORT:-13306}:3306"
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_0900_ai_ci
+      - --default-time-zone=+08:00
+    volumes:
+      - risk_proj_mysql_data:/var/lib/mysql
+      - ./db/init.sql:/docker-entrypoint-initdb.d/001-init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p$$MYSQL_ROOT_PASSWORD --silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 20s
+
+volumes:
+  risk_proj_mysql_data:
+    name: risk_proj_mysql_data

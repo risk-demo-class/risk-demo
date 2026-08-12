@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="chat-wrap">
+  <div id="chatMessages" class="chat-messages">
+    <div class="msg bot"><b>AI 助手</b><p>你好，我是教育风控助手。可以问我例如「对 RISK-STU-003 做一次退费风险检查」、「查一下待审核案件」、「RISK-STU-007 的用户画像」，或「最近 7 天风险趋势」。</p></div>
+  </div>
+  <div class="chat-input-row">
+    <input id="chatInput" type="text" placeholder="输入你的问题，Enter 发送…" autocomplete="off">
+    <button id="chatSend" class="btn">发送</button>
+  </div>
+</div>
+{% endblock %}

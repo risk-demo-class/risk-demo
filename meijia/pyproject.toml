@@ -1,0 +1,44 @@
+[project]
+name = "ai-risk"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "aiomysql==0.2.0",
+    "cryptography==44.0.0",
+    "deepagents==0.5.2",
+    "faker==33.1.0",
+    "fastapi==0.115.6",
+    "gunicorn==23.0.0",
+    "httpx==0.28.1",
+    "jinja2==3.1.4",
+    "langchain==1.2.15",
+    "langchain-core==1.4.8",
+    "langchain-openai==1.1.12",
+    "langgraph==1.1.6",
+    "numpy==2.2.0",
+    "pandas==2.2.3",
+    "pydantic==2.10.3",
+    "pydantic-settings==2.7.0",
+    "pymysql==1.1.1",
+    "pytest==8.3.4",
+    "pytest-asyncio==0.25.0",
+    "python-dotenv==1.0.1",
+    "python-multipart==0.0.18",
+    "scikit-learn==1.5.1",
+    "sqlalchemy==2.0.36",
+    "ulid-py==1.1.0",
+    "uvicorn[standard]==0.34.0",
+    "xgboost==2.0.3",
+]
+
+[tool.ruff.lint]
+# 规则引擎条件求值走"兜底不中断"策略:
+# _compare 因数据格式/缺失等抛出的异常, 在 evaluate_condition 里捕获后记日志并返回 False,
+# 不让单条规则异常拖垮整批评估. 因此禁用 BLE001(盲捕宽泛异常)检查.
+ignore = ["BLE001", "UP045", "RUF046", "DTZ005", "DTZ001"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+asyncio_default_fixture_loop_scope = "function"
