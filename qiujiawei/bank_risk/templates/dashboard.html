@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+{% block title %}仪表盘 - 银行风控系统{% endblock %}
+{% block content %}
+<h4 class="mb-4">银行风控仪表盘</h4>
+
+<!-- 统计卡片: 总用户数 / 今日交易数 / 待审案件 / 风控规则数 -->
+<div class="row mb-4" id="stat-cards">
+    <div class="col-md-3">
+        <div class="card stat-card p-3">
+            <div class="text-muted small">总用户数</div>
+            <div class="stat-value text-primary" id="total-users">-</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card p-3">
+            <div class="text-muted small">今日交易数</div>
+            <div class="stat-value text-info" id="today-transactions">-</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card p-3">
+            <div class="text-muted small">待审案件</div>
+            <div class="stat-value text-warning" id="pending-cases">-</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card p-3">
+            <div class="text-muted small">风控规则数</div>
+            <div class="stat-value text-success" id="rule-count">-</div>
+        </div>
+    </div>
+</div>
+
+<!-- 风险等级分布饼图 + 最近评估记录 -->
+<div class="row">
+    <div class="col-md-5">
+        <div class="card stat-card p-3">
+            <h6>风险等级分布</h6>
+            <canvas id="riskPieChart" height="260"></canvas>
+        </div>
+    </div>
+    <div class="col-md-7">
+        <div class="card stat-card p-3">
+            <h6>最近 10 条评估记录</h6>
+            <div class="table-responsive">
+                <table class="table table-hover table-sm mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>评估ID</th><th>用户</th><th>事件</th>
+                            <th>评分</th><th>等级</th><th>决策</th><th>时间</th>
+                        </tr>
+                    </thead>
+                    <tbody id="recent-assessments">
+                        <tr><td colspan="7" class="text-center text-muted">加载中...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function riskBadge(level) {
+    const cls = {'低':'badge-risk-low','中':'badge-risk-mid','高':'badge-risk-high','极高':'badge-risk-critical'}[level] || 'bg-secondary';
+    return `<span class="badge ${cls}">${level}</span>`;
+}
+
+function decisionBadge(d) {
+    const cls = {'通过':'bg-success','标记':'bg-info','人工审核':'bg-warning','拒绝':'bg-danger'}[d] || 'bg-secondary';
+    return `<span class="badge ${cls}">${d}</span>`;
+}
+
+let pieChart = null;
+
+async function loadDashboard() {
+    try {
+        const res = await fetch('/api/dashboard');
+        const data = await res.json();
+
+        // 4 个统计卡片
+        document.getElementById('total-users').textContent = data.total_users ?? 0;
+        document.getElementById('today-transactions').textContent = data.today_transactions ?? 0;
+        document.getElementById('pending-cases').textContent = data.pending_cases ?? 0;
+        document.getElementById('rule-count').textContent = data.rule_count ?? 0;
+
+        // 风险等级分布饼图
+        const dist = data.risk_distribution || {};
+        const labels = ['低', '中', '高', '极高'];
+        const values = labels.map(l => dist[l] || 0);
+        const colors = ['#dcfce7', '#fef9c3', '#fed7aa', '#fecaca'];
+        const ctx = document.getElementById('riskPieChart').getContext('2d');
+        if (pieChart) { pieChart.destroy(); }
+        pieChart = new Chart(ctx, {
+            type: 'pie',
+            data: {
+                labels: labels,
+                datasets: [{
+                    data: values,
+                    backgroundColor: colors,
+                    borderWidth: 1,
+                }]
+            },
+            options: { responsive: true, plugins: { legend: { position: 'right' } } }
+        });
+
+        // 最近 10 条评估记录
+        const recent = data.recent_assessments || [];
+        const tbody = document.getElementById('recent-assessments');
+        if (recent.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">暂无评估记录</td></tr>';
+        } else {
+            tbody.innerHTML = recent.map(a => `
+                <tr>
+                    <td><code>${(a.assessment_id || '').substring(0, 12)}...</code></td>
+                    <td>${a.user_id}</td>
+                    <td><span class="badge bg-light text-dark">${a.event_type}</span></td>
+                    <td><strong>${a.final_score}</strong></td>
+                    <td>${riskBadge(a.risk_level)}</td>
+                    <td>${decisionBadge(a.decision)}</td>
+                    <td>${a.create_time ? new Date(a.create_time).toLocaleString('zh-CN') : '-'}</td>
+                </tr>
+            `).join('');
+        }
+    } catch (e) {
+        console.error('加载仪表盘失败:', e);
+    }
+}
+loadDashboard();
+</script>
+{% endblock %}

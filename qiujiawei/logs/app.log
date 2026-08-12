@@ -1,0 +1,935 @@
+2026-08-12 11:05:19 [INFO] uvicorn.error: Started server process [24552]
+2026-08-12 11:05:19 [INFO] uvicorn.error: Waiting for application startup.
+2026-08-12 11:05:19 [INFO] bank_risk.app.scheduler: [scheduled] 启动: 间隔 900 秒 (案件超时 + 告警检查)
+2026-08-12 11:05:19 [INFO] uvicorn.error: Application startup complete.
+2026-08-12 11:05:19 [INFO] uvicorn.error: Uvicorn running on http://0.0.0.0:8001 (Press CTRL+C to quit)
+2026-08-12 11:05:19 [INFO] bank_risk.app.scheduler: [scheduled] 本轮: 关案 0, 告警 0, 错误 0
+2026-08-12 11:05:23 [INFO] uvicorn.access: 127.0.0.1:10419 - "GET / HTTP/1.1" 200
+2026-08-12 11:05:23 [INFO] uvicorn.access: 127.0.0.1:10419 - "GET /static/app.js?v=20260811v1 HTTP/1.1" 304
+2026-08-12 11:05:23 [INFO] uvicorn.access: 127.0.0.1:10419 - "GET /api/dashboard HTTP/1.1" 500
+2026-08-12 11:05:23 [ERROR] uvicorn.error: Exception in ASGI application
+Traceback (most recent call last):
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1969, in _exec_single_context
+    self.dialect.do_execute(
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\sqlalchemy\engine\default.py", line 952, in do_execute
+    cursor.execute(statement, parameters)
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\sqlalchemy\connectors\asyncio.py", line 230, in execute
+    self._adapt_connection._handle_exception(error)
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\sqlalchemy\connectors\asyncio.py", line 368, in _handle_exception
+    raise error.with_traceback(exc_info[2])
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\sqlalchemy\connectors\asyncio.py", line 228, in execute
+    return self.await_(self._execute_async(operation, parameters))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 132, in await_only
+    return current.parent.switch(awaitable)  # type: ignore[no-any-return,attr-defined] # noqa: E501
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 196, in greenlet_spawn
+    value = await result
+            ^^^^^^^^^^^^
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\sqlalchemy\connectors\asyncio.py", line 251, in _execute_async
+    result = await self._cursor.execute(operation, parameters)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\aiomysql\cursors.py", line 239, in execute
+    await self._query(query)
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\aiomysql\cursors.py", line 457, in _query
+    await conn.query(q)
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\aiomysql\connection.py", line 469, in query
+    await self._read_query_result(unbuffered=unbuffered)
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\aiomysql\connection.py", line 683, in _read_query_result
+    await result.read()
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\aiomysql\connection.py", line 1164, in read
+    first_packet = await self.connection._read_packet()
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\aiomysql\connection.py", line 652, in _read_packet
+    packet.raise_for_error()
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\pymysql\protocol.py", line 219, in raise_for_error
+    err.raise_mysql_exception(self._data)
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\pymysql\err.py", line 150, in raise_mysql_exception
+    raise errorclass(errno, errval)
+pymysql.err.ProgrammingError: (1146, "Table 'ecs.transaction' doesn't exist")
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\uvicorn\protocols\http\httptools_impl.py", line 409, in run_asgi
+    result = await app(  # type: ignore[func-returns-value]
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\uvicorn\middleware\proxy_headers.py", line 60, in __call__
+    return await self.app(scope, receive, send)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\fastapi\applications.py", line 1054, in __call__
+    await super().__call__(scope, receive, send)
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\starlette\applications.py", line 112, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\starlette\middleware\errors.py", line 187, in __call__
+    raise exc
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\starlette\middleware\errors.py", line 165, in __call__
+    await self.app(scope, receive, _send)
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\starlette\middleware\exceptions.py", line 62, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\starlette\routing.py", line 714, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\starlette\routing.py", line 734, in app
+    await route.handle(scope, receive, send)
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\starlette\routing.py", line 288, in handle
+    await self.app(scope, receive, send)
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\starlette\routing.py", line 76, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\starlette\routing.py", line 73, in app
+    response = await f(request)
+               ^^^^^^^^^^^^^^^^
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\fastapi\routing.py", line 301, in app
+    raw_response = await run_endpoint_function(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\fastapi\routing.py", line 212, in run_endpoint_function
+    return await dependant.call(**values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\app\routers\dashboard.py", line 25, in api_dashboard
+    total_transactions = int((await db.execute(
+                              ^^^^^^^^^^^^^^^^^
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\sqlalchemy\ext\asyncio\session.py", line 448, in execute
+    result = await greenlet_spawn(
+             ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 203, in greenlet_spawn
+    result = context.switch(value)
+             ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\sqlalchemy\orm\session.py", line 2373, in execute
+    return self._execute_internal(
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\sqlalchemy\orm\session.py", line 2271, in _execute_internal
+    result: Result[Any] = compile_state_cls.orm_execute_statement(
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\sqlalchemy\orm\context.py", line 306, in orm_execute_statement
+    result = conn.execute(
+             ^^^^^^^^^^^^^
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1421, in execute
+    return meth(
+           ^^^^^
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\sqlalchemy\sql\elements.py", line 526, in _execute_on_connection
+    return connection._execute_clauseelement(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1643, in _execute_clauseelement
+    ret = self._execute_context(
+          ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1848, in _execute_context
+    return self._exec_single_context(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1988, in _exec_single_context
+    self._handle_dbapi_exception(
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\sqlalchemy\engine\base.py", line 2365, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1969, in _exec_single_context
+    self.dialect.do_execute(
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\sqlalchemy\engine\default.py", line 952, in do_execute
+    cursor.execute(statement, parameters)
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\sqlalchemy\connectors\asyncio.py", line 230, in execute
+    self._adapt_connection._handle_exception(error)
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\sqlalchemy\connectors\asyncio.py", line 368, in _handle_exception
+    raise error.with_traceback(exc_info[2])
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\sqlalchemy\connectors\asyncio.py", line 228, in execute
+    return self.await_(self._execute_async(operation, parameters))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 132, in await_only
+    return current.parent.switch(awaitable)  # type: ignore[no-any-return,attr-defined] # noqa: E501
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 196, in greenlet_spawn
+    value = await result
+            ^^^^^^^^^^^^
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\sqlalchemy\connectors\asyncio.py", line 251, in _execute_async
+    result = await self._cursor.execute(operation, parameters)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\aiomysql\cursors.py", line 239, in execute
+    await self._query(query)
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\aiomysql\cursors.py", line 457, in _query
+    await conn.query(q)
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\aiomysql\connection.py", line 469, in query
+    await self._read_query_result(unbuffered=unbuffered)
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\aiomysql\connection.py", line 683, in _read_query_result
+    await result.read()
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\aiomysql\connection.py", line 1164, in read
+    first_packet = await self.connection._read_packet()
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\aiomysql\connection.py", line 652, in _read_packet
+    packet.raise_for_error()
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\pymysql\protocol.py", line 219, in raise_for_error
+    err.raise_mysql_exception(self._data)
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\pymysql\err.py", line 150, in raise_mysql_exception
+    raise errorclass(errno, errval)
+sqlalchemy.exc.ProgrammingError: (pymysql.err.ProgrammingError) (1146, "Table 'ecs.transaction' doesn't exist")
+[SQL: SELECT count(*) AS count_1 
+FROM transaction]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+2026-08-12 11:05:23 [INFO] uvicorn.access: 127.0.0.1:2383 - "GET /favicon.ico HTTP/1.1" 404
+2026-08-12 11:05:25 [INFO] uvicorn.access: 127.0.0.1:2383 - "GET /risk-check HTTP/1.1" 200
+2026-08-12 11:05:26 [INFO] uvicorn.access: 127.0.0.1:2383 - "GET /rules HTTP/1.1" 200
+2026-08-12 11:05:26 [INFO] uvicorn.access: 127.0.0.1:2383 - "GET /api/rules?page=1&page_size=20 HTTP/1.1" 500
+2026-08-12 11:05:26 [ERROR] uvicorn.error: Exception in ASGI application
+Traceback (most recent call last):
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\sqlalchemy\sql\sqltypes.py", line 1710, in _object_value_for_elem
+    return self._object_lookup[elem]  # type: ignore[return-value]
+           ~~~~~~~~~~~~~~~~~~~^^^^^^
+KeyError: '订单欺诈'
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\uvicorn\protocols\http\httptools_impl.py", line 409, in run_asgi
+    result = await app(  # type: ignore[func-returns-value]
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\uvicorn\middleware\proxy_headers.py", line 60, in __call__
+    return await self.app(scope, receive, send)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\fastapi\applications.py", line 1054, in __call__
+    await super().__call__(scope, receive, send)
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\starlette\applications.py", line 112, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\starlette\middleware\errors.py", line 187, in __call__
+    raise exc
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\starlette\middleware\errors.py", line 165, in __call__
+    await self.app(scope, receive, _send)
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\starlette\middleware\exceptions.py", line 62, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\starlette\routing.py", line 714, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\starlette\routing.py", line 734, in app
+    await route.handle(scope, receive, send)
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\starlette\routing.py", line 288, in handle
+    await self.app(scope, receive, send)
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\starlette\routing.py", line 76, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\starlette\routing.py", line 73, in app
+    response = await f(request)
+               ^^^^^^^^^^^^^^^^
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\fastapi\routing.py", line 301, in app
+    raw_response = await run_endpoint_function(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\fastapi\routing.py", line 212, in run_endpoint_function
+    return await dependant.call(**values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\app\routers\rule.py", line 40, in api_list_rules
+    result = await db.execute(stmt)
+             ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\sqlalchemy\ext\asyncio\session.py", line 448, in execute
+    result = await greenlet_spawn(
+             ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 203, in greenlet_spawn
+    result = context.switch(value)
+             ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\sqlalchemy\orm\session.py", line 2373, in execute
+    return self._execute_internal(
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\sqlalchemy\orm\session.py", line 2271, in _execute_internal
+    result: Result[Any] = compile_state_cls.orm_execute_statement(
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\sqlalchemy\orm\context.py", line 309, in orm_execute_statement
+    return cls.orm_setup_cursor_result(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\sqlalchemy\orm\context.py", line 616, in orm_setup_cursor_result
+    return loading.instances(result, querycontext)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\sqlalchemy\orm\loading.py", line 262, in instances
+    _prebuffered = list(chunks(None))
+                   ^^^^^^^^^^^^^^^^^^
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\sqlalchemy\orm\loading.py", line 220, in chunks
+    fetch = cursor._raw_all_rows()
+            ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\sqlalchemy\engine\result.py", line 580, in _raw_all_rows
+    return [make_row(row) for row in rows]
+            ^^^^^^^^^^^^^
+  File "lib/sqlalchemy/cyextension/resultproxy.pyx", line 22, in sqlalchemy.cyextension.resultproxy.BaseRow.__init__
+  File "lib/sqlalchemy/cyextension/resultproxy.pyx", line 79, in sqlalchemy.cyextension.resultproxy._apply_processors
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\sqlalchemy\sql\sqltypes.py", line 1830, in process
+    value = self._object_value_for_elem(value)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\sqlalchemy\dialects\mysql\enumerated.py", line 110, in _object_value_for_elem
+    return super()._object_value_for_elem(elem)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\sqlalchemy\sql\sqltypes.py", line 1712, in _object_value_for_elem
+    raise LookupError(
+LookupError: '订单欺诈' is not among the defined enum values. Enum name: None. Possible values: 信用卡欺诈, 贷款风险, 转账风险, ..., 设备风险
+2026-08-12 11:10:09 [INFO] uvicorn.access: 127.0.0.1:3059 - "GET /cases HTTP/1.1" 200
+2026-08-12 11:10:09 [INFO] uvicorn.access: 127.0.0.1:3059 - "GET /api/cases?page=1&page_size=20 HTTP/1.1" 500
+2026-08-12 11:10:09 [ERROR] uvicorn.error: Exception in ASGI application
+Traceback (most recent call last):
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\sqlalchemy\sql\sqltypes.py", line 1710, in _object_value_for_elem
+    return self._object_lookup[elem]  # type: ignore[return-value]
+           ~~~~~~~~~~~~~~~~~~~^^^^^^
+KeyError: '支付'
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\uvicorn\protocols\http\httptools_impl.py", line 409, in run_asgi
+    result = await app(  # type: ignore[func-returns-value]
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\uvicorn\middleware\proxy_headers.py", line 60, in __call__
+    return await self.app(scope, receive, send)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\fastapi\applications.py", line 1054, in __call__
+    await super().__call__(scope, receive, send)
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\starlette\applications.py", line 112, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\starlette\middleware\errors.py", line 187, in __call__
+    raise exc
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\starlette\middleware\errors.py", line 165, in __call__
+    await self.app(scope, receive, _send)
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\starlette\middleware\exceptions.py", line 62, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\starlette\routing.py", line 714, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\starlette\routing.py", line 734, in app
+    await route.handle(scope, receive, send)
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\starlette\routing.py", line 288, in handle
+    await self.app(scope, receive, send)
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\starlette\routing.py", line 76, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\starlette\routing.py", line 73, in app
+    response = await f(request)
+               ^^^^^^^^^^^^^^^^
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\fastapi\routing.py", line 301, in app
+    raw_response = await run_endpoint_function(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\fastapi\routing.py", line 212, in run_endpoint_function
+    return await dependant.call(**values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\app\routers\case.py", line 39, in api_list_cases
+    items = (await db.execute(stmt)).scalars().all()
+             ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\sqlalchemy\ext\asyncio\session.py", line 448, in execute
+    result = await greenlet_spawn(
+             ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 203, in greenlet_spawn
+    result = context.switch(value)
+             ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\sqlalchemy\orm\session.py", line 2373, in execute
+    return self._execute_internal(
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\sqlalchemy\orm\session.py", line 2271, in _execute_internal
+    result: Result[Any] = compile_state_cls.orm_execute_statement(
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\sqlalchemy\orm\context.py", line 309, in orm_execute_statement
+    return cls.orm_setup_cursor_result(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\sqlalchemy\orm\context.py", line 616, in orm_setup_cursor_result
+    return loading.instances(result, querycontext)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\sqlalchemy\orm\loading.py", line 262, in instances
+    _prebuffered = list(chunks(None))
+                   ^^^^^^^^^^^^^^^^^^
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\sqlalchemy\orm\loading.py", line 220, in chunks
+    fetch = cursor._raw_all_rows()
+            ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\sqlalchemy\engine\result.py", line 580, in _raw_all_rows
+    return [make_row(row) for row in rows]
+            ^^^^^^^^^^^^^
+  File "lib/sqlalchemy/cyextension/resultproxy.pyx", line 22, in sqlalchemy.cyextension.resultproxy.BaseRow.__init__
+  File "lib/sqlalchemy/cyextension/resultproxy.pyx", line 79, in sqlalchemy.cyextension.resultproxy._apply_processors
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\sqlalchemy\sql\sqltypes.py", line 1830, in process
+    value = self._object_value_for_elem(value)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\sqlalchemy\dialects\mysql\enumerated.py", line 110, in _object_value_for_elem
+    return super()._object_value_for_elem(elem)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\sqlalchemy\sql\sqltypes.py", line 1712, in _object_value_for_elem
+    raise LookupError(
+LookupError: '支付' is not among the defined enum values. Enum name: None. Possible values: 信用卡, 贷款, 转账, 登录
+2026-08-12 11:10:09 [INFO] uvicorn.access: 127.0.0.1:1221 - "GET /rules HTTP/1.1" 200
+2026-08-12 11:10:09 [INFO] uvicorn.access: 127.0.0.1:1221 - "GET /api/rules?page=1&page_size=20 HTTP/1.1" 500
+2026-08-12 11:10:09 [ERROR] uvicorn.error: Exception in ASGI application
+Traceback (most recent call last):
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\sqlalchemy\sql\sqltypes.py", line 1710, in _object_value_for_elem
+    return self._object_lookup[elem]  # type: ignore[return-value]
+           ~~~~~~~~~~~~~~~~~~~^^^^^^
+KeyError: '订单欺诈'
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\uvicorn\protocols\http\httptools_impl.py", line 409, in run_asgi
+    result = await app(  # type: ignore[func-returns-value]
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\uvicorn\middleware\proxy_headers.py", line 60, in __call__
+    return await self.app(scope, receive, send)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\fastapi\applications.py", line 1054, in __call__
+    await super().__call__(scope, receive, send)
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\starlette\applications.py", line 112, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\starlette\middleware\errors.py", line 187, in __call__
+    raise exc
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\starlette\middleware\errors.py", line 165, in __call__
+    await self.app(scope, receive, _send)
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\starlette\middleware\exceptions.py", line 62, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\starlette\routing.py", line 714, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\starlette\routing.py", line 734, in app
+    await route.handle(scope, receive, send)
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\starlette\routing.py", line 288, in handle
+    await self.app(scope, receive, send)
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\starlette\routing.py", line 76, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\starlette\routing.py", line 73, in app
+    response = await f(request)
+               ^^^^^^^^^^^^^^^^
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\fastapi\routing.py", line 301, in app
+    raw_response = await run_endpoint_function(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\fastapi\routing.py", line 212, in run_endpoint_function
+    return await dependant.call(**values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\app\routers\rule.py", line 40, in api_list_rules
+    result = await db.execute(stmt)
+             ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\sqlalchemy\ext\asyncio\session.py", line 448, in execute
+    result = await greenlet_spawn(
+             ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 203, in greenlet_spawn
+    result = context.switch(value)
+             ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\sqlalchemy\orm\session.py", line 2373, in execute
+    return self._execute_internal(
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\sqlalchemy\orm\session.py", line 2271, in _execute_internal
+    result: Result[Any] = compile_state_cls.orm_execute_statement(
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\sqlalchemy\orm\context.py", line 309, in orm_execute_statement
+    return cls.orm_setup_cursor_result(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\sqlalchemy\orm\context.py", line 616, in orm_setup_cursor_result
+    return loading.instances(result, querycontext)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\sqlalchemy\orm\loading.py", line 262, in instances
+    _prebuffered = list(chunks(None))
+                   ^^^^^^^^^^^^^^^^^^
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\sqlalchemy\orm\loading.py", line 220, in chunks
+    fetch = cursor._raw_all_rows()
+            ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\sqlalchemy\engine\result.py", line 580, in _raw_all_rows
+    return [make_row(row) for row in rows]
+            ^^^^^^^^^^^^^
+  File "lib/sqlalchemy/cyextension/resultproxy.pyx", line 22, in sqlalchemy.cyextension.resultproxy.BaseRow.__init__
+  File "lib/sqlalchemy/cyextension/resultproxy.pyx", line 79, in sqlalchemy.cyextension.resultproxy._apply_processors
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\sqlalchemy\sql\sqltypes.py", line 1830, in process
+    value = self._object_value_for_elem(value)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\sqlalchemy\dialects\mysql\enumerated.py", line 110, in _object_value_for_elem
+    return super()._object_value_for_elem(elem)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\sqlalchemy\sql\sqltypes.py", line 1712, in _object_value_for_elem
+    raise LookupError(
+LookupError: '订单欺诈' is not among the defined enum values. Enum name: None. Possible values: 信用卡欺诈, 贷款风险, 转账风险, ..., 设备风险
+2026-08-12 11:10:10 [INFO] uvicorn.access: 127.0.0.1:3584 - "GET /assessments HTTP/1.1" 200
+2026-08-12 11:10:10 [INFO] uvicorn.access: 127.0.0.1:3584 - "GET /api/assessments?page=1&page_size=20 HTTP/1.1" 200
+2026-08-12 11:10:10 [INFO] uvicorn.access: 127.0.0.1:3584 - "GET /cases HTTP/1.1" 200
+2026-08-12 11:10:10 [INFO] uvicorn.access: 127.0.0.1:3584 - "GET /api/cases?page=1&page_size=20 HTTP/1.1" 500
+2026-08-12 11:10:10 [ERROR] uvicorn.error: Exception in ASGI application
+Traceback (most recent call last):
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\sqlalchemy\sql\sqltypes.py", line 1710, in _object_value_for_elem
+    return self._object_lookup[elem]  # type: ignore[return-value]
+           ~~~~~~~~~~~~~~~~~~~^^^^^^
+KeyError: '支付'
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\uvicorn\protocols\http\httptools_impl.py", line 409, in run_asgi
+    result = await app(  # type: ignore[func-returns-value]
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\uvicorn\middleware\proxy_headers.py", line 60, in __call__
+    return await self.app(scope, receive, send)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\fastapi\applications.py", line 1054, in __call__
+    await super().__call__(scope, receive, send)
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\starlette\applications.py", line 112, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\starlette\middleware\errors.py", line 187, in __call__
+    raise exc
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\starlette\middleware\errors.py", line 165, in __call__
+    await self.app(scope, receive, _send)
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\starlette\middleware\exceptions.py", line 62, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\starlette\routing.py", line 714, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\starlette\routing.py", line 734, in app
+    await route.handle(scope, receive, send)
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\starlette\routing.py", line 288, in handle
+    await self.app(scope, receive, send)
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\starlette\routing.py", line 76, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\starlette\routing.py", line 73, in app
+    response = await f(request)
+               ^^^^^^^^^^^^^^^^
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\fastapi\routing.py", line 301, in app
+    raw_response = await run_endpoint_function(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\fastapi\routing.py", line 212, in run_endpoint_function
+    return await dependant.call(**values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\app\routers\case.py", line 39, in api_list_cases
+    items = (await db.execute(stmt)).scalars().all()
+             ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\sqlalchemy\ext\asyncio\session.py", line 448, in execute
+    result = await greenlet_spawn(
+             ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 203, in greenlet_spawn
+    result = context.switch(value)
+             ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\sqlalchemy\orm\session.py", line 2373, in execute
+    return self._execute_internal(
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\sqlalchemy\orm\session.py", line 2271, in _execute_internal
+    result: Result[Any] = compile_state_cls.orm_execute_statement(
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\sqlalchemy\orm\context.py", line 309, in orm_execute_statement
+    return cls.orm_setup_cursor_result(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\sqlalchemy\orm\context.py", line 616, in orm_setup_cursor_result
+    return loading.instances(result, querycontext)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\sqlalchemy\orm\loading.py", line 262, in instances
+    _prebuffered = list(chunks(None))
+                   ^^^^^^^^^^^^^^^^^^
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\sqlalchemy\orm\loading.py", line 220, in chunks
+    fetch = cursor._raw_all_rows()
+            ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\sqlalchemy\engine\result.py", line 580, in _raw_all_rows
+    return [make_row(row) for row in rows]
+            ^^^^^^^^^^^^^
+  File "lib/sqlalchemy/cyextension/resultproxy.pyx", line 22, in sqlalchemy.cyextension.resultproxy.BaseRow.__init__
+  File "lib/sqlalchemy/cyextension/resultproxy.pyx", line 79, in sqlalchemy.cyextension.resultproxy._apply_processors
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\sqlalchemy\sql\sqltypes.py", line 1830, in process
+    value = self._object_value_for_elem(value)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\sqlalchemy\dialects\mysql\enumerated.py", line 110, in _object_value_for_elem
+    return super()._object_value_for_elem(elem)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\sqlalchemy\sql\sqltypes.py", line 1712, in _object_value_for_elem
+    raise LookupError(
+LookupError: '支付' is not among the defined enum values. Enum name: None. Possible values: 信用卡, 贷款, 转账, 登录
+2026-08-12 11:10:11 [INFO] uvicorn.access: 127.0.0.1:10972 - "GET /cases HTTP/1.1" 200
+2026-08-12 11:10:11 [INFO] uvicorn.access: 127.0.0.1:10972 - "GET /api/cases?page=1&page_size=20 HTTP/1.1" 500
+2026-08-12 11:10:11 [ERROR] uvicorn.error: Exception in ASGI application
+Traceback (most recent call last):
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\sqlalchemy\sql\sqltypes.py", line 1710, in _object_value_for_elem
+    return self._object_lookup[elem]  # type: ignore[return-value]
+           ~~~~~~~~~~~~~~~~~~~^^^^^^
+KeyError: '支付'
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\uvicorn\protocols\http\httptools_impl.py", line 409, in run_asgi
+    result = await app(  # type: ignore[func-returns-value]
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\uvicorn\middleware\proxy_headers.py", line 60, in __call__
+    return await self.app(scope, receive, send)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\fastapi\applications.py", line 1054, in __call__
+    await super().__call__(scope, receive, send)
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\starlette\applications.py", line 112, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\starlette\middleware\errors.py", line 187, in __call__
+    raise exc
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\starlette\middleware\errors.py", line 165, in __call__
+    await self.app(scope, receive, _send)
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\starlette\middleware\exceptions.py", line 62, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\starlette\routing.py", line 714, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\starlette\routing.py", line 734, in app
+    await route.handle(scope, receive, send)
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\starlette\routing.py", line 288, in handle
+    await self.app(scope, receive, send)
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\starlette\routing.py", line 76, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\starlette\routing.py", line 73, in app
+    response = await f(request)
+               ^^^^^^^^^^^^^^^^
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\fastapi\routing.py", line 301, in app
+    raw_response = await run_endpoint_function(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\fastapi\routing.py", line 212, in run_endpoint_function
+    return await dependant.call(**values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\app\routers\case.py", line 39, in api_list_cases
+    items = (await db.execute(stmt)).scalars().all()
+             ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\sqlalchemy\ext\asyncio\session.py", line 448, in execute
+    result = await greenlet_spawn(
+             ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 203, in greenlet_spawn
+    result = context.switch(value)
+             ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\sqlalchemy\orm\session.py", line 2373, in execute
+    return self._execute_internal(
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\sqlalchemy\orm\session.py", line 2271, in _execute_internal
+    result: Result[Any] = compile_state_cls.orm_execute_statement(
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\sqlalchemy\orm\context.py", line 309, in orm_execute_statement
+    return cls.orm_setup_cursor_result(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\sqlalchemy\orm\context.py", line 616, in orm_setup_cursor_result
+    return loading.instances(result, querycontext)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\sqlalchemy\orm\loading.py", line 262, in instances
+    _prebuffered = list(chunks(None))
+                   ^^^^^^^^^^^^^^^^^^
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\sqlalchemy\orm\loading.py", line 220, in chunks
+    fetch = cursor._raw_all_rows()
+            ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\sqlalchemy\engine\result.py", line 580, in _raw_all_rows
+    return [make_row(row) for row in rows]
+            ^^^^^^^^^^^^^
+  File "lib/sqlalchemy/cyextension/resultproxy.pyx", line 22, in sqlalchemy.cyextension.resultproxy.BaseRow.__init__
+  File "lib/sqlalchemy/cyextension/resultproxy.pyx", line 79, in sqlalchemy.cyextension.resultproxy._apply_processors
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\sqlalchemy\sql\sqltypes.py", line 1830, in process
+    value = self._object_value_for_elem(value)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\sqlalchemy\dialects\mysql\enumerated.py", line 110, in _object_value_for_elem
+    return super()._object_value_for_elem(elem)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\sqlalchemy\sql\sqltypes.py", line 1712, in _object_value_for_elem
+    raise LookupError(
+LookupError: '支付' is not among the defined enum values. Enum name: None. Possible values: 信用卡, 贷款, 转账, 登录
+2026-08-12 11:10:13 [INFO] uvicorn.access: 127.0.0.1:3465 - "GET /cases HTTP/1.1" 200
+2026-08-12 11:10:13 [INFO] uvicorn.access: 127.0.0.1:3465 - "GET /api/cases?page=1&page_size=20 HTTP/1.1" 500
+2026-08-12 11:10:13 [ERROR] uvicorn.error: Exception in ASGI application
+Traceback (most recent call last):
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\sqlalchemy\sql\sqltypes.py", line 1710, in _object_value_for_elem
+    return self._object_lookup[elem]  # type: ignore[return-value]
+           ~~~~~~~~~~~~~~~~~~~^^^^^^
+KeyError: '支付'
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\uvicorn\protocols\http\httptools_impl.py", line 409, in run_asgi
+    result = await app(  # type: ignore[func-returns-value]
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\uvicorn\middleware\proxy_headers.py", line 60, in __call__
+    return await self.app(scope, receive, send)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\fastapi\applications.py", line 1054, in __call__
+    await super().__call__(scope, receive, send)
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\starlette\applications.py", line 112, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\starlette\middleware\errors.py", line 187, in __call__
+    raise exc
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\starlette\middleware\errors.py", line 165, in __call__
+    await self.app(scope, receive, _send)
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\starlette\middleware\exceptions.py", line 62, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\starlette\routing.py", line 714, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\starlette\routing.py", line 734, in app
+    await route.handle(scope, receive, send)
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\starlette\routing.py", line 288, in handle
+    await self.app(scope, receive, send)
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\starlette\routing.py", line 76, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\starlette\routing.py", line 73, in app
+    response = await f(request)
+               ^^^^^^^^^^^^^^^^
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\fastapi\routing.py", line 301, in app
+    raw_response = await run_endpoint_function(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\fastapi\routing.py", line 212, in run_endpoint_function
+    return await dependant.call(**values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\app\routers\case.py", line 39, in api_list_cases
+    items = (await db.execute(stmt)).scalars().all()
+             ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\sqlalchemy\ext\asyncio\session.py", line 448, in execute
+    result = await greenlet_spawn(
+             ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 203, in greenlet_spawn
+    result = context.switch(value)
+             ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\sqlalchemy\orm\session.py", line 2373, in execute
+    return self._execute_internal(
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\sqlalchemy\orm\session.py", line 2271, in _execute_internal
+    result: Result[Any] = compile_state_cls.orm_execute_statement(
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\sqlalchemy\orm\context.py", line 309, in orm_execute_statement
+    return cls.orm_setup_cursor_result(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\sqlalchemy\orm\context.py", line 616, in orm_setup_cursor_result
+    return loading.instances(result, querycontext)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\sqlalchemy\orm\loading.py", line 262, in instances
+    _prebuffered = list(chunks(None))
+                   ^^^^^^^^^^^^^^^^^^
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\sqlalchemy\orm\loading.py", line 220, in chunks
+    fetch = cursor._raw_all_rows()
+            ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\sqlalchemy\engine\result.py", line 580, in _raw_all_rows
+    return [make_row(row) for row in rows]
+            ^^^^^^^^^^^^^
+  File "lib/sqlalchemy/cyextension/resultproxy.pyx", line 22, in sqlalchemy.cyextension.resultproxy.BaseRow.__init__
+  File "lib/sqlalchemy/cyextension/resultproxy.pyx", line 79, in sqlalchemy.cyextension.resultproxy._apply_processors
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\sqlalchemy\sql\sqltypes.py", line 1830, in process
+    value = self._object_value_for_elem(value)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\sqlalchemy\dialects\mysql\enumerated.py", line 110, in _object_value_for_elem
+    return super()._object_value_for_elem(elem)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\sqlalchemy\sql\sqltypes.py", line 1712, in _object_value_for_elem
+    raise LookupError(
+LookupError: '支付' is not among the defined enum values. Enum name: None. Possible values: 信用卡, 贷款, 转账, 登录
+2026-08-12 11:10:14 [INFO] uvicorn.access: 127.0.0.1:4761 - "GET /rules HTTP/1.1" 200
+2026-08-12 11:10:14 [INFO] uvicorn.access: 127.0.0.1:4761 - "GET /api/rules?page=1&page_size=20 HTTP/1.1" 500
+2026-08-12 11:10:14 [ERROR] uvicorn.error: Exception in ASGI application
+Traceback (most recent call last):
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\sqlalchemy\sql\sqltypes.py", line 1710, in _object_value_for_elem
+    return self._object_lookup[elem]  # type: ignore[return-value]
+           ~~~~~~~~~~~~~~~~~~~^^^^^^
+KeyError: '订单欺诈'
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\uvicorn\protocols\http\httptools_impl.py", line 409, in run_asgi
+    result = await app(  # type: ignore[func-returns-value]
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\uvicorn\middleware\proxy_headers.py", line 60, in __call__
+    return await self.app(scope, receive, send)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\fastapi\applications.py", line 1054, in __call__
+    await super().__call__(scope, receive, send)
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\starlette\applications.py", line 112, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\starlette\middleware\errors.py", line 187, in __call__
+    raise exc
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\starlette\middleware\errors.py", line 165, in __call__
+    await self.app(scope, receive, _send)
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\starlette\middleware\exceptions.py", line 62, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\starlette\routing.py", line 714, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\starlette\routing.py", line 734, in app
+    await route.handle(scope, receive, send)
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\starlette\routing.py", line 288, in handle
+    await self.app(scope, receive, send)
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\starlette\routing.py", line 76, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\starlette\routing.py", line 73, in app
+    response = await f(request)
+               ^^^^^^^^^^^^^^^^
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\fastapi\routing.py", line 301, in app
+    raw_response = await run_endpoint_function(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\fastapi\routing.py", line 212, in run_endpoint_function
+    return await dependant.call(**values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\app\routers\rule.py", line 40, in api_list_rules
+    result = await db.execute(stmt)
+             ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\sqlalchemy\ext\asyncio\session.py", line 448, in execute
+    result = await greenlet_spawn(
+             ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 203, in greenlet_spawn
+    result = context.switch(value)
+             ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\sqlalchemy\orm\session.py", line 2373, in execute
+    return self._execute_internal(
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\sqlalchemy\orm\session.py", line 2271, in _execute_internal
+    result: Result[Any] = compile_state_cls.orm_execute_statement(
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\sqlalchemy\orm\context.py", line 309, in orm_execute_statement
+    return cls.orm_setup_cursor_result(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\sqlalchemy\orm\context.py", line 616, in orm_setup_cursor_result
+    return loading.instances(result, querycontext)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\sqlalchemy\orm\loading.py", line 262, in instances
+    _prebuffered = list(chunks(None))
+                   ^^^^^^^^^^^^^^^^^^
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\sqlalchemy\orm\loading.py", line 220, in chunks
+    fetch = cursor._raw_all_rows()
+            ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\sqlalchemy\engine\result.py", line 580, in _raw_all_rows
+    return [make_row(row) for row in rows]
+            ^^^^^^^^^^^^^
+  File "lib/sqlalchemy/cyextension/resultproxy.pyx", line 22, in sqlalchemy.cyextension.resultproxy.BaseRow.__init__
+  File "lib/sqlalchemy/cyextension/resultproxy.pyx", line 79, in sqlalchemy.cyextension.resultproxy._apply_processors
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\sqlalchemy\sql\sqltypes.py", line 1830, in process
+    value = self._object_value_for_elem(value)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\sqlalchemy\dialects\mysql\enumerated.py", line 110, in _object_value_for_elem
+    return super()._object_value_for_elem(elem)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\sqlalchemy\sql\sqltypes.py", line 1712, in _object_value_for_elem
+    raise LookupError(
+LookupError: '订单欺诈' is not among the defined enum values. Enum name: None. Possible values: 信用卡欺诈, 贷款风险, 转账风险, ..., 设备风险
+2026-08-12 11:10:16 [INFO] uvicorn.access: 127.0.0.1:10396 - "GET /cases HTTP/1.1" 200
+2026-08-12 11:10:16 [INFO] uvicorn.access: 127.0.0.1:10396 - "GET /api/cases?page=1&page_size=20 HTTP/1.1" 500
+2026-08-12 11:10:16 [ERROR] uvicorn.error: Exception in ASGI application
+Traceback (most recent call last):
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\sqlalchemy\sql\sqltypes.py", line 1710, in _object_value_for_elem
+    return self._object_lookup[elem]  # type: ignore[return-value]
+           ~~~~~~~~~~~~~~~~~~~^^^^^^
+KeyError: '支付'
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\uvicorn\protocols\http\httptools_impl.py", line 409, in run_asgi
+    result = await app(  # type: ignore[func-returns-value]
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\uvicorn\middleware\proxy_headers.py", line 60, in __call__
+    return await self.app(scope, receive, send)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\fastapi\applications.py", line 1054, in __call__
+    await super().__call__(scope, receive, send)
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\starlette\applications.py", line 112, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\starlette\middleware\errors.py", line 187, in __call__
+    raise exc
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\starlette\middleware\errors.py", line 165, in __call__
+    await self.app(scope, receive, _send)
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\starlette\middleware\exceptions.py", line 62, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\starlette\routing.py", line 714, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\starlette\routing.py", line 734, in app
+    await route.handle(scope, receive, send)
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\starlette\routing.py", line 288, in handle
+    await self.app(scope, receive, send)
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\starlette\routing.py", line 76, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\starlette\routing.py", line 73, in app
+    response = await f(request)
+               ^^^^^^^^^^^^^^^^
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\fastapi\routing.py", line 301, in app
+    raw_response = await run_endpoint_function(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\fastapi\routing.py", line 212, in run_endpoint_function
+    return await dependant.call(**values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\app\routers\case.py", line 39, in api_list_cases
+    items = (await db.execute(stmt)).scalars().all()
+             ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\sqlalchemy\ext\asyncio\session.py", line 448, in execute
+    result = await greenlet_spawn(
+             ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 203, in greenlet_spawn
+    result = context.switch(value)
+             ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\sqlalchemy\orm\session.py", line 2373, in execute
+    return self._execute_internal(
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\sqlalchemy\orm\session.py", line 2271, in _execute_internal
+    result: Result[Any] = compile_state_cls.orm_execute_statement(
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\sqlalchemy\orm\context.py", line 309, in orm_execute_statement
+    return cls.orm_setup_cursor_result(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\sqlalchemy\orm\context.py", line 616, in orm_setup_cursor_result
+    return loading.instances(result, querycontext)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\sqlalchemy\orm\loading.py", line 262, in instances
+    _prebuffered = list(chunks(None))
+                   ^^^^^^^^^^^^^^^^^^
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\sqlalchemy\orm\loading.py", line 220, in chunks
+    fetch = cursor._raw_all_rows()
+            ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\sqlalchemy\engine\result.py", line 580, in _raw_all_rows
+    return [make_row(row) for row in rows]
+            ^^^^^^^^^^^^^
+  File "lib/sqlalchemy/cyextension/resultproxy.pyx", line 22, in sqlalchemy.cyextension.resultproxy.BaseRow.__init__
+  File "lib/sqlalchemy/cyextension/resultproxy.pyx", line 79, in sqlalchemy.cyextension.resultproxy._apply_processors
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\sqlalchemy\sql\sqltypes.py", line 1830, in process
+    value = self._object_value_for_elem(value)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\sqlalchemy\dialects\mysql\enumerated.py", line 110, in _object_value_for_elem
+    return super()._object_value_for_elem(elem)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\39583\PycharmProjects\risk-demo\risk-demo\qiujiawei\bank_risk\.venv\Lib\site-packages\sqlalchemy\sql\sqltypes.py", line 1712, in _object_value_for_elem
+    raise LookupError(
+LookupError: '支付' is not among the defined enum values. Enum name: None. Possible values: 信用卡, 贷款, 转账, 登录
+2026-08-12 11:10:17 [INFO] uvicorn.access: 127.0.0.1:8605 - "GET /blacklist HTTP/1.1" 200
+2026-08-12 11:10:17 [INFO] uvicorn.access: 127.0.0.1:8605 - "GET /api/blacklist?page=1&page_size=100 HTTP/1.1" 200
+2026-08-12 11:10:17 [INFO] uvicorn.access: 127.0.0.1:8605 - "GET /api/blacklist?page=1&page_size=20 HTTP/1.1" 200
+2026-08-12 11:10:17 [INFO] uvicorn.access: 127.0.0.1:8605 - "GET /assessments HTTP/1.1" 200
+2026-08-12 11:10:17 [INFO] uvicorn.access: 127.0.0.1:8605 - "GET /api/assessments?page=1&page_size=20 HTTP/1.1" 200
+2026-08-12 11:12:02 [INFO] uvicorn.error: Shutting down
+2026-08-12 11:12:02 [INFO] uvicorn.error: Waiting for application shutdown.
+2026-08-12 11:12:02 [INFO] bank_risk.app.scheduler: [scheduled] stop_scheduler() 完成
+2026-08-12 11:12:02 [INFO] uvicorn.error: Application shutdown complete.
+2026-08-12 11:12:02 [INFO] uvicorn.error: Finished server process [24552]
