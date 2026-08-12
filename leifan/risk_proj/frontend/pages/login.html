@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="OTA 旅游风控平台登录">
+  <title>登录 · 旅盾 RiskOps</title>
+  <link rel="stylesheet" href="/static/css/app.css">
+</head>
+<body class="login-page">
+  <main class="login-shell">
+    <section class="login-brand">
+      <div class="brand-mark login-mark">R</div>
+      <p class="eyebrow">Risk operations center</p>
+      <h1>旅盾 RiskOps</h1>
+      <p>面向机票、酒店、签证与跟团游业务的统一风险运营平台。</p>
+      <div class="login-points"><span>规则分档</span><span>人工审核</span><span>权限隔离</span></div>
+    </section>
+    <section class="login-card">
+      <div><p class="eyebrow">安全访问</p><h2>登录管理后台</h2><p class="muted">请输入员工账号和密码</p></div>
+      <form id="login-form" class="login-form">
+        <div class="field"><label for="username">账号</label><input class="input" id="username" name="username" autocomplete="username" autofocus required></div>
+        <div class="field"><label for="password">密码</label><input class="input" id="password" name="password" type="password" autocomplete="current-password" required minlength="6"></div>
+        <p class="form-error" id="login-error" role="alert"></p>
+        <button class="btn btn-primary login-submit" id="login-submit">登录</button>
+      </form>
+    </section>
+  </main>
+  <script type="module" src="/static/js/login.js"></script>
+</body>
+</html>

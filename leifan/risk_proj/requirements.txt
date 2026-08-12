@@ -1,0 +1,8 @@
+fastapi==0.141.1
+PyMySQL==1.2.0
+python-dotenv==1.2.2
+SQLAlchemy==2.0.51
+uvicorn==0.52.1
+openai==2.54.0
+deepagents==0.7.5
+langchain-openai==1.4.3

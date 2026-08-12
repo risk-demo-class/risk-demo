@@ -1,0 +1,68 @@
+{
+  "model_version": "xgb-20260812090842",
+  "trained_at": "2026-08-12T09:08:42.235066",
+  "model_path": "C:\\Users\\12638\\Desktop\\Project\\risk_proj\\models\\travel_risk_xgboost.ubj",
+  "feature_names": [
+    "log_total_amount",
+    "is_cross_border",
+    "passenger_count",
+    "account_age_days",
+    "real_name_status",
+    "vip_level_ordinal",
+    "order_hour_sin",
+    "order_hour_cos",
+    "days_to_depart",
+    "trip_duration_days",
+    "order_type_flight",
+    "order_type_hotel",
+    "order_type_visa",
+    "order_type_tour",
+    "payment_alipay",
+    "payment_bank_card",
+    "payment_wechat_pay",
+    "payment_active",
+    "visa_reject_history_max",
+    "visa_current_rejected",
+    "flight_ticket_count",
+    "flight_segment_count",
+    "flight_business_cabin",
+    "hotel_room_count",
+    "hotel_non_refundable",
+    "tour_traveler_count",
+    "tour_outbound",
+    "blacklisted_passenger_count"
+  ],
+  "training_rows": 211,
+  "training_label_counts": {
+    "safe": 91,
+    "risky": 120
+  },
+  "label_sources": {
+    "weak_assessment": 211
+  },
+  "validation_rows": 42,
+  "validation_accuracy": 0.880952,
+  "validation_auc": 0.956019,
+  "validation_logloss": 0.366977,
+  "best_iteration": 4,
+  "parameters": {
+    "objective": "binary:logistic",
+    "eval_metric": [
+      "logloss",
+      "auc"
+    ],
+    "max_depth": 4,
+    "eta": 0.06,
+    "min_child_weight": 2,
+    "subsample": 0.85,
+    "colsample_bytree": 0.85,
+    "lambda": 1.0,
+    "alpha": 0.1,
+    "scale_pos_weight": 0.7604166666666666,
+    "seed": 20260812,
+    "nthread": 2
+  },
+  "score_mapping": "p=sigmoid(z); model_score=round(p*100)",
+  "score_fusion": "final=min(max(rule_score,round(0.6*rule_score+0.4*model_score)),100)",
+  "weak_supervision_warning": true
+}
