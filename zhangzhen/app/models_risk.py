@@ -178,7 +178,12 @@ class RiskEvent(Base):
 class RiskFeature(Base):
     __tablename__ = "risk_feature"
 
-    feature_id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True, comment="特征ID")
+    feature_id: Mapped[int] = mapped_column(
+        BigInteger().with_variant(Integer, "sqlite"),
+        primary_key=True,
+        autoincrement=True,
+        comment="特征ID",
+    )
     event_id: Mapped[str] = mapped_column(
         ForeignKey("risk_event.event_id"), nullable=False, comment="关联事件ID"
     )
@@ -275,7 +280,12 @@ class RiskCase(Base):
 class RiskBlacklist(Base):
     __tablename__ = "risk_blacklist"
 
-    blacklist_id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True, comment="黑名单ID")
+    blacklist_id: Mapped[int] = mapped_column(
+        BigInteger().with_variant(Integer, "sqlite"),
+        primary_key=True,
+        autoincrement=True,
+        comment="黑名单ID",
+    )
     blacklist_type: Mapped[BlacklistType] = mapped_column(
         enum_type(BlacklistType, "blacklist_type_enum"), nullable=False, comment="银行黑名单类型"
     )
@@ -340,7 +350,12 @@ class RiskUserProfile(Base):
 class RiskActionLog(Base):
     __tablename__ = "risk_action_log"
 
-    log_id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True, comment="日志ID")
+    log_id: Mapped[int] = mapped_column(
+        BigInteger().with_variant(Integer, "sqlite"),
+        primary_key=True,
+        autoincrement=True,
+        comment="日志ID",
+    )
     operator: Mapped[str] = mapped_column(String(50), nullable=False, comment="操作人")
     action_type: Mapped[ActionType] = mapped_column(
         enum_type(ActionType, "action_type_enum"), nullable=False, comment="操作类型"
@@ -367,7 +382,12 @@ class RiskActionLog(Base):
 class RiskAlert(Base):
     __tablename__ = "risk_alert"
 
-    alert_id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True, comment="告警ID")
+    alert_id: Mapped[int] = mapped_column(
+        BigInteger().with_variant(Integer, "sqlite"),
+        primary_key=True,
+        autoincrement=True,
+        comment="告警ID",
+    )
     alert_type: Mapped[AlertType] = mapped_column(
         enum_type(AlertType, "alert_type_enum"), nullable=False, comment="告警分类"
     )
@@ -410,4 +430,3 @@ RISK_TABLE_NAMES = (
     "risk_action_log",
     "risk_alert",
 )
-

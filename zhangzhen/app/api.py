@@ -8,7 +8,7 @@ from fastapi import FastAPI
 from app import __version__
 from app.config import settings
 from app.database import async_engine
-from app.routers import health_router
+from app.routers import health_router, risk_router
 
 
 @asynccontextmanager
@@ -27,8 +27,8 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
     )
     application.include_router(health_router)
+    application.include_router(risk_router)
     return application
 
 
 app = create_app()
-

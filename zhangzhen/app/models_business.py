@@ -285,7 +285,12 @@ class LoginLog(Base):
 class DeviceFingerprint(Base):
     __tablename__ = "device_fingerprint"
 
-    binding_id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True, comment="绑定记录ID")
+    binding_id: Mapped[int] = mapped_column(
+        BigInteger().with_variant(Integer, "sqlite"),
+        primary_key=True,
+        autoincrement=True,
+        comment="绑定记录ID",
+    )
     device_id: Mapped[str] = mapped_column(String(100), nullable=False, index=True, comment="设备ID")
     user_id: Mapped[str] = mapped_column(
         ForeignKey("customer_info.user_id"), nullable=False, index=True, comment="关联用户"
