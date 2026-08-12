@@ -1,169 +1,213 @@
-# 📊 Insight Demo 课程演示仓库
+# 银行信贷风控系统（AI_Risk · 银行版）
 
-本仓库用于课程各小组的**演示成果提交与展示**。每位同学把自己的代码 / 演示成果推送到**对应行业方向的分支**上。
-
-- 仓库地址：https://github.com/wyxaxx02419/insight_demo
+> 基于尚硅谷电商版 `AI_Risk` 风控框架改造的**银行信贷风控系统**：业务层换成银行业务（贷款/转账/登录），风控核心 9 张表与决策流水线完全复用，特征/规则/模型按银行业务重写。当前已跑通"造数 → 风险检查 → 规则拦截 → XGBoost 训练"完整链路。
 
 ---
 
-## 一、分支说明（按行业方向划分）
+## 一、为什么做这个项目（业务背景）
 
-| 分支名 | 行业方向 | 说明 |
+### 1.1 银行信贷风控和电商风控的差别
+
+电商风控盯的是"订单、支付、售后"，核心是**少发货、多退款、薅羊毛**；银行信贷风控盯的是**借贷全生命周期**，核心矛盾是**信息不对称 + 欺诈黑产**：
+
+- 贷前要回答"**能不能借、是不是骗贷**"——判断借款人身份真假、收入真假、有没有多头负债；
+- 贷中要控制"**钱怎么付**"——放款是否受托支付、资金是否流入楼市股市；
+- 贷后要管理"**钱收不收得回**"——还款监控、逾期催收、有没有被挪用。
+
+业务对象是**借款人（个人/企业）**而不是用户订单，且受强监管约束（2024 版贷款"三个办法"、征信管理条例、个保法等）。
+
+### 1.2 银行特有的典型欺诈场景
+
+这是本项目要防的东西，也是特征/规则/造数的来源：
+
+| 类别 | 典型场景 | 阶段 |
 |---|---|---|
-| `main` | 主分支 | 只读，**禁止直接推送**（已设置保护） |
-| `tourism` | 旅游 | 旅游组同学推送 |
-| `banking` | 银行 | 银行组同学推送 |
-| `education` | 教育 | 教育组同学推送 |
-| `manufacturing` | 制造业 | 制造业组同学推送 |
-| `logistics` | 物流 | 物流组同学推送 |
-| `medical` | 医疗 | 医疗组同学推送 |
-| `telecom` | 电信 | 电信组同学推送 |
-| `sharing-economy` | 共享经济 | 共享经济组同学推送 |
+| 身份欺诈 | 冒名贷款、伪造证件、一人多证 | 贷前 |
+| 材料造假 | 伪造收入证明/银行流水/完税证明 | 贷前 |
+| 黑产包装 | 空壳公司+短期补缴虚构资质、包装征信白户 | 贷前 |
+| 团伙欺诈 | 同设备/同地址/同收款账户批量申请、互保、一房多贷 | 贷前/贷后 |
+| 多头借贷 | 频繁硬查询、隐瞒负债、短期多家申请 | 贷前 |
+| 资金回流 | 经营贷/消费贷流入楼市股市、借新还旧 | 贷中/贷后 |
+| 内部欺诈 | 内外勾结、员工篡改材料 | 全流程 |
 
-> 分支名统一用英文，是为了兼容各类 Git 工具（Windows 下中文分支名容易出问题），中文含义见上表。
+### 1.3 国内监管红线（合规是银行业的生命线）
 
----
-
-## 二、重要规则（务必遵守）
-
-1. ✅ **每位同学只能往自己的分支推送**，分支用自己的名字命名（如 `zhangsan`、`li-xiaoming`）
-2. 🚫 **禁止向 `main` 推送**（已开启分支保护，会直接报错拒绝）
-3. 🚫 **禁止修改、覆盖其他同学的分支**
-4. 📁 建议在分支内先建一个**自己名字的文件夹**，把成果放进去，方便老师和同学查看
-5. ❤️ 尊重他人成果，只提交自己的内容
+- **贷款"三个办法"**（2024-07-01 施行）：尽职调查真实性、审贷分离分级审批、受托支付、贷后管理；
+- **《商业银行互联网贷款管理暂行办法》**：核心风控环节不得外包；
+- **征信监管**：查询须授权、不良信息保存 5 年、保障异议权；
+- **数据合规（PIPL/数安法/网安法）**：最小必要、敏感信息脱敏——本项目身份证/卡号/设备指纹全部只存 SHA-256 哈希；
+- **反洗钱与涉赌涉诈资金链治理**：KYC、大额可疑交易报告、"断卡行动"。
 
 ---
 
-## 三、学生推送步骤（第一次）
+## 二、怎么做的（项目架构与实现）
 
-### 第 0 步：准备工作
+### 2.1 复用边界（基线项目规则）
 
-1. **注册 GitHub 账号**：https://github.com/join （已有账号跳过）
-2. **把你的 GitHub 用户名发给老师**——老师把你加为仓库协作者后，你才有推送权限（邀请链接会发到你的 GitHub 通知里，点 Accept 接受即可）
-3. **安装 Git**：https://git-scm.com/download/win 一路 Next 安装
+按任务书要求，两类东西**不许改**：
 
-### 第 1 步：克隆仓库到本地
-
-打开命令行（Windows 按 `Win+R` 输入 `cmd` 回车；或右键桌面 →「在终端中打开」），执行：
-
-```bash
-git clone https://github.com/wyxaxx02419/insight_demo.git
-cd insight_demo
-```
-
-### 第 2 步：创建自己的分支（用自己的名字）
-
-```bash
-git checkout -b zhangsan
-```
-
-> 分支名建议：名字拼音全小写，多个字用 `-` 连接，例如 `zhangsan`、`wang-xiaoming`、`chenxi`。**不要用中文和空格**。
-
-### 第 3 步：放入你的成果
-
-把代码 / 演示文件（PPT、图片、视频、代码等）复制到仓库文件夹里，建议建一个自己的文件夹：
-
-```bash
-mkdir zhangsan
-# 然后把你的文件放进 zhangsan 文件夹
-```
-
-### 第 4 步：提交并推送（关键！）
-
-```bash
-git add .
-git commit -m "zhangsan 提交旅游行业演示成果"
-git push -u origin zhangsan
-```
-
-看到 `branch 'zhangsan' set up to track` 和进度条走完，就说明**推送成功**了 🎉
-
-### 第 5 步：确认成果
-
-打开 https://github.com/wyxaxx02419/insight_demo ，点击左上角的 **Branch 下拉框**，选择你的分支名 `zhangsan`，即可看到你的文件。
-
----
-
-## 四、以后每次更新（重复这三条）
-
-```bash
-git add .
-git commit -m "更新说明，比如：补充了演示视频"
-git push
-```
-
----
-
-## 五、常见问题（FAQ）
-
-| 问题 | 原因与解决办法 |
+| 模块 | 处理方式 |
 |---|---|
-| `Permission to ... denied` | 老师还没邀请你，或邀请没点接受。把 GitHub 用户名发给老师 |
-| `Updates were rejected` | 你当前不在自己的分支上。先 `git status` 查看，再用 `git checkout 你的分支名` 切回去，最后 `git push` |
-| `master has no upstream branch` | 说明你在 `main` 上，直接用 `git checkout -b 你的名字` 建自己的分支再推 |
-| 推送超时 / 网络错误 | GitHub 网络不稳定，可以开代理，或改用 SSH 方式（见下节） |
-| 忘了自己分支名 | `git branch -a` 查看所有分支（本地+远程） |
+| 风控核心 9 张表（risk_rule/event/feature/assessment/case/blacklist/user_profile/action_log/alert） | 表结构完全复用，只把枚举词汇换成银行业务（事件类型/规则分类/黑名单类型） |
+| 决策流水线（`process_event` 4 步 + `run_risk_check` 7 步） | 流程原样保留，只改业务实体查询和特征计算 |
 
-### 网络不好？用 SSH 方式（可选）
+必须自己写的部分：**17 张银行业务表、25 维银行特征、11 条银行规则、银行造数脚本、XGBoost 训练**。
 
-如果 HTTPS 推送经常超时，可以用 SSH：
+### 2.2 数据层：17 张银行业务表
 
-1. 生成密钥：`ssh-keygen -t ed25519 -C "你的邮箱"`（一路回车）
-2. 查看公钥：`cat ~/.ssh/id_ed25519.pub`，复制全部内容
-3. 粘贴到 GitHub：https://github.com/settings/keys → New SSH key → 保存
-4. 之后用 SSH 地址克隆：
+按信贷全生命周期设计，每张表都为后续特征计算做了索引/冗余设计：
 
-```bash
-git clone git@github.com:wyxaxx02419/insight_demo.git
-cd insight_demo
-git checkout -b zhangsan
-# ... 后面的提交推送步骤一样
+| 层 | 表 | 设计要点 |
+|---|---|---|
+| 客户主档 | `user_info` / `enterprise_info` / `bank_account` | KYC 等级、三源收入、信用分；统一社会信用代码；储蓄卡/信用卡/对公账户 |
+| 信贷生命周期 | `loan_application` / `loan_contract` / `repayment_plan` / `repayment_record` | 申请→审批→放款→还款计划→还款流水全流程 |
+| 贷前风控 | `credit_report` / `income_verify` / `collateral` / `guarantee` | 征信快照（硬查询/五级分类）、收入三源交叉核验、一房多贷查重、互保/关联担保 |
+| 行为反欺诈 | `transaction` / `login_log` / `device_fingerprint` / `ip_geo_location` | 资金流向监控、登录行为、设备指纹、代理/Tor IP |
+| 反欺诈扩展 | `blacklist_extra` / `user_relation` | 行业黑名单、知识图谱关联（共享设备/地址/互保/资金往来） |
+
+**为特征计算做的设计**：子表冗余 `user_id` 免 join；`(user_id, time)` 复合索引支撑"近 30 天申请数/逾期期数"；`id_card_hash` / `cert_no_hash` / `fingerprint_hash` 支撑同人、一房多贷、设备共用识别；PII 只存哈希（合规）。
+
+### 2.3 造数：内置 7 类欺诈人群
+
+`scripts/gen_business_data.py` 用固定种子生成 **120 个借款人、9308 行业务数据**，并且刻意内置了 7 类欺诈人群，让规则有真实样本可命中、模型有正负样本可学：
+
+团伙共享设备/收款账户、多头借贷（60 天内 3-4 笔申请）、收入申报虚高 3-6 倍、空壳公司（注册短/实缴低/纳税近 0）、逾期 M1/M2/M3、放款资金回流（受托支付后转回本人）、内部员工骗贷。
+
+### 2.4 风控流程：事件入口 + 7 步决策流水线
+
+**`process_event`（4 步）**：① 业务实体校验（借款人/申请/合同/还款/转账/登录是否存在、归属是否一致，防越权）→ ② 补全事件参数 → ③ 黑名单前置拦截（用户/身份证/手机号/设备指纹/IP/银行卡/企业信用代码，撞黑直接拒）→ ④ 进决策引擎。
+
+**`run_risk_check`（7 步）**：① 准备上下文 → ② 写 `risk_event` 事件审计 → ③ 算 25 维特征 → ④ 特征快照落库 `risk_feature` → ⑤ 加载并匹配规则 → ⑥ 评分决策（公式 + 一票否决 + 双轨融合）→ ⑦ 落库评估/案件/画像并返回响应。
+
+**评分公式**：`final_score = max(各规则分) + 3 × 额外命中数`（上限 100），再与 XGBoost 概率按 0.5/0.5 融合；`极高` 级规则一票否决（如设备多人共用、收入虚高），ML 给低分也翻不了案。
+
+### 2.5 特征工程：25 维银行特征
+
+| 族 | 维度 | 代表特征 |
+|---|---|---|
+| user_*（13） | 借款人 | 近 30/60 天申请数、平均 DTI、当前逾期期数、征信近 24 月逾期、硬查询、收入申报偏差比、开户天数、关联关系数 |
+| order_*（9） | 事件（按 event_type 映射） | 申请金额/期限/DTI、是否凌晨、用途敏感度、本次征信分/硬查询/五级分类/收入偏差 |
+| addr_*（3） | 设备/IP | 设备关联用户数（团伙）、设备年龄（新设备）、IP 是否代理/Tor/境外 |
+
+### 2.6 规则引擎：11 条银行业务规则
+
+全部命中真实样例数据（见"落地效果"）。核心规则：
+
+- R003 收入申报显著虚高（`order_income_verify_gap ≥ 1.0`）→ 极高/拒绝
+- R006 设备多人共用（`addr_device_share_count ≥ 3`）→ 极高/拒绝（一票否决）
+- R009 征信五级分类异常 → 极高/拒绝
+- R004 短期多头借贷（60 天 ≥ 3 笔）→ 高/人工审核
+- R008 征信硬查询过多（≥ 6 次）→ 高/人工审核
+- R010 逾期借款人再申请 → 高/人工审核
+- R001 大额转账（≥ 10 万）→ 高/人工审核
+- R002 凌晨高风险操作 / R007 代理秒拨 IP / R011 关联关系密集 → 标记
+
+### 2.7 模型：XGBoost 双轨融合
+
+训练数据来自真实跑过的 `risk_assessment`（1931 条，正例 11.5%），标签 = 人工审核/拒绝。特征顺序固定 25 维，80/20 stratify 拆分 + 早停 + `scale_pos_weight` 平衡样本，训练结果保存到 `app/engine/xgb_model.json`，线上推理概率经 sigmoid 校准后与规则分融合。
+
+---
+
+## 三、实际落地效果（验证结果）
+
+### 3.1 数据规模（当前库）
+
+| 层 | 规模 |
+|---|---|
+| 业务数据 | 120 借款人 · 199 笔贷款申请 · 87 份合同 · 5070 条还款计划 · 1781 条还款流水 · 818 条交易流水 · 合计 9308 行 |
+| 风控评估 | 1942 条评估（拒绝 216 / 人工审核 17 / 标记 7 / 通过 1702） |
+| 事件与特征 | 1942 条 `risk_event` · 48550 条特征快照 |
+| 案件 | 227 条（215 自动拒绝 + 12 待审核） |
+| 规则与黑名单 | 11 条规则 · 4 条黑名单演示数据 |
+
+### 3.2 规则命中情况（11 条全部命中）
+
+设备共用 R006 命中 169 次、代理 IP R007 命中 75 次、五级异常 R009 命中 40 次、凌晨操作 R002 命中 39 次、硬查询过多 R008 命中 37 次、收入虚高 R003 命中 27 次……远超任务书"≥5 条规则、≥3 条命中"要求。
+
+### 3.3 模型指标
+
+```
+n=1931, 正例=223 (11.5%)
+训练集: AUC=1.0000, F1=0.9933, Acc=0.9984
+验证集: AUC=1.0000, F1=0.9890 (阈值=0.35)
+Top3 特征: user_avg_debt_ratio / user_hard_query_6m / order_income_verify_gap (解释 65.7% 决策)
+```
+
+> 说明：AUC=1.0 是因为训练标签来自规则决策，模型学到的是规则边界（教学项目预期效果）；真实业务标签来自人工审核，AUC 不会这么高。
+
+### 3.4 端到端演示（真实跑通）
+
+| 场景 | 输入 | 结果 |
+|---|---|---|
+| 团伙成员申请 | U0003 / 贷款申请 LA0003 | **拒绝 98 分/极高**，6 条规则命中，ML 0.998 |
+| 多头借贷申请 | U0013 / 贷款申请 LA0020 | **拒绝 84 分**（R004+R008 + ML 融合） |
+| 正常用户申请 | U0055 / 贷款申请 LA0100 | **通过 2 分/低**，ML 0.016 |
+| 撞黑用户 | U0001 / 转账 | **黑名单拦截**（手机号） |
+| 防越权 | U0003 拿 U0002 的申请 LA0002 | **403 归属不一致** |
+
+演示截图 8 张在 `screenshots/`：仪表盘、风险检查表单/结果、案件管理、评估历史、规则列表、黑名单、AI Agent。
+
+---
+
+## 四、快速开始
+
+环境：Python 3.11+，MySQL 8.0（本机 `root/123321`，库名 `ecs`）。
+
+```powershell
+# 1. 安装依赖（已装可跳过）
+uv pip install -r uv/requirements-uv.txt
+
+# 2. 清库重建：17 银行业务表 + 数据 + 9 风控表 + 11 规则
+python scripts/init_db.py --yes
+
+# 3. （可选）重新造数，默认 120 个借款人，可 --users 200 / --insert 直连入库
+python scripts/gen_business_data.py
+
+# 4. 批量生成风控事件（训练数据；--good-rate 0.35 提升正例比）
+python scripts/gen_bank_risk_events.py --good-rate 0.35
+
+# 5. 训练 XGBoost（输出 val_auc / val_f1）
+python scripts/train_xgb_model.py
+
+# 6. 启动 Web 服务
+python run_app.py            # 打开 http://127.0.0.1:8000
+
+# 7. 生成演示截图（可选）
+python scripts/capture_screenshots.py
+```
+
+> 注意：`init_db --yes` 会清空库，跑完必须重新执行第 4/5 步，否则评估历史与模型会丢。
+
+---
+
+## 五、目录结构
+
+```
+app/
+  models_business.py      # 17 张银行业务表 ORM
+  models_risk.py          # 9 张风控表 ORM（结构不动，枚举换银行词汇）
+  engine/feature.py       # 25 维银行特征
+  engine/rule.py          # 规则引擎（JSON 条件求值）
+  engine/decision.py      # 7 步决策流水线
+  engine/ml_model.py      # XGBoost 加载/推理/训练
+  service/event.py        # process_event 4 步入口
+  service/validator.py    # 业务实体校验 + 防越权
+sql/                      # init_business_tables/data + init_risk_tables/data
+scripts/
+  gen_business_data.py    # 造数（7 类欺诈人群）
+  gen_bank_risk_events.py # 批量生成风控评估
+  train_xgb_model.py      # XGBoost 训练
+  capture_screenshots.py  # 演示截图
+screenshots/              # 8 张演示截图
 ```
 
 ---
 
-## 六、老师（管理员）操作备忘
+## 六、已知边界
 
-### 1. 添加学生为协作者（学生有推送权限的前提）
-
-```bash
-gh repo add-collaborator wyxaxx02419/insight_demo <学生GitHub用户名> --permission push
-```
-
-或网页操作：仓库页面 → **Settings → Collaborators → Add people** → 输入学生用户名 → 选择 **Write** 权限 → 发送邀请。
-
-### 2. 严格锁定：每个分支只允许本组同学推送（强烈建议）
-
-默认情况下，协作者可以推送到任意分支。为了真正做到「只能推送自己的分支」，收集齐学生用户名后，对每个分支设置「只允许指定用户推送」：
-
-```bash
-# 先准备好 students.csv，格式：分支名,用户名（一行一个学生）
-# 例如：
-# tourism,zhangsan
-# tourism,lisi
-# banking,wangwu
-
-# 然后运行下面的脚本（bash / git-bash）
-while IFS=, read -r branch user; do
-  gh api -X PUT "repos/wyxaxx02419/insight_demo/branches/$branch/protection" \
-    -H "Accept: application/vnd.github+json" \
-    --input - <<EOF
-{"required_status_checks":null,"enforce_admins":false,
- "required_pull_request_reviews":null,
- "restrictions":{"users":["$user"],"teams":[],"apps":[]}}
-EOF
-done < students.csv
-```
-
-> 说明：脚本会给每个分支设置「仅允许指定学生 + 老师推送」。注意一个分支有多个学生时，后执行的行会覆盖前面的 users 列表——如果每组多人，把同分支的所有用户名放进一个数组再设置一次即可（或直接找我帮你配置，把名单给我就行）。
-
-### 3. 查看仓库状态
-
-```bash
-gh api repos/wyxaxx02419/insight_demo/branches --jq '.[].name'   # 列出所有分支
-gh repo view wyxaxx02419/insight_demo                            # 查看仓库信息
-```
-
----
-
-*本指南由老师统一发布，如有问题请私信老师。祝大家演示顺利！🎓*
+- `tests/` 已切换为银行版核心测试（44 通过/1 跳过），旧电商用例归档在 `tests/legacy_ecommerce/`（pytest 自动忽略）；
+- 风控核心 9 张表的**列结构**保持基线不变，只改了枚举值集合；
+- `risk_user_profile` 字段为银行语义复用（贷款申请笔数/当前逾期期数/逾期风险度/平均申请金额/关联关系数/征信近24月逾期），
+  明细见 `app/engine/decision.py::_update_user_profile`；`risk_feature.entity_type` 枚举沿用基线
+  （用户=借款人 / 订单=事件实体 / 地址=设备-IP），列结构未动；
+- 演示讲解稿见 `讲解稿.md`，LLM 协作复盘见 `agent_design.md`。

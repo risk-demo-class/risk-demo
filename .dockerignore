@@ -1,0 +1,63 @@
+# Docker 构建忽略 (build context 是项目根, 排除不需要打进镜像的大文件/敏感文件)
+# 与 docker/.dockerignore 保持一致; 注意 docker/.dockerignore 只对 docker/ 生效,
+# 根目录这个才是真正生效的 (context 根)
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+.eggs/
+.pytest_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+.tox/
+
+# 虚拟环境 (最大头, 不打进镜像)
+venv/
+env/
+.venv/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# 测试 (镜像里不需要)
+tests/
+
+# 文档/截图 (镜像里不需要)
+docs/
+*.md
+!README.md
+Z_MyFile/screenshots/
+
+# 日志
+*.log
+logs/
+
+# uv / docker 自身元数据
+uv/
+docker/
+
+# 环境变量/临时 (敏感, 不进镜像; 运行时用 docker-compose environment 注入)
+.env
+.env.local
+.env.*.local
+*.bak
+*.tmp
+
+# Git
+.git/
+.gitignore
+
+# 构建产物
+build/
+dist/
+*.egg
