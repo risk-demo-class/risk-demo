@@ -1,0 +1,55 @@
+{
+  "training_samples": 842,
+  "validation_samples": 198,
+  "training_label_0": 374,
+  "training_label_1": 468,
+  "validation_label_0": 88,
+  "validation_label_1": 110,
+  "accuracy": 0.989899,
+  "precision": 0.982143,
+  "recall": 1.0,
+  "f1": 0.990991,
+  "roc_auc": 0.999587,
+  "confusion_matrix": [
+    [
+      86,
+      2
+    ],
+    [
+      0,
+      110
+    ]
+  ],
+  "best_iteration": 50,
+  "scale_pos_weight": 0.799145,
+  "warmup_rounds": 50,
+  "feature_count": 25,
+  "leakage_audit": {
+    "train_dealers": 140,
+    "validation_dealers": 35,
+    "dealer_overlap": 0,
+    "source_overlap": 0,
+    "exact_feature_vector_overlap": 0
+  },
+  "parameters": {
+    "objective": "binary:logistic",
+    "eval_metric": [
+      "logloss",
+      "auc"
+    ],
+    "max_depth": 6,
+    "eta": 0.1,
+    "min_child_weight": 3,
+    "reg_alpha": 0.1,
+    "reg_lambda": 1.0,
+    "gamma": 0.0,
+    "subsample": 0.8,
+    "colsample_bytree": 0.8,
+    "scale_pos_weight": 0.7991452991452992,
+    "tree_method": "hist",
+    "seed": 42,
+    "verbosity": 0
+  },
+  "near_perfect_score_warning": true,
+  "score_interpretation": "规则弱监督标签；高分表示模型较好地模仿当前规则，不代表真实欺诈检测能力"
+}
