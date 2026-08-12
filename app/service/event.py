@@ -2,16 +2,17 @@
 事件处理管道 (process_event 统一入口)
 
 4 步业务流:
-  1. 业务实体校验 (用户/订单/售后是否存在, 归属是否一致)
+  1. 业务实体校验 (客户/贷款申请/还款是否存在, 归属是否一致)
   2. 自动补全关联业务参数 (order_id, receive_id)
   3. 黑名单前置拦截 (用户/地址/手机号 3 种类型, 撞黑就拒, 不再跑 7 步)
   4. 调用风控决策引擎 run_risk_check (7 步)
 
 【P1-S9 修复 2026-08-07】原代码只查"用户"黑名单, "地址"和"手机号"加了也用不上.
 现在按以下规则查:
-  - 用户黑名单: 必查 (任何 event_type)
-  - 地址黑名单: 有 receive_id 时查 (下单/支付/售后 都有)
-  - 手机号黑名单: 有 receive_id 时, 查 receive_info.receiver_phone
+  - 客户黑名单: 必查 (任何 event_type)
+  - 地址黑名单: 有 receive_id 时查 (贷款申请/放款/还款 都有)
+  - 手机号黑名单: 有 receive_id 时, 查 contact_info.contact_phone
+  - 设备黑名单: 有 order_id 时, 查 loan_application.device_id
 所以 enrich_request 提到撞黑检查之前, 保证 receive_id 已知.
 """
 import asyncio

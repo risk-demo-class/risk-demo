@@ -420,16 +420,16 @@ if __name__ == "__main__":
     print("\n[2] 25 维特征 → numpy 数组 (_features_to_array):")
     print(f"  FEATURE_COLUMNS 长度 = {len(FEATURE_COLUMNS)}  (必须是 25, 跟 feature.py 对齐)")
     sample = {
-        "user_total_orders": 3, "user_orders_30d": 1, "user_orders_7d": 0,
-        "user_total_amount": 5000, "user_avg_order_amount": 1666.67,
-        "user_max_order_amount": 3000,
-        "user_refund_count": 0, "user_refund_rate": 0.0, "user_refund_amount": 0,
-        "user_postsale_count": 0, "user_postsale_rate": 0.0,
-        "user_cancel_count": 0, "user_complaint_count": 0, "user_address_count": 1,
-        "order_total_amount": 1500, "order_item_count": 1, "order_sku_count": 1,
-        "order_discount_amount": 0, "order_discount_rate": 0.0,
-        "order_pay_interval": 30, "order_is_night": 0, "order_category_count": 1,
-        "addr_total_count": 1, "addr_province_count": 1, "addr_is_new": 0,
+        "cust_total_loans": 3, "cust_loans_30d": 1, "cust_loans_7d": 0,
+        "cust_total_amount": 5000, "cust_avg_loan_amount": 1666.67,
+        "cust_max_loan_amount": 3000,
+        "cust_overdue_count": 0, "cust_overdue_rate": 0.0, "cust_overdue_amount": 0,
+        "cust_repay_count": 0, "cust_repay_rate": 0.0,
+        "cust_reject_count": 0, "cust_complaint_count": 0, "cust_contact_count": 1,
+        "loan_amount": 1500, "loan_term_month": 12, "loan_debt_ratio": 0.3,
+        "loan_apply_interval_sec": 30, "loan_apply_is_night": 0,
+        "loan_to_income": 0.3, "loan_apply_product_count": 1, "loan_income_debt_ratio": 0.2,
+        "dev_device_count": 1, "dev_ip_province_count": 1, "dev_is_new": 0,
     }
     arr = _features_to_array(sample)
     print(f"  shape           = {arr.shape}  (期望 (1, 25))")
@@ -458,7 +458,7 @@ if __name__ == "__main__":
     # 造 300 条, 200 负 100 正 (不均衡, 触发 scale_pos_weight)
     X_demo = np.random.uniform(0, 1, size=(300, 25)).astype(np.float32)
     y_demo = (np.random.rand(300) > 0.66).astype(np.int32)  # 约 100 正
-    # 让 user_total_orders (FEATURE_COLUMNS[0]) 强相关 y, 方便看特征重要性
+    # 让 cust_total_loans (FEATURE_COLUMNS[0]) 强相关 y, 方便看特征重要性
     X_demo[:, 0] = y_demo.astype(np.float32) * 8 + np.random.randn(300) * 0.5
     print(f"  合成数据: n={len(y_demo)}, pos={int(y_demo.sum())} ({100*y_demo.mean():.1f}%)")
     # 用 tmp path 避免覆盖真实模型文件

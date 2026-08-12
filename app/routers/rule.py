@@ -210,9 +210,9 @@ if __name__ == "__main__":
     example = {
         "rule_id": "R031",
         "rule_name": "Demo 规则",
-        "rule_category": "订单欺诈",
-        "event_type": "下单",
-        "rule_condition": {"field": "order_total_amount", "op": ">=", "value": 1000},
+        "rule_category": "信用风险",
+        "event_type": "贷款申请",
+        "rule_condition": {"field": "loan_debt_ratio", "op": ">=", "value": 0.5},
         "risk_level": "高",
         "risk_score": 50,
         "action": "人工审核",

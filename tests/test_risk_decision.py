@@ -34,7 +34,7 @@ class TestScoreCalculation:
         """多规则命中: max + BONUS × extra_count"""
         hits = [
             RuleHitResult(_MockRule("R1", "测试1", "欺诈风险", "高", 70, "人工审核")),
-            RuleHitResult(_MockRule("R2", "测试2", "支付风险", "中", 40, "标记")),
+            RuleHitResult(_MockRule("R2", "测试2", "账户风险", "中", 40, "标记")),
             RuleHitResult(_MockRule("R3", "测试3", "账户风险", "低", 20, "通过")),
         ]
         # max=70, extra=2, bonus=3*2=6, total=76
@@ -142,7 +142,7 @@ class TestVetoHardVetoAfterFusion:
         from app.engine import decision
 
         veto_hit = RuleHitResult(_MockRule(
-            "R007", "30天30单", "支付风险", "极高", 90, "拒绝",
+            "R007", "30天30单", "账户风险", "极高", 90, "拒绝",
         ))
 
         class _FakeMlResult:
@@ -406,9 +406,9 @@ class TestCaseCategoryAggregation:
         ctx = SimpleNamespace(request=request, user_id="1001")
         # priority 高的 R007 (支付风险) 排第一
         rules = [
-            RuleHitResult(_MockRule("R007", "30天30单", "支付风险", "极高", 90, "拒绝")),
-            RuleHitResult(_MockRule("R006", "7天10单", "支付风险", "高", 70, "人工审核")),
-            RuleHitResult(_MockRule("R008", "金额异常", "支付风险", "高", 65, "人工审核")),
+            RuleHitResult(_MockRule("R007", "30天30单", "账户风险", "极高", 90, "拒绝")),
+            RuleHitResult(_MockRule("R006", "7天10单", "账户风险", "高", 70, "人工审核")),
+            RuleHitResult(_MockRule("R008", "金额异常", "账户风险", "高", 65, "人工审核")),
             RuleHitResult(_MockRule("R001", "5000+", "欺诈风险", "高", 70, "人工审核")),
         ]
 
@@ -432,7 +432,7 @@ class TestCaseCategoryAggregation:
         log = next((x for x in db.added if x.__class__.__name__ == "RiskActionLog"), None)
         assert case is not None and log is not None
         # 3 条支付风险 vs 1 条订单欺诈 → 取多的
-        assert case.case_category == "支付风险", (
+        assert case.case_category == "账户风险", (
             f"应取命中数最多的 '支付风险', 实际 {case.case_category}"
         )
 

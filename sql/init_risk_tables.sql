@@ -1,5 +1,5 @@
 -- ============================================
--- 电商风控系统 - 风控表 DDL 初始化脚本
+-- 银行信贷风控系统 - 风控表 DDL 初始化脚本
 -- 在 ecs 数据库中创建 7 张新增风控表
 -- ============================================
 
@@ -82,7 +82,7 @@ CREATE TABLE IF NOT EXISTS `risk_case` (
     `risk_detail` JSON COMMENT '风险详情',
     -- 【2026-08-07 补】业务回溯字段: decision.py 写入, "重做检查" 按钮回查用
     -- 之前漏在 DDL 里, 导致 ORM 查 risk_case.source_id 时报 1054 (修复: 合并自原 migration_add_case_source_id.sql)
-    `source_id` VARCHAR(50) DEFAULT NULL COMMENT '原始业务ID(订单/售后/投诉ID), 重做检查时用',
+    `source_id` VARCHAR(50) DEFAULT NULL COMMENT '原始业务ID(贷款申请/还款/投诉ID), 重做检查时用',
     `event_type` ENUM('贷款申请','放款','还款','客户投诉') DEFAULT NULL COMMENT '触发案件的事件类型',
     `reviewer` VARCHAR(50) DEFAULT NULL COMMENT '审核人',
     `review_comment` TEXT COMMENT '审核意见',

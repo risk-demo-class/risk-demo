@@ -1,5 +1,5 @@
 """
-电商风控系统 - 风控表 ORM (7 张)
+银行信贷风控系统 - 风控表 ORM (7 张)
 风控系统自建表, 跟业务表分开管理
 - 规则配置 (RiskRule)
 - 事件审计 (RiskEvent / RiskFeature / RiskAssessment)
@@ -185,7 +185,7 @@ class RiskCase(Base):
     review_comment: Mapped[Optional[str]] = mapped_column(Text, comment="审核意见")
     review_time: Mapped[Optional[datetime]] = mapped_column(DateTime, comment="审核时间")
     # --- 业务回溯字段 (重做检查时使用) ---
-    source_id: Mapped[Optional[str]] = mapped_column(String(50), comment="原始业务ID(订单/售后/投诉ID)")
+    source_id: Mapped[Optional[str]] = mapped_column(String(50), comment="原始业务ID(贷款申请/还款/投诉ID)")
     event_type: Mapped[Optional[str]] = mapped_column(
         Enum("贷款申请", "放款", "还款", "客户投诉", name="case_event_type_enum"),
         comment="触发案件的事件类型",

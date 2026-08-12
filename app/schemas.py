@@ -311,7 +311,7 @@ if __name__ == "__main__":
 
     # 1. RiskCheckRequest — 入口 (前端"风险检查"页触发)
     req = RiskCheckRequest(
-        event_type="下单", source_id="ord_demo_001", user_id="U0001",
+        event_type="贷款申请", source_id="ln_demo_001", user_id="C00001",
         order_id="ord_demo_001", receive_id="rec_001",
         event_data={"amount": 5000, "category": "电子产品"},
     )
@@ -321,14 +321,14 @@ if __name__ == "__main__":
     # 2. RuleHitInfo + RiskCheckResponse — 7 步流水线返回
     hits = [
         RuleHitInfo(
-            rule_id="R002", rule_name="单笔极端高额订单",
-            rule_category="订单欺诈", risk_level="极高",
-            risk_score=95, action="拒绝",
-            description="单笔订单实付金额≥10000元, 一票否决",
+            rule_id="R102", rule_name="严重多头借贷",
+            rule_category="欺诈风险", risk_level="极高",
+            risk_score=90, action="拒绝",
+            description="近30天贷款申请≥8笔, 一票否决",
         ),
         RuleHitInfo(
-            rule_id="R005", rule_name="高折扣率订单",
-            rule_category="订单欺诈", risk_level="高",
+            rule_id="R201", rule_name="负债率过高",
+            rule_category="信用风险", risk_level="高",
             risk_score=65, action="人工审核",
         ),
     ]
@@ -336,7 +336,7 @@ if __name__ == "__main__":
         assessment_id="ast_demo_xxx", event_id="evt_demo_xxx",
         user_id="U0001", final_score=95, risk_level="极高", decision="拒绝",
         rule_count=2, triggered_rules=hits,
-        features={"user_total_orders": 3, "order_total_amount": 15000},
+        features={"cust_total_loans": 3, "loan_amount": 15000},
         create_time=datetime.now(),
         ml_score=0.92, ml_decision="拒绝",
     )
@@ -352,7 +352,7 @@ if __name__ == "__main__":
     # 3. AssessmentDetailResponse (P3-S9) — 评估历史详情
     detail = AssessmentDetailResponse(
         assessment_id="ast_demo_xxx", event_id="evt_demo_xxx",
-        user_id="U0001", event_type="下单", event_source_id="ord_demo_001",
+        user_id="C00001", event_type="贷款申请", event_source_id="ln_demo_001",
         final_score=95, risk_level="极高", decision="拒绝",
         rule_count=2, triggered_rules=hits,
         create_time=datetime.now(),

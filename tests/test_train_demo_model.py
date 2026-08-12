@@ -21,11 +21,11 @@ class TestTrainDemoModelStructure:
         assert SCRIPT.exists()
 
     def test_has_7_pattern_generators(self):
-        """必须有 6 种正例模式 + 1 种正常模式 = 7 个生成器."""
+        """必须有 6 种正例模式 + 1 种正常模式 = 7 个生成器 (银行版)."""
         src = SCRIPT.read_text(encoding="utf-8")
-        for name in ["_gen_high_refund_rate", "_gen_high_complaint", "_gen_high_amount",
-                     "_gen_multi_address", "_gen_night_high_freq", "_gen_mixed_high_risk",
-                     "_gen_normal_user"]:
+        for name in ["_gen_multi_loan", "_gen_high_debt", "_gen_large_amount",
+                     "_gen_overdue_history", "_gen_night_high_freq", "_gen_device_anomaly",
+                     "_gen_normal_customer"]:
             assert f"def {name}(" in src, f"缺模式: {name}"
 
     def test_uses_correct_feature_order(self):
@@ -36,10 +36,10 @@ class TestTrainDemoModelStructure:
         assert "N_FEATURES == 25" in src
 
     def test_saves_to_default_path(self):
-        """默认保存到 app/engine/xgb_model.json."""
+        """默认保存到 ml_models/xgb_demo.json (不覆盖真实 PD 模型)."""
         src = SCRIPT.read_text(encoding="utf-8")
-        m = re.search(r'--model-path.*?default\s*=\s*os\.path\.join\([^,]+,\s*"app",\s*"engine",\s*"xgb_model\.json"\)', src, re.DOTALL)
-        assert m, "默认应保存到 app/engine/xgb_model.json"
+        m = re.search(r'--model-path.*?default\s*=\s*os\.path\.join\([^,]+,\s*"ml_models",\s*"xgb_demo\.json"\)', src, re.DOTALL)
+        assert m, "默认应保存到 ml_models/xgb_demo.json"
 
     def test_uses_ml_model_hyperparams(self):
         """训练超参跟 ml_model.py 一致 (max_depth 6 / lr 0.1 / min_child_weight 3 等)."""
@@ -79,42 +79,42 @@ class TestSyntheticDatasetGeneration:
     def test_gen_synthetic_dataset_feature_order_matches_columns(self):
         """合成数据的特征顺序必须跟 FEATURE_COLUMNS 一致, 否则训练/推理错位.
 
-        注: 只测单种模式 (高退款率) 的特征范围, 6 种模式轮换时整体范围更大.
+        注: 只测单种模式 (多头借贷) 的特征范围, 6 种模式轮换时整体范围更大.
         """
         import sys
         for p in [str(ROOT)]:
             if p not in sys.path:
                 sys.path.insert(0, p)
-        from scripts.train_demo_model import _gen_high_refund_rate
+        from scripts.train_demo_model import _gen_multi_loan
         import random
         rng = random.Random(42)
-        # 拿 10 个高退款率样本
-        X = np.array([_gen_high_refund_rate(rng) for _ in range(10)])
-        # 第 1 列 (idx=0) 应该是 user_total_orders (uniform 5-30)
-        assert (X[:, 0] >= 5).all() and (X[:, 0] <= 30).all(), (
-            f"user_total_orders 应该是 5-30, 实际范围: {X[:, 0].min()}-{X[:, 0].max()}"
+        # 拿 10 个多头借贷样本
+        X = np.array([_gen_multi_loan(rng) for _ in range(10)])
+        # 第 1 列 (idx=0) 应该是 cust_total_loans (uniform 8-40)
+        assert (X[:, 0] >= 8).all() and (X[:, 0] <= 40).all(), (
+            f"cust_total_loans 应该是 8-40, 实际范围: {X[:, 0].min()}-{X[:, 0].max()}"
         )
-        # 第 8 列 (idx=8) 应该是 user_refund_rate (uniform 0.3-0.8)
-        assert (X[:, 8] >= 0.3).all() and (X[:, 8] <= 0.8).all(), (
-            f"user_refund_rate 应该是 0.3-0.8, 实际: {X[:, 8].min()}-{X[:, 8].max()}"
+        # 第 2 列 (idx=1) 应该是 cust_loans_30d (uniform 5-15, 多头信号)
+        assert (X[:, 1] >= 5).all() and (X[:, 1] <= 15).all(), (
+            f"cust_loans_30d 应该是 5-15, 实际: {X[:, 1].min()}-{X[:, 1].max()}"
         )
 
     def test_normal_user_low_risk_features(self):
-        """正常用户模式: 退款率/投诉数/大额订单 都应偏低."""
+        """正常客户模式: 逾期/负债率/大额申请 都应偏低."""
         import sys
         for p in [str(ROOT)]:
             if p not in sys.path:
                 sys.path.insert(0, p)
-        from scripts.train_demo_model import _gen_normal_user
+        from scripts.train_demo_model import _gen_normal_customer
         import random
         rng = random.Random(42)
-        X = np.array([_gen_normal_user(rng) for _ in range(100)])
-        # 负例: user_refund_rate (col 8) <= 0.05
-        assert (X[:, 8] <= 0.05).all(), f"正常用户 refund_rate 应 <= 0.05, 实际最大: {X[:, 8].max()}"
-        # 负例: user_complaint_count (col 12) <= 1
-        assert (X[:, 12] <= 1).all(), f"正常用户 complaint_count 应 <= 1, 实际最大: {X[:, 12].max()}"
-        # 负例: user_max_order_amount (col 5) <= 3000
-        assert (X[:, 5] <= 3000).all(), f"正常用户 max_order 应 <= 3000, 实际最大: {X[:, 5].max()}"
+        X = np.array([_gen_normal_customer(rng) for _ in range(100)])
+        # 负例: cust_overdue_rate (col 7) <= 0.05
+        assert (X[:, 7] <= 0.05).all(), f"正常客户 overdue_rate 应 <= 0.05, 实际最大: {X[:, 7].max()}"
+        # 负例: cust_complaint_count (col 12) <= 1
+        assert (X[:, 12] <= 1).all(), f"正常客户 complaint_count 应 <= 1, 实际最大: {X[:, 12].max()}"
+        # 负例: loan_debt_ratio (col 16) <= 0.3
+        assert (X[:, 16] <= 0.3).all(), f"正常客户 loan_debt_ratio 应 <= 0.3, 实际最大: {X[:, 16].max()}"
 
 
 class TestTrainedModelQuality:
@@ -164,19 +164,19 @@ class TestTrainedModelQuality:
         booster = xgb.Booster()
         booster.load_model(str(model_path))
         # 推理 1 个样本 (正常用户)
-        from scripts.train_demo_model import _gen_normal_user, _gen_high_refund_rate
+        from scripts.train_demo_model import _gen_normal_customer, _gen_multi_loan
         import random
         rng = random.Random(123)
-        X_normal = _gen_normal_user(rng).reshape(1, -1)
-        X_risk = _gen_high_refund_rate(rng).reshape(1, -1)
+        X_normal = _gen_normal_customer(rng).reshape(1, -1)
+        X_risk = _gen_multi_loan(rng).reshape(1, -1)
         from app.engine.ml_model import FEATURE_COLUMNS
         dmat_normal = xgb.DMatrix(X_normal, feature_names=FEATURE_COLUMNS)
         dmat_risk = xgb.DMatrix(X_risk, feature_names=FEATURE_COLUMNS)
         prob_normal = float(booster.predict(dmat_normal)[0])
         prob_risk = float(booster.predict(dmat_risk)[0])
-        # 正常用户 < 0.5, RISK 用户 > 0.5
-        assert prob_normal < 0.5, f"正常用户应 < 0.5, 实际: {prob_normal}"
-        assert prob_risk > 0.5, f"RISK 用户应 > 0.5, 实际: {prob_risk}"
+        # 正常客户 < 0.5, 多头借贷客户 > 0.5
+        assert prob_normal < 0.5, f"正常客户应 < 0.5, 实际: {prob_normal}"
+        assert prob_risk > 0.5, f"多头客户应 > 0.5, 实际: {prob_risk}"
         # RISK 应该比 normal 高很多 (区分度)
         assert prob_risk - prob_normal > 0.3, (
             f"区分度应 > 0.3, 实际: {prob_risk - prob_normal:.4f}"
