@@ -1,6 +1,6 @@
 # Spec: 电商风控 → 银行信贷风控 全量领域迁移
 
-> 状态：`ready-for-agent` · 来源：Q&A 对齐（Q1 全量替换 / Q2 信贷审批主线 / Q3 四事件 / Q4 表映射）
+> 状态：`done`（2026-08-12 T-01..T-10 全部落地，360 测试通过并合并 bank-migration → main）
 > 说明：本项目无 issue tracker（非 git 仓库），本 spec 落地为文件，等同发布。
 
 ---
