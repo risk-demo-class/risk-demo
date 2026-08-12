@@ -20,10 +20,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import AsyncSessionLocal
 from app.engine.feature import compute_user_features
 from app.models import (
-    OrderDetail,
-    OrderInfo,
-    Postsale,
-    ReceiveInfo,
+    CodTransaction,
+    DangerousDeclaration,
+    Parcel,
+    ReceiverInfo,
     RiskAssessment,
     RiskBlacklist,
     RiskCase,
@@ -374,159 +374,146 @@ async def _analyze_rule_effectiveness_impl(*, db: AsyncSession) -> str:
 # 业务数据查询 (字典派发 6 种 query_type)
 # ============================================================
 
-async def _biz_user_orders(db: AsyncSession, user_id: str, order_id: str, limit: int) -> list[Any]:
-    """用户的所有订单 (含聚合总金额). LEFT JOIN 保没明细的订单 total_amount 显 0."""
-    order_total_subq = (
-        select(
-            OrderDetail.order_id,
-            func.coalesce(func.sum(OrderDetail.final_amount), 0).label("total_amount"),
-        )
-        .group_by(OrderDetail.order_id)
-        .subquery()
-    )
+async def _biz_user_parcels(db: AsyncSession, user_id: str, order_id: str, limit: int) -> list[Any]:
+    """用户寄出的所有包裹 (物流版: 电商'订单' → 物流'包裹')."""
     stmt = (
         select(
-            OrderInfo.order_id,
-            OrderInfo.create_time,
-            OrderInfo.order_status,
-            func.coalesce(order_total_subq.c.total_amount, 0).label("total_amount"),
+            Parcel.parcel_id,
+            Parcel.created_at,
+            Parcel.status,
+            Parcel.weight_kg,
+            Parcel.declared_value,
+            Parcel.item_category,
+            Parcel.is_international,
+            Parcel.piece_count,
         )
-        .select_from(OrderInfo)
-        .outerjoin(order_total_subq, OrderInfo.order_id == order_total_subq.c.order_id)
-        .where(OrderInfo.user_id == user_id)
-        .order_by(OrderInfo.create_time.desc())
+        .where(Parcel.user_id == user_id)
+        .order_by(Parcel.created_at.desc())
         .limit(limit)
     )
     return list((await db.execute(stmt)).all())
 
 
-async def _biz_user_postsales(db: AsyncSession, user_id: str, order_id: str, limit: int) -> list[Any]:
-    """用户的售后记录 (3 表 JOIN: postsale → order_detail → order_info)."""
+async def _biz_user_declarations(db: AsyncSession, user_id: str, order_id: str, limit: int) -> list[Any]:
+    """用户的危险品申报记录 (JOIN parcel 拿申报物品)."""
     stmt = (
         select(
-            Postsale.postsale_id,
-            Postsale.create_time,
-            Postsale.postsale_type,
-            Postsale.postsale_reason,
-            Postsale.postsale_status,
-            Postsale.refund_amount,
+            DangerousDeclaration.decl_id,
+            DangerousDeclaration.parcel_id,
+            DangerousDeclaration.item_type,
+            DangerousDeclaration.is_liquid,
+            DangerousDeclaration.is_battery,
+            DangerousDeclaration.declared_at,
         )
-        .select_from(Postsale)
-        .join(OrderDetail, Postsale.order_detail_id == OrderDetail.order_detail_id)
-        .join(OrderInfo, OrderDetail.order_id == OrderInfo.order_id)
-        .where(OrderInfo.user_id == user_id)
-        .order_by(Postsale.create_time.desc())
+        .select_from(DangerousDeclaration)
+        .join(Parcel, DangerousDeclaration.parcel_id == Parcel.parcel_id)
+        .where(Parcel.user_id == user_id)
+        .order_by(DangerousDeclaration.declared_at.desc())
         .limit(limit)
     )
     return list((await db.execute(stmt)).all())
 
 
-async def _biz_user_addresses(db: AsyncSession, user_id: str, order_id: str, limit: int) -> list[Any]:
-    """用户的收货地址."""
+async def _biz_user_cod(db: AsyncSession, user_id: str, order_id: str, limit: int) -> list[Any]:
+    """用户的 COD 代收货款流水 (JOIN parcel)."""
     stmt = (
         select(
-            ReceiveInfo.receive_id,
-            ReceiveInfo.receiver_name,
-            ReceiveInfo.receiver_phone,
-            ReceiveInfo.receive_province,
-            ReceiveInfo.receive_city,
-            ReceiveInfo.receive_district,
+            CodTransaction.cod_id,
+            CodTransaction.parcel_id,
+            CodTransaction.amount,
+            CodTransaction.cod_status,
+            CodTransaction.days_overdue,
+            CodTransaction.paid_at,
         )
-        .where(ReceiveInfo.user_id == user_id)
+        .select_from(CodTransaction)
+        .join(Parcel, CodTransaction.parcel_id == Parcel.parcel_id)
+        .where(Parcel.user_id == user_id)
+        .order_by(CodTransaction.paid_at.desc().nulls_first())
         .limit(limit)
     )
     return list((await db.execute(stmt)).all())
 
 
-async def _biz_order_detail(db: AsyncSession, user_id: str, order_id: str, limit: int) -> list[Any]:
-    """订单的明细行."""
+async def _biz_parcel_detail(db: AsyncSession, user_id: str, order_id: str, limit: int) -> list[Any]:
+    """包裹详情 (含收件人 + 寄件人 + 危险品申报 + COD, 物流版核心实体视图)."""
     stmt = (
         select(
-            OrderDetail.order_detail_id,
-            OrderDetail.sku_id,
-            OrderDetail.sku_name,
-            OrderDetail.sku_count,
-            OrderDetail.total_amount,
-            OrderDetail.discount_amount,
-            OrderDetail.final_amount,
+            Parcel.parcel_id,
+            Parcel.user_id,
+            Parcel.weight_kg,
+            Parcel.declared_value,
+            Parcel.item_category,
+            Parcel.is_international,
+            Parcel.piece_count,
+            Parcel.status,
+            Parcel.created_at,
+            ReceiverInfo.name.label("receiver_name"),
+            ReceiverInfo.receiver_province,
+            ReceiverInfo.is_proxy_received,
         )
-        .where(OrderDetail.order_id == order_id)
+        .select_from(Parcel)
+        .outerjoin(ReceiverInfo, Parcel.receiver_id == ReceiverInfo.receiver_id)
+        .where(Parcel.parcel_id == order_id)
         .limit(limit)
     )
     return list((await db.execute(stmt)).all())
 
 
-async def _biz_recent_orders(db: AsyncSession, user_id: str, order_id: str, limit: int) -> list[Any]:
-    """系统最近的订单 (不限 user, 管理员视角)."""
-    order_total_subq = (
-        select(
-            OrderDetail.order_id,
-            func.coalesce(func.sum(OrderDetail.final_amount), 0).label("total_amount"),
-        )
-        .group_by(OrderDetail.order_id)
-        .subquery()
-    )
+async def _biz_recent_parcels(db: AsyncSession, user_id: str, order_id: str, limit: int) -> list[Any]:
+    """系统最近的包裹 (不限 user, 管理员视角)."""
     stmt = (
         select(
-            OrderInfo.order_id,
-            OrderInfo.user_id,
-            OrderInfo.create_time,
-            OrderInfo.order_status,
-            func.coalesce(order_total_subq.c.total_amount, 0).label("total_amount"),
+            Parcel.parcel_id,
+            Parcel.user_id,
+            Parcel.created_at,
+            Parcel.status,
+            Parcel.weight_kg,
+            Parcel.declared_value,
+            Parcel.is_international,
         )
-        .select_from(OrderInfo)
-        .outerjoin(order_total_subq, OrderInfo.order_id == order_total_subq.c.order_id)
-        .order_by(OrderInfo.create_time.desc())
+        .order_by(Parcel.created_at.desc())
         .limit(limit)
     )
     return list((await db.execute(stmt)).all())
 
 
-async def _biz_high_value_orders(db: AsyncSession, user_id: str, order_id: str, limit: int) -> list[Any]:
-    """高价值订单 (单笔总价 >= 1000, GROUP BY + HAVING 筛选).
-
-    HAVING 在 GROUP BY 之后筛选聚合结果, 区别于 WHERE (筛行).
-    """
+async def _biz_high_value_parcels(db: AsyncSession, user_id: str, order_id: str, limit: int) -> list[Any]:
+    """高申报价值包裹 (单票申报 >= 3000, 对应 R025 大额低报场景)."""
     stmt = (
         select(
-            OrderInfo.order_id,
-            OrderInfo.user_id,
-            OrderInfo.create_time,
-            func.sum(OrderDetail.final_amount).label("total_amount"),
+            Parcel.parcel_id,
+            Parcel.user_id,
+            Parcel.created_at,
+            Parcel.weight_kg,
+            Parcel.declared_value,
+            Parcel.item_category,
         )
-        .select_from(OrderInfo)
-        .join(OrderDetail, OrderInfo.order_id == OrderDetail.order_id)
-        .group_by(
-            OrderInfo.order_id,
-            OrderInfo.user_id,
-            OrderInfo.create_time,
-        )
-        .having(func.sum(OrderDetail.final_amount) >= 1000)
-        .order_by(func.sum(OrderDetail.final_amount).desc())
+        .where(Parcel.declared_value >= 3000)
+        .order_by(Parcel.declared_value.desc())
         .limit(limit)
     )
     return list((await db.execute(stmt)).all())
 
 
-# 业务查询 dispatch table
+# 业务查询 dispatch table (物流版 6 种)
 _BIZ_QUERY_HANDLERS = {
-    "user_orders": _biz_user_orders,
-    "user_postsales": _biz_user_postsales,
-    "user_addresses": _biz_user_addresses,
-    "order_detail": _biz_order_detail,
-    "recent_orders": _biz_recent_orders,
-    "high_value_orders": _biz_high_value_orders,
+    "user_parcels": _biz_user_parcels,
+    "user_declarations": _biz_user_declarations,
+    "user_cod": _biz_user_cod,
+    "parcel_detail": _biz_parcel_detail,
+    "recent_parcels": _biz_recent_parcels,
+    "high_value_parcels": _biz_high_value_parcels,
 }
 
 
 async def _query_business_data_impl(
-    *, db: AsyncSession, query_type: str, user_id: str, order_id: str, limit: int,
+    *, db: AsyncSession, query_type: str, user_id: str, parcel_id: str, limit: int,
 ) -> str:
     """业务数据查询统一入口 (字典派发 6 种 query_type)."""
     handler = _BIZ_QUERY_HANDLERS.get(query_type)
     if not handler:
         return f"不支持的查询类型: {query_type}, 可选: {', '.join(_BIZ_QUERY_HANDLERS)}"
-    rows = await handler(db, user_id, order_id, limit)
+    rows = await handler(db, user_id, parcel_id, limit)
     return json.dumps(
         [_row_to_dict(r) for r in rows],
         ensure_ascii=False, indent=2,
@@ -540,7 +527,7 @@ async def _query_business_data_impl(
 @tool(
     description=(
         "对指定用户和事件执行实时风险检查。"
-        "参数: user_id (用户ID, 如 '1001')、event_type (事件类型, 可选值: 下单/支付/售后申请/物流投诉)、source_id (关联业务ID, 如订单号)。"
+        "参数: user_id (用户ID, 如 'RISK001')、event_type (事件类型, 可选值: parcel_pickup揽收/dangerous_declare危险品申报/cross_border_ship跨境发运/cod_settlement COD结算/下单/支付/售后申请/物流投诉)、source_id (关联业务ID, 如包裹ID/申报ID/COD流水ID)。"
         "返回: 风控评估结果字符串, 含评分、风险等级、决策和命中规则。"
         "内部: 走 process_event 7 步流水线 (校验→黑名单→补全→决策)。"
     )
@@ -564,8 +551,8 @@ async def query_cases(status: str = "", page: int = 1) -> str:
 @tool(
     description=(
         "查询用户的风险画像信息。"
-        "参数: user_id (用户ID, 如 '1001')。"
-        "返回: 用户的风险评分、订单统计、退款率、地址数等画像数据; 没画像时实时算 14 个 user 特征。"
+        "参数: user_id (用户ID, 如 'RISK001')。"
+        "返回: 用户的风险评分、包裹统计、COD逾期、黑名单命中等画像数据; 没画像时实时算用户特征。"
     )
 )
 async def query_user_profile(user_id: str) -> str:
@@ -619,16 +606,16 @@ async def analyze_rule_effectiveness() -> str:
 
 @tool(
     description=(
-        "查询业务数据, 用于数据分析和风控辅助判断。"
-        "参数: query_type (查询类型, 可选值: user_orders/user_postsales/user_addresses/order_detail/recent_orders/high_value_orders)、user_id (部分需要)、order_id (部分需要)、limit (返回数量, 默认10)。"
-        "返回: 业务数据 (JSON 字符串)。"
+        "查询物流业务数据, 用于数据分析和风控辅助判断。"
+        "参数: query_type (查询类型, 可选值: user_parcels用户包裹/user_declarations危险品申报/user_cod COD流水/parcel_detail包裹详情/recent_parcels最近包裹/high_value_parcels高申报包裹)、user_id (部分需要)、parcel_id (包裹详情需要)、limit (返回数量, 默认10)。"
+        "返回: 物流业务数据 (JSON 字符串)。"
     )
 )
 async def query_business_data(
-    query_type: str, user_id: str = "", order_id: str = "", limit: int = 10,
+    query_type: str, user_id: str = "", parcel_id: str = "", limit: int = 10,
 ) -> str:
     return await _safe_call("业务数据查询", _query_business_data_impl,
-                            query_type=query_type, user_id=user_id, order_id=order_id, limit=limit)
+                            query_type=query_type, user_id=user_id, parcel_id=parcel_id, limit=limit)
 
 
 # ============================================================

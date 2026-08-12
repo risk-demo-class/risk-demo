@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}风险检查 - 电商风控系统{% endblock %}
+{% block title %}风险检查 - 物流风控系统{% endblock %}
 {% block content %}
 <h4 class="mb-4">风险检查</h4>
 
@@ -11,7 +11,11 @@
             <form id="checkForm">
                 <div class="mb-3">
                     <label class="form-label"><span class="text-danger">*</span> 事件类型</label>
-                    <select class="form-select" id="ck_event_type" required>
+                    <select class="form-select" id="ck_event_type" onchange="updateSourceHint()" required>
+                        <option value="parcel_pickup">揽收</option>
+                        <option value="dangerous_declare">危险品申报</option>
+                        <option value="cross_border_ship">跨境发运</option>
+                        <option value="cod_settlement">COD结算</option>
                         <option value="下单">下单</option>
                         <option value="支付">支付</option>
                         <option value="售后申请">售后申请</option>
@@ -20,15 +24,11 @@
                 </div>
                 <div class="mb-3">
                     <label class="form-label"><span class="text-danger">*</span> 用户ID</label>
-                    <input type="text" class="form-control" id="ck_user_id" placeholder="如: 1001" required>
+                    <input type="text" class="form-control" id="ck_user_id" placeholder="如: RISK001 / U0001" required>
                 </div>
                 <div class="mb-3">
-                    <label class="form-label"><span class="text-danger">*</span> 业务ID (订单号/售后ID)</label>
-                    <input type="text" class="form-control" id="ck_source_id" placeholder="如: ord05a5ac8c8cfe4f51" required>
-                </div>
-                <div class="mb-3">
-                    <label class="form-label">订单ID (可选, 下单/支付时自动填充)</label>
-                    <input type="text" class="form-control" id="ck_order_id">
+                    <label class="form-label"><span class="text-danger">*</span> <span id="ck_source_label">包裹ID</span></label>
+                    <input type="text" class="form-control" id="ck_source_id" placeholder="如: P000001" required>
                 </div>
                 <button type="submit" class="btn btn-primary w-100" id="checkBtn">
                     <i class="bi bi-search"></i> 执行检查
@@ -65,6 +65,24 @@ function decisionBadge(d) {
     return `<span class="badge ${cls}">${d}</span>`;
 }
 
+// 按事件类型动态更新"业务ID"的标签与占位符 (物流版: 包裹/申报/COD 三种业务对象)
+function updateSourceHint() {
+    const et = document.getElementById('ck_event_type').value;
+    const map = {
+        'parcel_pickup':      ['包裹ID', '如: P000001'],
+        'dangerous_declare':  ['申报ID', '如: DCL00001'],
+        'cross_border_ship':  ['包裹ID', '如: P000001'],
+        'cod_settlement':     ['COD流水ID', '如: COD00001'],
+        '下单':               ['订单号', '如: ord05a5ac8c8cfe4f51'],
+        '支付':               ['订单号', '如: ord05a5ac8c8cfe4f51'],
+        '售后申请':           ['订单号', '如: ord05a5ac8c8cfe4f51'],
+        '物流投诉':           ['订单号', '如: ord05a5ac8c8cfe4f51'],
+    };
+    const [label, ph] = map[et] || ['业务ID', '如: P000001'];
+    document.getElementById('ck_source_label').textContent = label;
+    document.getElementById('ck_source_id').placeholder = ph;
+}
+
 // 接收从案件列表跳过来的预填数据 (重做检查功能)
 (function prefillFromCase() {
     const raw = sessionStorage.getItem('risk_check_prefill');
@@ -75,6 +93,7 @@ function decisionBadge(d) {
         setVal('ck_event_type', data.event_type);
         setVal('ck_user_id', data.user_id);
         setVal('ck_source_id', data.source_id);
+        updateSourceHint();
         // 顶部加个提示横幅
         const form = document.getElementById('checkForm');
         if (form && data.case_id) {
@@ -100,7 +119,6 @@ document.getElementById('checkForm').addEventListener('submit', async function(e
         event_type: document.getElementById('ck_event_type').value,
         user_id: document.getElementById('ck_user_id').value,
         source_id: document.getElementById('ck_source_id').value,
-        order_id: document.getElementById('ck_order_id').value || null,
     };
 
     try {

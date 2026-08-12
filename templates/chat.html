@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}AI 助手 - 电商风控系统{% endblock %}
+{% block title %}AI 助手 - 物流风控系统{% endblock %}
 {% block content %}
 <h4 class="mb-4">AI 风控助手</h4>
 
@@ -10,7 +10,7 @@
             <div class="d-flex">
                 <div class="chat-bubble ai">
                     你好! 我是风控AI助手，可以帮你完成以下任务:<br>
-                    - 对用户/订单进行风险检查<br>
+                    - 对用户/包裹进行风险检查<br>
                     - 查询和分析风控案件<br>
                     - 查看用户风险画像<br>
                     - 查看仪表盘统计和趋势<br>
@@ -39,7 +39,7 @@
     <small class="text-muted">快捷指令:</small>
     <button class="btn btn-outline-secondary btn-sm" onclick="sendQuick('查看今天的风控统计数据')">今日统计</button>
     <button class="btn btn-outline-secondary btn-sm" onclick="sendQuick('查看所有待审核的案件')">待审案件</button>
-    <button class="btn btn-outline-secondary btn-sm" onclick="sendQuick('分析用户1003的风险画像')">用户画像</button>
+    <button class="btn btn-outline-secondary btn-sm" onclick="sendQuick('分析用户RISK001的风险画像')">用户画像</button>
     <button class="btn btn-outline-secondary btn-sm" onclick="sendQuick('分析规则命中效果')">规则分析</button>
     <button class="btn btn-outline-secondary btn-sm" onclick="sendQuick('查看近30天的风控趋势')">趋势分析</button>
 </div>

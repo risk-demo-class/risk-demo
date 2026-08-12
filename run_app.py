@@ -68,10 +68,12 @@ def _check_dependencies() -> tuple[str, str]:
 def _check_mysql_alive() -> tuple[str, str]:
     """检查 MySQL 是否在 localhost:3306 跑. 用 socket 探测, 不依赖 pymysql."""
     import pymysql
-    from app.config import settings as _  # 加载 .env 配置
-    password = os.getenv("DB_PASSWORD", "123321")
-    user = os.getenv("DB_USER", "root")
-    db = os.getenv("DB_NAME", "ecs")
+    from app.config import settings  # 加载 .env 配置 (pydantic-settings 从 .env 读真实密码)
+    # 【阶段6 修复】之前用 os.getenv(..., "123321") 兜底, .env 的密码 (qnzhong) 没注入
+    # os.environ, 导致 preflight 用错密码报 Access denied. 改用 settings 保证与脚本一致.
+    password = settings.DB_PASSWORD
+    user = settings.DB_USER
+    db = settings.DB_NAME
     try:
         conn = pymysql.connect(
             host="localhost", port=3306, user=user, password=password,
@@ -90,9 +92,10 @@ def _check_db_initialized() -> tuple[str, str]:
     """检查数据库是否已初始化 (risk_rule 表能查)."""
     try:
         import pymysql
-        password = os.getenv("DB_PASSWORD", "123321")
-        user = os.getenv("DB_USER", "root")
-        db = os.getenv("DB_NAME", "ecs")
+        from app.config import settings  # 加载 .env 配置
+        password = settings.DB_PASSWORD
+        user = settings.DB_USER
+        db = settings.DB_NAME
         conn = pymysql.connect(
             host="localhost", port=3306, user=user, password=password,
             database=db, connect_timeout=3,

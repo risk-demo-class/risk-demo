@@ -334,26 +334,26 @@ if __name__ == "__main__":
     print("Pydantic Schema 演示 (19 个类的 3 个典型代表)")
     print("=" * 60)
 
-    # 1. RiskCheckRequest — 入口 (前端"风险检查"页触发)
+    # 1. RiskCheckRequest — 入口 (前端"风险检查"页触发, 物流版: 揽收事件 + 包裹ID)
     req = RiskCheckRequest(
-        event_type="下单", source_id="ord_demo_001", user_id="U0001",
-        order_id="ord_demo_001", receive_id="rec_001",
-        event_data={"amount": 5000, "category": "电子产品"},
+        event_type="parcel_pickup", source_id="P000001", user_id="U0001",
+        parcel_id="P000001",
+        event_data={"declared_value": 5000, "item_category": "电子产品"},
     )
-    print("\n[1] RiskCheckRequest (入口):")
+    print("\n[1] RiskCheckRequest (入口, 物流版):")
     print(req.model_dump_json(indent=2))
 
     # 2. RuleHitInfo + RiskCheckResponse — 7 步流水线返回
     hits = [
         RuleHitInfo(
-            rule_id="R002", rule_name="单笔极端高额订单",
-            rule_category="订单欺诈", risk_level="极高",
+            rule_id="R008", rule_name="COD逾期卷款",
+            rule_category="代收货款", risk_level="极高",
             risk_score=95, action="拒绝",
-            description="单笔订单实付金额≥10000元, 一票否决",
+            description="COD 历史逾期 + 大额代收≥1000, 一票否决",
         ),
         RuleHitInfo(
-            rule_id="R005", rule_name="高折扣率订单",
-            rule_category="订单欺诈", risk_level="高",
+            rule_id="R002", rule_name="危险品瞒报",
+            rule_category="危险品申报", risk_level="高",
             risk_score=65, action="人工审核",
         ),
     ]
@@ -377,12 +377,12 @@ if __name__ == "__main__":
     # 3. AssessmentDetailResponse (P3-S9) — 评估历史详情
     detail = AssessmentDetailResponse(
         assessment_id="ast_demo_xxx", event_id="evt_demo_xxx",
-        user_id="U0001", event_type="下单", event_source_id="ord_demo_001",
+        user_id="U0001", event_type="parcel_pickup", event_source_id="P000001",
         final_score=95, risk_level="极高", decision="拒绝",
         rule_count=2, triggered_rules=hits,
         create_time=datetime.now(),
         ml_score=0.92, ml_decision="拒绝",
-        event_data=json.dumps({"amount": 5000}, ensure_ascii=False),
+        event_data=json.dumps({"declared_value": 5000}, ensure_ascii=False),
     )
     print("\n[3] AssessmentDetailResponse (P3-S9 评估历史详情):")
     print(f"  event_source_id = {detail.event_source_id}")

@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}规则管理 - 电商风控系统{% endblock %}
+{% block title %}规则管理 - 物流风控系统{% endblock %}
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h4 class="mb-0">规则管理</h4>
@@ -12,12 +12,17 @@
 <div class="mb-3 d-flex gap-2 align-items-center flex-wrap">
     <select class="form-select form-select-sm w-auto" id="filterCategory" onchange="loadRules(1)">
         <option value="">全部分类</option>
+        <option value="寄递实名">寄递实名</option>
+        <option value="危险品申报">危险品申报</option>
+        <option value="跨境合规">跨境合规</option>
+        <option value="代收货款">代收货款</option>
+        <option value="寄递行为">寄递行为</option>
+        <option value="地址风险">地址风险</option>
+        <option value="物流风险">物流风险</option>
         <option value="订单欺诈">订单欺诈</option>
         <option value="支付风险">支付风险</option>
         <option value="账户风险">账户风险</option>
         <option value="售后滥用">售后滥用</option>
-        <option value="地址风险">地址风险</option>
-        <option value="物流风险">物流风险</option>
     </select>
     <span class="text-muted small">每页</span>
     <select class="form-select form-select-sm w-auto" id="pageSize" onchange="onPageSizeChange()">
@@ -68,12 +73,17 @@
                         <div class="col-md-4">
                             <label class="form-label">分类</label>
                             <select class="form-select" id="f_category" required>
+                                <option value="寄递实名">寄递实名</option>
+                                <option value="危险品申报">危险品申报</option>
+                                <option value="跨境合规">跨境合规</option>
+                                <option value="代收货款">代收货款</option>
+                                <option value="寄递行为">寄递行为</option>
+                                <option value="地址风险">地址风险</option>
+                                <option value="物流风险">物流风险</option>
                                 <option value="订单欺诈">订单欺诈</option>
                                 <option value="支付风险">支付风险</option>
                                 <option value="账户风险">账户风险</option>
                                 <option value="售后滥用">售后滥用</option>
-                                <option value="地址风险">地址风险</option>
-                                <option value="物流风险">物流风险</option>
                             </select>
                         </div>
                     </div>
@@ -82,6 +92,10 @@
                             <label class="form-label">事件类型</label>
                             <select class="form-select" id="f_event_type">
                                 <option value="通用">通用</option>
+                                <option value="parcel_pickup">揽收</option>
+                                <option value="dangerous_declare">危险品申报</option>
+                                <option value="cross_border_ship">跨境发运</option>
+                                <option value="cod_settlement">COD结算</option>
                                 <option value="下单">下单</option>
                                 <option value="支付">支付</option>
                                 <option value="售后申请">售后申请</option>
@@ -114,7 +128,7 @@
                     <div class="mb-3">
                         <label class="form-label">条件表达式 (JSON)</label>
                         <textarea class="form-control" id="f_condition" rows="4" required
-                            placeholder='{"field": "order_total_amount", "op": ">=", "value": 5000}'></textarea>
+                            placeholder='{"field": "order_declared_value", "op": ">=", "value": 3000}'></textarea>
                     </div>
                     <div class="row mb-3">
                         <div class="col-md-3">

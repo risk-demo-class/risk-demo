@@ -210,14 +210,14 @@ if __name__ == "__main__":
     example = {
         "rule_id": "R031",
         "rule_name": "Demo 规则",
-        "rule_category": "订单欺诈",
-        "event_type": "下单",
-        "rule_condition": {"field": "order_total_amount", "op": ">=", "value": 1000},
+        "rule_category": "寄递行为",
+        "event_type": "parcel_pickup",
+        "rule_condition": {"field": "order_declared_value", "op": ">=", "value": 3000},
         "risk_level": "高",
         "risk_score": 50,
         "action": "人工审核",
         "priority": 70,
-        "description": "单笔≥1000 即中等风险",
+        "description": "申报价值≥3000 即中等风险",
     }
     import json
     print(json.dumps(example, ensure_ascii=False, indent=2))

@@ -1,5 +1,5 @@
 """
-电商风控系统 - 风控表 ORM (7 张)
+物流风控系统 - 风控表 ORM (7 张)
 风控系统自建表, 跟业务表分开管理
 - 规则配置 (RiskRule)
 - 事件审计 (RiskEvent / RiskFeature / RiskAssessment)
