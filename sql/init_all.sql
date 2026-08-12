@@ -1,0 +1,37 @@
+-- ============================================
+-- 医疗风控系统 - 数据库初始化指南
+-- ============================================
+--
+-- 本系统共需初始化 4 个 SQL 脚本，按以下顺序执行:
+--
+--   1. init_business_tables.sql  -- 8 张医疗业务表 (DDL)
+--   2. init_business_data.sql    -- 业务种子数据 (医院/医生/患者/黑名单)
+--   3. init_risk_tables.sql      -- 9 张风控表 (DDL, 结构与电商版一致)
+--   4. init_risk_data.sql        -- 30 条医疗预置风控规则 (R001-R030)
+--
+-- ============================================
+-- 使用方式
+-- ============================================
+--
+-- 方式1 (推荐): 一键 Python 脚本
+--   python scripts/init_db.py
+--
+-- 方式2: 手动按顺序执行 (在项目根目录下)
+--   mysql -u root -p --default-character-set=utf8mb4 < sql/init_business_tables.sql
+--   mysql -u root -p --default-character-set=utf8mb4 < sql/init_business_data.sql
+--   mysql -u root -p --default-character-set=utf8mb4 < sql/init_risk_tables.sql
+--   mysql -u root -p --default-character-set=utf8mb4 < sql/init_risk_data.sql
+--
+-- 方式3: 仅创建数据库结构 (不含数据)
+--   mysql -u root -p --default-character-set=utf8mb4 < sql/init_business_tables.sql
+--   mysql -u root -p --default-character-set=utf8mb4 < sql/init_risk_tables.sql
+--
+-- ============================================
+-- 注意事项
+-- ============================================
+-- - 数据库名: medical_risk (init_db.py 会自动创建; 手动执行需提前 CREATE DATABASE)
+--   CREATE DATABASE IF NOT EXISTS medical_risk DEFAULT CHARACTER SET utf8mb4;
+-- - 字符集: utf8mb4
+-- - 业务表按依赖顺序执行, 可安全重复执行 (DROP TABLE IF EXISTS)
+-- - 风控表 9 张 (与电商风控完全一致, 仅枚举值适配医疗行业)
+-- - 大批量诊疗数据 (训练 XGBoost 用): python scripts/gen_risk_data.py
