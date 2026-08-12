@@ -1,3 +1,15 @@
+# 项目演示截图
+
+AI Agent对话
+![AI Agent对话](meijia/image/1.png)
+
+index页面
+![index页面](meijia/image/2.png)
+
+人工审核页面
+![人工审核页面](meijia/image/3.png)
+
+
 # 📊 Risk Demo 课程演示仓库
 
 本仓库用于课程各小组的**演示成果提交与展示**。每位同学已分配**自己的专属分支**，把代码 / 演示成果推送到自己的分支上即可。
