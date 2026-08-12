@@ -30,7 +30,7 @@ from app.engine.feature import compute_all_features
 from app.engine.ml_model import is_model_loaded, predict
 from app.engine.rule import RuleHitResult, load_enabled_rules, match_rules
 from app.models import (
-    OrderInfo, RiskAssessment, RiskCase, RiskEvent, RiskFeature, RiskUserProfile,
+    Parcel, RiskAssessment, RiskCase, RiskEvent, RiskFeature, RiskUserProfile,
 )
 from app.schemas import RiskCheckRequest, RiskCheckResponse, RuleHitInfo
 
@@ -111,42 +111,43 @@ def check_veto(hits: list[RuleHitResult]) -> bool:
 class _RiskCheckContext:
     request: RiskCheckRequest
     user_id: str
-    order_id: Optional[str] = None
-    receive_id: Optional[str] = None
+    parcel_id: Optional[str] = None
+    receiver_id: Optional[str] = None
     event_id: str = ""
 
 
 def _build_context(request: RiskCheckRequest) -> _RiskCheckContext:
-    """步骤 1b: 请求 → Context, 顺便补全 order_id.
+    """步骤 1b: 请求 → Context, 补全 parcel_id.
 
-    业务规则:
-      - "下单" / "支付" 事件: source_id 就是 order_id
-      - "售后申请" 事件: source_id 是 postsale_id, order_id 要从 request 传
-      - "物流投诉" 事件: source_id 是 complaints_id
+    业务规则 (物流 4 类事件):
+      - "parcel_pickup" 揽收 / "cross_border_ship" 跨境发运: source_id 就是 parcel_id
+      - "dangerous_declare" 危险品申报: source_id 是 decl_id, parcel_id 从 request.parcel_id 传
+      - "cod_settlement" COD 结算: source_id 是 cod_id, parcel_id 从 request.parcel_id 传
+      - 电商旧事件兼容: request.parcel_id 为空时 source_id 顶替
     """
-    order_id = request.order_id
-    if not order_id and request.event_type in ("下单", "支付"):
-        order_id = request.source_id
+    parcel_id = request.parcel_id
+    if not parcel_id and request.event_type in ("parcel_pickup", "cross_border_ship", "下单", "支付"):
+        parcel_id = request.source_id
     return _RiskCheckContext(
         request=request,
         user_id=request.user_id,
-        order_id=order_id,
-        receive_id=request.receive_id,
+        parcel_id=parcel_id,
+        receiver_id=request.receiver_id,
     )
 
 
-async def _enrich_receive_id(db: AsyncSession, ctx: _RiskCheckContext) -> None:
-    """步骤 1c: 从订单里补全 receive_id (地址 ID).
+async def _enrich_receiver_id(db: AsyncSession, ctx: _RiskCheckContext) -> None:
+    """步骤 1c: 从包裹里补全 receiver_id (收件人 ID).
 
-    退出条件 (任一满足就不补): 已有 receive_id / 没有 order_id (售后/物流投诉场景).
+    退出条件 (任一满足就不补): 已有 receiver_id / 没有 parcel_id (只算用户维度的场景).
     """
-    if ctx.receive_id or not ctx.order_id:
+    if ctx.receiver_id or not ctx.parcel_id:
         return
     row = (await db.execute(
-        select(OrderInfo.receive_id).where(OrderInfo.order_id == ctx.order_id)
+        select(Parcel.receiver_id).where(Parcel.parcel_id == ctx.parcel_id)
     )).first()
     if row:
-        ctx.receive_id = row.receive_id
+        ctx.receiver_id = row.receiver_id
 
 
 # ============================================================
@@ -173,12 +174,11 @@ def _create_event_record(db: AsyncSession, ctx: _RiskCheckContext) -> str:
 # ============================================================
 
 async def _compute_features(db: AsyncSession, ctx: _RiskCheckContext) -> dict:
-    """步骤 3: 调 feature.py 计算 25 个风控特征 (用户/订单/地址 3 类)"""
+    """步骤 3: 调 feature.py 计算 25 个风控特征 (用户/包裹/地址 3 类)"""
     return await compute_all_features(
         db,
         user_id=ctx.user_id,
-        order_id=ctx.order_id,        # 可能 None (售后场景只算用户+地址)
-        receive_id=ctx.receive_id,
+        parcel_id=ctx.parcel_id,      # 可能 None (无包裹上下文时只算用户维度 + 地址 0 填充)
     )
 
 
@@ -208,9 +208,9 @@ def _save_feature_snapshot(
         if entity_type == "用户":
             entity_id = ctx.user_id
         elif entity_type == "订单":
-            entity_id = ctx.order_id or ctx.request.source_id
+            entity_id = ctx.parcel_id or ctx.request.source_id
         else:  # 地址
-            entity_id = ctx.receive_id or ctx.user_id
+            entity_id = ctx.receiver_id or ctx.user_id
         db.add(RiskFeature(
             event_id=ctx.event_id,
             entity_type=entity_type,
@@ -455,7 +455,14 @@ async def _update_user_profile(
 ) -> None:
     """步骤 7c: 更新用户风险画像 (upsert 模式: 有则更新, 无则插入).
 
-    9 个字段从 features 取 (复用刚才算好的 25 特征, 不再查 DB).
+    画像字段 (risk_user_profile) 是电商遗留列, 语义映射到物流:
+      total_orders     ← 历史寄件总票数 (user_total_parcel_count)
+      total_refunds    ← COD 逾期次数   (user_cod_overdue_count)
+      refund_rate      ← COD 逾期率     (逾期次数 / 总票数)
+      avg_order_amount ← 平均申报价值    (user_avg_declared_value)
+      address_count    ← 不同收件人数    (user_distinct_receiver_count)
+      complaint_count  ← 黑名单命中数    (user_blacklist_hit_count)
+    全量 25 维特征再冗余一份到 profile_data JSON, 供前端/Agent 查明细.
     """
     profile = (await db.execute(
         select(RiskUserProfile).where(RiskUserProfile.user_id == ctx.user_id)
@@ -467,17 +474,18 @@ async def _update_user_profile(
 
     profile.risk_score = final_score
     profile.risk_level = risk_level
-    profile.total_orders = int(features.get("user_total_orders", 0))
-    profile.total_refunds = int(features.get("user_refund_count", 0))
-    # 退款率 = 退款次数 / 总订单数, 防 0 除
-    total_orders = features.get("user_total_orders", 0)
+    total_parcels = float(features.get("user_total_parcel_count", 0))
+    cod_overdue = float(features.get("user_cod_overdue_count", 0))
+    profile.total_orders = int(total_parcels)
+    profile.total_refunds = int(cod_overdue)
+    # COD 逾期率 = 逾期次数 / 总票数, 防 0 除
     profile.refund_rate = (
-        round(features.get("user_refund_count", 0) / total_orders, 4)
-        if total_orders > 0 else 0
+        round(cod_overdue / total_parcels, 4) if total_parcels > 0 else 0
     )
-    profile.avg_order_amount = features.get("user_avg_order_amount", 0)
-    profile.address_count = int(features.get("user_address_count", 0))
-    profile.complaint_count = int(features.get("user_complaint_count", 0))
+    profile.avg_order_amount = features.get("user_avg_declared_value", 0)
+    profile.address_count = int(features.get("user_distinct_receiver_count", 0))
+    profile.complaint_count = int(features.get("user_blacklist_hit_count", 0))
+    profile.profile_data = json.dumps(features, ensure_ascii=False)
     # 累计评估次数 +1 (or 0 兜底, 防止新建时 None)
     profile.assessment_count = (profile.assessment_count or 0) + 1
     profile.last_assessment_time = datetime.now()
@@ -544,7 +552,7 @@ async def run_risk_check(
     """
     # 1. 准备上下文 (校验已在 process_event 完成, 不重复)
     ctx = _build_context(request)
-    await _enrich_receive_id(db, ctx)
+    await _enrich_receiver_id(db, ctx)
 
     # 2. 创建事件记录
     event_id = _create_event_record(db, ctx)

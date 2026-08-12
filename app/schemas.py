@@ -361,7 +361,7 @@ if __name__ == "__main__":
         assessment_id="ast_demo_xxx", event_id="evt_demo_xxx",
         user_id="U0001", final_score=95, risk_level="极高", decision="拒绝",
         rule_count=2, triggered_rules=hits,
-        features={"user_total_orders": 3, "order_total_amount": 15000},
+        features={"user_total_parcel_count": 12, "order_declared_value": 15000},
         create_time=datetime.now(),
         ml_score=0.92, ml_decision="拒绝",
     )

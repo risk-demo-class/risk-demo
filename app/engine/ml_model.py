@@ -28,31 +28,34 @@ logger = logging.getLogger(__name__)
 # / compute_address_features / tests/test_xgboost.py::test_feature_columns_align
 # 对不齐会让 XGBoost 训练/推理退化成 0 填充, 业务上相当于模型没工作
 FEATURE_COLUMNS: list[str] = [
-    "user_total_orders",
-    "user_orders_30d",
-    "user_orders_7d",
-    "user_total_amount",
-    "user_avg_order_amount",
-    "user_max_order_amount",
-    "user_refund_count",
-    "user_postsale_count",
-    "user_refund_rate",
-    "user_postsale_rate",
-    "user_refund_amount",
-    "user_cancel_count",
-    "user_complaint_count",
-    "user_address_count",
-    "order_total_amount",
-    "order_item_count",
-    "order_sku_count",
-    "order_discount_amount",
-    "order_discount_rate",
-    "order_pay_interval_sec",
-    "order_is_night",
-    "order_category_count",
-    "addr_total_count",
-    "addr_province_count",
-    "addr_is_new",
+    # ---- 用户(寄件人)维度 10 ----
+    "user_account_age_days",
+    "user_real_name_verified",
+    "user_is_enterprise",
+    "user_total_parcel_count",
+    "user_total_parcel_count_30d",
+    "user_total_parcel_count_7d",
+    "user_avg_declared_value",
+    "user_distinct_receiver_count",
+    "user_cod_overdue_count",
+    "user_blacklist_hit_count",
+    # ---- 包裹维度 8 ----
+    "order_weight_kg",
+    "order_declared_value",
+    "order_value_per_kg",
+    "order_piece_count",
+    "order_is_international",
+    "order_is_dangerous_declared",
+    "order_has_cod",
+    "order_cod_amount",
+    # ---- 地址维度 7 ----
+    "addr_sender_province",
+    "addr_receiver_province",
+    "addr_is_cross_province",
+    "addr_same_address_sender_count_24h",
+    "addr_address_blacklist_hit",
+    "addr_is_proxy_received",
+    "addr_sender_is_blacklisted",
 ]
 
 assert len(FEATURE_COLUMNS) == 25, f"特征数量必须是 25, 当前 {len(FEATURE_COLUMNS)}"
@@ -420,16 +423,22 @@ if __name__ == "__main__":
     print("\n[2] 25 维特征 → numpy 数组 (_features_to_array):")
     print(f"  FEATURE_COLUMNS 长度 = {len(FEATURE_COLUMNS)}  (必须是 25, 跟 feature.py 对齐)")
     sample = {
-        "user_total_orders": 3, "user_orders_30d": 1, "user_orders_7d": 0,
-        "user_total_amount": 5000, "user_avg_order_amount": 1666.67,
-        "user_max_order_amount": 3000,
-        "user_refund_count": 0, "user_refund_rate": 0.0, "user_refund_amount": 0,
-        "user_postsale_count": 0, "user_postsale_rate": 0.0,
-        "user_cancel_count": 0, "user_complaint_count": 0, "user_address_count": 1,
-        "order_total_amount": 1500, "order_item_count": 1, "order_sku_count": 1,
-        "order_discount_amount": 0, "order_discount_rate": 0.0,
-        "order_pay_interval": 30, "order_is_night": 0, "order_category_count": 1,
-        "addr_total_count": 1, "addr_province_count": 1, "addr_is_new": 0,
+        # ---- 用户维度 ----
+        "user_account_age_days": 400.0, "user_real_name_verified": 1.0,
+        "user_is_enterprise": 0.0, "user_total_parcel_count": 12,
+        "user_total_parcel_count_30d": 3, "user_total_parcel_count_7d": 1,
+        "user_avg_declared_value": 350.0, "user_distinct_receiver_count": 4,
+        "user_cod_overdue_count": 0, "user_blacklist_hit_count": 0,
+        # ---- 包裹维度 ----
+        "order_weight_kg": 2.5, "order_declared_value": 800.0,
+        "order_value_per_kg": 320.0, "order_piece_count": 3,
+        "order_is_international": 0.0, "order_is_dangerous_declared": 0.0,
+        "order_has_cod": 1.0, "order_cod_amount": 800.0,
+        # ---- 地址维度 ----
+        "addr_sender_province": 11.0, "addr_receiver_province": 19.0,
+        "addr_is_cross_province": 1.0, "addr_same_address_sender_count_24h": 1.0,
+        "addr_address_blacklist_hit": 0.0, "addr_is_proxy_received": 0.0,
+        "addr_sender_is_blacklisted": 0.0,
     }
     arr = _features_to_array(sample)
     print(f"  shape           = {arr.shape}  (期望 (1, 25))")
