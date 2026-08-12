@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}银行风控系统{% endblock %}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.2/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        :root {
+            --bank-navy: #0f172a;
+            --bank-blue: #1e3a8a;
+            --bank-gold: #a16207;
+            --bank-cyan: #0891b2;
+            --bank-surface: #ffffff;
+            --bank-canvas: #f8fafc;
+            --bank-text: #020617;
+            --bank-muted: #64748b;
+            --bank-border: #e2e8f0;
+            --bank-danger: #b91c1c;
+            --bank-radius: 12px;
+            --bank-shadow: 0 10px 28px rgba(15, 23, 42, .07);
+        }
+        html, body { height: 100%; margin: 0; }
+        body {
+            background: var(--bank-canvas);
+            color: var(--bank-text);
+            font-family: "IBM Plex Sans", "Microsoft YaHei", sans-serif;
+            overflow: hidden;
+            line-height: 1.5;
+        }
+        .container-fluid, .row { padding: 0 !important; margin: 0 !important; }
+        .skip-link { position: fixed; left: 12px; top: -48px; z-index: 2000; padding: 8px 12px; background: #fff; color: var(--bank-navy); border-radius: 6px; }
+        .skip-link:focus { top: 12px; }
+        .sidebar {
+            position: fixed;
+            top: 0; left: 0; bottom: 0;
+            width: 16.66667%;
+            background: radial-gradient(circle at top left, #1e3a8a 0%, var(--bank-navy) 48%, #020617 100%);
+            overflow-y: auto;
+            z-index: 1000;
+            border-right: 1px solid rgba(255,255,255,.08);
+        }
+        .sidebar-brand { color: #fff; font-size: 18px; font-weight: 700; padding: 24px 20px 18px; border-bottom: 1px solid rgba(255,255,255,.12); letter-spacing: .02em; }
+        .sidebar-brand small { display: block; margin-top: 5px; color: #94a3b8; font-size: 11px; font-weight: 500; letter-spacing: .12em; }
+        .sidebar .nav-link { color: #cbd5e1; padding: 11px 14px; border-radius: 8px; margin: 3px 10px; font-size: 14px; transition: background .18s ease, color .18s ease, transform .18s ease; }
+        .sidebar .nav-link:hover { color: #fff; background: rgba(255,255,255,.11); transform: translateX(2px); }
+        .sidebar .nav-link.active { color: #fff; background: var(--bank-gold); box-shadow: 0 6px 15px rgba(0,0,0,.18); }
+        .sidebar .nav-link i { width: 21px; margin-right: 9px; text-align: center; }
+        .nav-caption { padding: 20px 20px 6px; color: #64748b; font-size: 10px; font-weight: 700; letter-spacing: .13em; text-transform: uppercase; }
+        .main-content { margin-left: 16.66667%; height: 100vh; overflow-y: auto; padding: 28px; }
+        .page-heading { display: flex; align-items: end; justify-content: space-between; gap: 16px; margin-bottom: 24px; }
+        .page-heading h1 { margin: 0; font-size: clamp(22px, 2vw, 30px); font-weight: 700; letter-spacing: -.025em; }
+        .page-heading p { margin: 5px 0 0; color: var(--bank-muted); font-size: 14px; }
+        .stat-card { border: 1px solid var(--bank-border); border-radius: var(--bank-radius); box-shadow: var(--bank-shadow); background: var(--bank-surface); }
+        .stat-card .stat-value { font-size: 28px; font-weight: 700; font-variant-numeric: tabular-nums; }
+        .card, .modal-content { border-color: var(--bank-border); border-radius: var(--bank-radius); }
+        .card { box-shadow: var(--bank-shadow); }
+        .table { --bs-table-hover-bg: #f1f5f9; }
+        .table thead th { background: #f8fafc; color: #475569; border-bottom-color: var(--bank-border); font-size: 12px; font-weight: 600; white-space: nowrap; }
+        .table td { vertical-align: middle; }
+        .form-control, .form-select { border-color: #cbd5e1; min-height: 40px; }
+        .form-control:focus, .form-select:focus { border-color: var(--bank-cyan); box-shadow: 0 0 0 3px rgba(8,145,178,.16); }
+        .btn-primary { --bs-btn-bg: #1e3a8a; --bs-btn-border-color: #1e3a8a; --bs-btn-hover-bg: #172554; --bs-btn-hover-border-color: #172554; }
+        .btn-outline-primary { --bs-btn-color: #1e3a8a; --bs-btn-border-color: #1e3a8a; --bs-btn-hover-bg: #1e3a8a; }
+        .btn { min-height: 36px; transition: transform .16s ease, box-shadow .16s ease; }
+        .btn:hover { transform: translateY(-1px); }
+        .badge-risk-low { background: #dcfce7; color: #166534; }
+        .badge-risk-mid { background: #fef3c7; color: #92400e; }
+        .badge-risk-high { background: #ffedd5; color: #9a3412; }
+        .badge-risk-critical { background: #fee2e2; color: #991b1b; }
+        .pagination-bottom { position: sticky; bottom: 0; background: rgba(248,250,252,.96); backdrop-filter: blur(8px); padding: 8px 12px; margin: 12px 0 0; border-top: 1px solid var(--bank-border); z-index: 100; min-height: 42px; }
+        .pagination-bottom .pagination { margin: 0; display: flex; list-style: none; gap: 4px; justify-content: center; align-items: center; }
+        .pagination-bottom .page-item .page-link { color: var(--bank-blue); background: #fff; border: 1px solid #cbd5e1; padding: 4px 10px; font-size: 13px; min-width: 34px; min-height: 30px; text-align: center; border-radius: 6px; display: inline-flex; align-items: center; justify-content: center; }
+        .pagination-bottom .page-item.active .page-link { color: #fff; background: var(--bank-blue); border-color: var(--bank-blue); font-weight: 600; }
+        .pagination-bottom .page-item.disabled .page-link { color: #94a3b8; background: #f8fafc; cursor: not-allowed; }
+        .chat-messages { height: calc(100vh - 330px); min-height: 300px; max-height: calc(100vh - 160px); overflow-y: auto; background: linear-gradient(180deg, #f8fafc, #fff); }
+        .chat-bubble { max-width: 80%; padding: 11px 14px; border-radius: 12px; margin-bottom: 9px; }
+        .chat-bubble.user { background: #1e3a8a; color: #fff; margin-left: auto; }
+        .chat-bubble.ai { background: #e0f2fe; color: #0f172a; border: 1px solid #bae6fd; }
+        .btn-close-risk { background: transparent; border: 1px solid #cbd5e1; border-radius: 6px; color: #475569; width: 36px; height: 36px; display: inline-flex; align-items: center; justify-content: center; padding: 0; }
+        .btn-close-risk:hover { background: #fee2e2; border-color: #fecaca; color: var(--bank-danger); }
+        :focus-visible { outline: 3px solid rgba(8,145,178,.55); outline-offset: 2px; }
+        @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; } }
+        @media (max-width: 767.98px) {
+            body { overflow: auto; }
+            .sidebar { position: relative; width: 100%; height: auto; overflow-y: visible; }
+            .sidebar-brand { padding: 16px; }
+            .sidebar .nav { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); padding: 8px; }
+            .sidebar .nav-link { margin: 2px; padding: 10px; }
+            .nav-caption { display: none; }
+            .main-content { margin-left: 0; height: auto; overflow-y: visible; padding: 18px 14px; }
+            .page-heading { align-items: start; flex-direction: column; }
+        }
+    </style>
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+<a class="skip-link" href="#main-content">跳到主内容</a>
+<div class="container-fluid">
+    <div class="row">
+        <aside class="col-md-2 sidebar px-0" aria-label="银行风控导航">
+            <div class="sidebar-brand"><i class="bi bi-bank2"></i> 银行风控中心<small>RISK OPERATIONS</small></div>
+            <nav class="nav flex-column mt-2">
+                <div class="nav-caption">监控与处置</div>
+                <a class="nav-link {% if request.url.path == '/' %}active{% endif %}" href="/"><i class="bi bi-grid-1x2"></i> 风险总览</a>
+                <a class="nav-link {% if request.url.path == '/risk-check' %}active{% endif %}" href="/risk-check"><i class="bi bi-shield-check"></i> 实时核验</a>
+                <a class="nav-link {% if request.url.path == '/cases' %}active{% endif %}" href="/cases"><i class="bi bi-folder2-open"></i> 风险案件</a>
+                <a class="nav-link {% if request.url.path == '/assessments' %}active{% endif %}" href="/assessments"><i class="bi bi-clipboard-data"></i> 评估记录</a>
+                <div class="nav-caption">策略与工具</div>
+                <a class="nav-link {% if request.url.path == '/rules' %}active{% endif %}" href="/rules"><i class="bi bi-diagram-3"></i> 策略规则</a>
+                <a class="nav-link {% if request.url.path == '/blacklist' %}active{% endif %}" href="/blacklist"><i class="bi bi-shield-x"></i> 风险名单</a>
+                <a class="nav-link {% if request.url.path == '/chat' %}active{% endif %}" href="/chat"><i class="bi bi-robot"></i> 智能研判</a>
+            </nav>
+        </aside>
+        <div class="col-md-10 main-content" id="main-content" role="main">{% block content %}{% endblock %}</div>
+    </div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="/static/app.js?v=20260812-bank"></script>
+{% block extra_js %}{% endblock %}
+</body>
+</html>
