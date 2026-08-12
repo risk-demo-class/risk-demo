@@ -1,0 +1,475 @@
+# PP_Risk 项目设计方案
+
+状态：IMPLEMENTED — v0.4 已确认并完成实现与验证
+
+版本：0.4-design
+
+## 1. 开发治理准则
+
+1. 每次功能、数据库、接口、前端或数据生成器改进，必须先更新本文件。
+2. 设计稿必须写清目标、范围、数据模型、接口、页面交互、测试和风险。
+3. DESIGN 更新完成后停止，不修改功能代码；只有用户明确确认设计后才能实现。
+4. 实现不得超出已确认范围；出现会改变方案的新问题时，再次更新 DESIGN 并等待确认。
+5. 紧急缺陷只有在用户明确要求直接修复时才可跳过确认，但修复前仍需同步更新 DESIGN。
+
+## 2. 本轮目标
+
+本轮计划增强四项业务能力：
+
+- 建设与 AI_Risk 视觉交互一致、但面向真实客服历史数据的客服交互工作台。
+- 扩展模拟数据脚本的数据量参数和随机性，同时保持风险场景之间的业务关联。
+- 交易监控与客服交互监控支持逐条进入详情并提交人工审核。
+- 两个监控页面支持按当前实体的每个可展示字段进行服务端筛选。
+
+本轮不改变9张风控核心表结构，不改变固定风控流水线，不自动冻结账户、拦截资金或封禁用户。
+
+## 3. 现状与复用边界
+
+### 3.1 已确认现状
+
+- PP_Risk 已有 `/transactions`、`/interactions` 页面，但仅提供简单列表。
+- `/api/transactions` 目前只有 `transaction_type` 和 `limit`；没有详情、完整字段筛选与分页游标。
+- `/api/interactions` 目前返回 Interaction 汇总计数；没有 Segment、Message、Email 的层级详情。
+- AI_Risk 的 `chat.html` 提供左右消息气泡、输入区、快捷按钮、加载反馈和清空交互。
+- AI_Risk 的 `cases.html` 与 `assessments.html` 提供列表筛选、详情模态框、分页和进一步操作模式。
+- PP_Risk 生成器已有 `users / transactions / risk_ratio / seed / preset`，但商户、会话、消息等规模主要由用户数隐式决定。
+
+### 3.2 复用策略
+
+- 复用 AI_Risk 的聊天气泡视觉、筛选工具栏、详情模态框、分页和操作反馈模式。
+- 不复用 AI_Risk 的电商字段和 AI Agent 对话 API。
+- 客服界面读取 PP_Risk 的 `interaction → conversation_segment → message`，Email 再关联 `email_envelope` 与附件。
+- 所有列表和详情均从 MySQL 查询，不直接读取生成 CSV。
+
+## 4. 目标架构
+
+```mermaid
+flowchart LR
+    UI["交易/客服监控页面"] --> LIST["分页与字段筛选 API"]
+    UI --> DETAIL["详情 API"]
+    UI --> REVIEW["提交人工审核 API"]
+    LIST --> MYSQL[("MySQL pp_risk")]
+    DETAIL --> MYSQL
+    REVIEW --> PIPE["既有风险事件与案件流程"]
+    PIPE --> MYSQL
+    GEN["参数化随机数据生成器"] --> CSV["40表 CSV"]
+    CSV --> LOAD["批量导入器"]
+    LOAD --> MYSQL
+```
+
+## 5. 客服交互工作台
+
+### 5.1 页面布局
+
+- 左侧：Interaction 列表，展示客户、客服、状态、首次/最近联系时间、Segment数和Message数。
+- 中间：选中 Interaction 的 Segment 时间线，可按 CHAT/EMAIL、状态、语言和时间筛选。
+- 右侧或大尺寸抽屉：选中 Segment 的完整消息流，复用 AI_Risk 聊天气泡样式。
+- 用户消息靠右，客服消息靠左；Email 显示主题、发件/收件哈希、附件与扫描状态。
+- Interaction、Segment、Message 的 ID 和所有时间字段均可点击打开对应层级详情。
+- 详情区提供“提交人工审核”按钮，填写原因、备注、风险分类和优先级。
+
+### 5.2 客服详情内容
+
+| 层级 | 详情内容 | 可执行操作 |
+|---|---|---|
+| Interaction | 全部基础字段、客户摘要、会话统计、最近联系 | 提交人工审核 |
+| Segment | 渠道、主题、起止时间、状态、语言、完整消息流 | 提交人工审核 |
+| Message | 发送方、正文、语言、投递状态、发送时间、Email/附件 | 提交人工审核 |
+
+不提供真实消息回复、邮件发送、用户封禁或资金操作；这些能力需要单独授权与外部系统集成。
+
+## 6. 交易监控详情与操作
+
+点击交易 ID、创建时间或完成时间均打开详情抽屉/模态框。详情聚合：
+
+- `payment_transaction` 基础交易信息。
+- `transaction_party` 付款方与收款方。
+- 对应子类型：`user_transfer / merchant_payment / cross_border_transfer / cash_movement`。
+- `transaction_status_history` 状态时间线。
+- `ledger_entry` 双边账务记录。
+- 可选关联：`fx_conversion / refund / chargeback`。
+- 已存在时展示相关 `risk_event / risk_assessment / risk_case`。
+
+进一步操作仅为“提交人工审核”：创建或复用风险事件并进入既有固定决策流水线，最终生成待审核案件；接口必须幂等，避免重复点击产生重复案件。
+
+## 7. 全字段筛选设计
+
+### 7.1 通用规则
+
+- 使用服务端筛选，不在浏览器仅过滤当前100条数据。
+- API 使用显式字段白名单，禁止将任意字段名直接拼入 SQL。
+- 字符串支持精确匹配和包含匹配；枚举使用下拉多选；金额支持最小/最大；时间支持起止；布尔值支持全部/是/否。
+- 支持排序字段、升降序、页码和每页数量；返回 `items / total / page / page_size`。
+- 空筛选不进入 SQL 条件；非法字段或类型返回 HTTP 422。
+
+### 7.2 交易筛选字段
+
+`transaction_id, transaction_type, payer_account_id, payee_account_id, amount_min, amount_max, asset_code, transaction_status, channel, create_time_from, create_time_to, complete_time_from, complete_time_to`。
+
+### 7.3 客服筛选字段
+
+- Interaction：全部9个业务字段，加 `segment_count_min/max`、`message_count_min/max`。
+- Segment：全部8个业务字段。
+- Message：全部9个业务字段；正文使用包含匹配。
+- Email：全部8个业务字段；哈希字段默认精确匹配。
+
+前端采用“常用筛选 + 展开全部字段”，提供应用、重置和保存当前筛选按钮；URL 查询参数保留筛选状态，方便刷新和分享。
+
+## 8. API 方案
+
+| 方法 | 路径 | 功能 |
+|---|---|---|
+| GET | `/api/transactions` | 全字段筛选、排序、分页 |
+| GET | `/api/transactions/{transaction_id}` | 聚合交易详情 |
+| POST | `/api/transactions/{transaction_id}/submit-review` | 幂等提交人工审核 |
+| GET | `/api/interactions` | Interaction全字段筛选、统计、分页 |
+| GET | `/api/interactions/{interaction_id}` | Interaction详情与Segment摘要 |
+| GET | `/api/interactions/{interaction_id}/segments` | Segment筛选与分页 |
+| GET | `/api/segments/{segment_id}` | Segment详情和Message分页 |
+| GET | `/api/messages/{message_id}` | Message、Email和附件详情 |
+| POST | `/api/interactions/{interaction_id}/submit-review` | Interaction提交人工审核 |
+| POST | `/api/segments/{segment_id}/submit-review` | Segment提交人工审核 |
+| POST | `/api/messages/{message_id}/submit-review` | Message提交人工审核 |
+
+接口实现时从当前集中式 `app/web.py` 拆分为交易、客服、审核三个 router，页面路由单独保留，降低生产维护风险。
+
+## 9. 测试数据生成器方案
+
+### 9.1 新增参数
+
+| 参数 | 含义 | 默认策略 |
+|---|---|---|
+| `--users` | 用户数量 | preset决定 |
+| `--merchants` | 商户数量 | `max(10, users/10)` |
+| `--transactions` | 交易数量 | preset决定 |
+| `--interactions` | 历史客户关系数量 | 默认等于用户数 |
+| `--segments` | 完整会话总数 | 默认每个Interaction 1–8个 |
+| `--messages` | 发言总数 | 默认每个Segment 2–30条 |
+| `--email-ratio` | Email会话比例 | 0.20 |
+| `--attachment-ratio` | Email附件比例 | 0.15 |
+| `--risk-ratio` | 风险主体/事件比例 | 0.12 |
+| `--start-at/--end-at` | 数据时间范围 | 最近一年至当前时间 |
+| `--seed` | 可复现随机种子 | 显式整数 |
+| `--random-seed` | 每次使用安全随机种子 | 与 `--seed` 互斥，并打印实际种子 |
+| `--locale-mix` | 国家/语言分布配置 | global |
+
+所有数量参数必须校验上下限和父子关系。`init_demo` 透传上述参数，不要求用户单独运行生成器。
+
+### 9.2 随机性与业务一致性
+
+- 随机化国家、币种、语言、渠道、时间、交易状态、金额分布、客服主题、消息轮次和附件。
+- 使用偏态金额分布和工作日/时区峰谷，不使用简单均匀分布模拟全部业务。
+- 风险场景采用加权抽样，但同一用户、设备、交易、对话之间保持相关性。
+- AML拆分、快速流转、漏斗账户、账户盗用、卡测试、制裁命中、社工欺诈、退款滥用等场景产生可解释证据。
+- 同一 `seed + 参数` 必须生成完全一致的数据；`--random-seed` 用于每次变化。
+- 输出 manifest 记录参数、实际随机种子、各表行数、时间范围和风险标签分布。
+
+### 9.3 导入策略
+
+- 默认只向空表导入，保持幂等。
+- `--replace --yes` 继续作为明确的破坏性确认。
+- 大数据量按批次流式生成和写入，避免把全部数据放入内存。
+- MySQL 建库、49表建表、CSV生成、批量导入、规则初始化仍由 `scripts.init_demo` 一键编排。
+
+## 10. 数据库与索引计划
+
+本轮不修改既有表字段。实现前评估并通过迁移新增查询索引：
+
+- `payment_transaction(transaction_type, transaction_status, create_time)`。
+- `payment_transaction(payer_account_id)`、`payment_transaction(payee_account_id)`。
+- `conversation_segment(interaction_id, start_time, channel)`。
+- `message(segment_id, sent_time, sender_type)`。
+- `interaction(customer_id, agent_id, last_contact_time, interaction_status)`。
+- 风险事件的业务来源字段索引，用于提交人工审核的幂等检查。
+
+生产环境不依赖 `create_all` 变更现有结构；索引使用 Alembic 迁移，升级前提供检查与回滚方案。
+
+## 11. 安全与性能
+
+- Message正文可能包含敏感信息，页面默认转义，不允许直接插入HTML。
+- 身份证、账号、邮箱等继续展示哈希/脱敏值。
+- 全字段筛选采用参数绑定、白名单排序和最大分页限制。
+- Message正文包含查询在大规模数据下需要全文索引或专用搜索服务；第一阶段使用受限 LIKE，并设置时间范围和最大结果数。
+- 人工审核操作记录操作者、原因、来源实体、时间和幂等键，写入审计日志。
+
+## 12. 测试与验收
+
+### 12.1 后端
+
+- 每种字段类型的筛选、组合筛选、非法参数和分页边界测试。
+- 交易聚合详情覆盖五种交易类型以及缺失可选关联记录。
+- Interaction/Segment/Message/Email三级详情和无附件场景。
+- 人工审核提交的成功、重复提交、实体不存在和事务回滚。
+- 生成器参数校验、确定性随机、随机种子、行数约束和跨表外键一致性。
+
+### 12.2 前端
+
+- 每条交易与客服记录、所有时间链接均可打开正确详情。
+- 常用/全部字段筛选、重置、分页、排序及URL状态恢复。
+- 对话气泡、长消息、多语言、空数据、加载失败和窄屏显示。
+- 提交人工审核具有确认、成功反馈、失败反馈和防重复点击。
+
+### 12.3 验收基线
+
+- 现有测试全部通过，并新增上述接口与生成器测试。
+- MySQL开发数据验证至少覆盖1000笔交易、多个Segment和多轮Message。
+- 不改变9张风控核心表结构和固定决策流程。
+- 页面无未转义用户内容，查询无动态SQL字段注入。
+
+## 13. 建议实施顺序（待确认后执行）
+
+1. 拆分 router 并实现通用筛选、分页和响应模型。
+2. 实现交易详情聚合与人工审核提交。
+3. 实现客服三级详情、消息流和人工审核提交。
+4. 改造两个监控页面的筛选、详情与操作。
+5. 扩展生成器参数、随机模型、manifest和一键初始化透传。
+6. 增加数据库迁移、索引、自动化测试与README说明。
+
+## 14. 本轮待用户确认
+
+- 确认客服工作台是“查看历史对话并提交审核”，不包含客服实际回复/发送邮件。
+- 确认交易和客服的进一步操作暂时只有“提交人工审核”。
+- 确认全字段筛选采用“常用字段默认展示、全部字段折叠展开”，避免工具栏过度拥挤。
+- 确认后按第13节顺序进入代码实现。
+
+## 15. v0.3 实施记录
+
+实施日期：2026-08-11
+
+- 已实现交易全字段组合筛选、排序、分页、聚合详情和幂等提交人工审核。
+- 已实现客服 Interaction/Segment/Message 三级工作台、聊天气泡、Email与附件详情、逐层提交人工审核。
+- 已实现 `merchants / interactions / segments / messages / email-ratio / attachment-ratio / random-seed` 数据生成参数，并由 `init_demo` 透传。
+- 默认仍保持每个 Segment 两条 Message，以兼容既有演示数据；传入 `--messages` 可生成任意合法的多轮规模。
+- 人工审核提交在不修改固定风险决策流水线的前提下，创建风险事件、人工评估、待审核案件和操作日志；相同来源存在待审案件时返回原案件。
+- FastAPI lifespan 已在退出时释放 SQLAlchemy engine，避免 MySQL 连接遗留。
+
+验证结果：
+
+- 自动化测试：15 passed。
+- MySQL只读验收：交易列表、交易详情、客服列表、客服详情均为 HTTP 200。
+- 当前MySQL验收数据：1000笔交易、100个Interaction。
+- 自定义数据生成：20用户、7商户、40交易、12 Interaction、36 Segment、180 Message，共1074行，随机种子已记录在manifest。
+
+尚未实施：Alembic索引迁移和专用全文搜索服务；当前表已有主键查找索引，消息正文筛选的生产级扩展留待后续DESIGN确认。
+
+## 16. v0.4 设计目标（待确认）
+
+本轮增加三个闭环：
+
+1. 面向客户的 LLM Agent 智能客服，客户通过自然语言查询账户与交易、解释风险状态、发起争议或提交人工审核。
+2. 首页用实时风控折线图替换“最近交易”表格，持续展示交易量、高风险评估和待审案件变化。
+3. 完成人工审核操作和黑名单管理：案件详情、通过、拒绝、拒绝并加入黑名单、黑名单查询与移除。
+
+本轮继续保持9张风控表结构不变，并复用 `risk_case / risk_blacklist / risk_action_log` 现有字段。
+
+## 17. 智能客服 Agent 设计
+
+### 17.1 页面与业务定位
+
+新增 `/agent` 客户智能客服页面，视觉和交互参考 AI_Risk 的聊天页：
+
+- 左右消息气泡、发送中状态、清空会话、快捷问题和错误反馈。
+- 客户身份区显示当前客户ID；Demo阶段从页面选择已存在用户，禁止由聊天内容任意切换身份。
+- 会话支持连续上下文，默认进程内保存；生产扩展时切换 Redis，不把会话写入40张业务表。
+- Agent回答中展示调用过的工具、关键数据来源和操作结果，避免“只给结论、不留证据”。
+
+### 17.2 Agent可用工具
+
+| 工具 | 能力 | 权限级别 |
+|---|---|---|
+| `get_my_profile` | 查询当前客户基础资料、KYC和风险摘要 | 只读 |
+| `list_my_transactions` | 按时间、类型、状态查询本人相关交易 | 只读 |
+| `get_transaction_detail` | 查询本人参与交易的状态、金额和时间线 | 只读 |
+| `get_my_cases` | 查询本人相关人工审核案件状态 | 只读 |
+| `explain_risk_status` | 解释可公开的评估等级、决策和命中原因摘要 | 只读、脱敏 |
+| `list_my_support_history` | 查询本人的Interaction/Segment摘要 | 只读 |
+| `submit_transaction_review` | 将本人交易提交人工审核 | 写操作、二次确认 |
+| `submit_support_review` | 将本人客服会话提交人工审核 | 写操作、二次确认 |
+
+Agent不允许直接通过/拒绝案件、不允许添加或移除黑名单、不允许修改账户余额。这些属于风控操作员权限，只能在后台页面完成。
+
+### 17.3 写操作二次确认
+
+LLM不能仅凭一句自然语言直接执行有状态操作：
+
+```mermaid
+sequenceDiagram
+    participant C as 客户
+    participant A as Agent
+    participant T as 工具层
+    participant DB as MySQL
+    C->>A: 请审核这笔交易
+    A->>T: 准备提交参数
+    T-->>A: 返回确认令牌和操作摘要
+    A-->>C: 展示交易ID、原因并请求确认
+    C->>A: 确认提交
+    A->>T: 携带一次性令牌执行
+    T->>DB: 创建或复用待审案件并写审计日志
+    T-->>C: 返回案件ID
+```
+
+确认令牌绑定 `session_id + user_id + tool + target_id + 参数摘要`，短时过期且只能使用一次。
+
+### 17.4 LLM配置
+
+`.env` 与 `.env.example` 增加：
+
+```text
+LLM_ENABLED=true
+LLM_PROVIDER=dashscope
+LLM_MODEL_NAME=qwen-plus
+LLM_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1
+LLM_API_KEY=
+LLM_TEMPERATURE=0.1
+LLM_TIMEOUT_SECONDS=60
+LLM_MAX_TOOL_ROUNDS=8
+AGENT_SESSION_TTL_MINUTES=60
+```
+
+- 使用 OpenAI-compatible 协议适配 DashScope、OpenAI、DeepSeek或自定义网关。
+- `LLM_PROVIDER` 负责选择预设，显式 `LLM_BASE_URL` 可覆盖预设地址。
+- API Key只进入本地 `.env`，不返回前端、不打印日志、不提交Git。
+- `LLM_ENABLED=false` 或缺少Key时，页面显示“Agent未配置”，其他系统功能保持可用。
+- 启动时仅校验配置结构，首次对话时惰性创建模型客户端，避免LLM故障阻断主服务。
+
+依赖计划：使用 `langchain-openai + langchain` 的工具调用能力；不引入 AI_Risk 的电商工具和 DeepAgents，PP_Risk单独实现支付领域工具。
+
+### 17.5 Agent接口
+
+| 方法 | 路径 | 功能 |
+|---|---|---|
+| GET | `/agent` | 智能客服页面 |
+| GET | `/api/agent/status` | 模型启用状态和模型名，不暴露Key |
+| POST | `/api/agent/chat` | 发送消息、运行只读工具或生成待确认操作 |
+| POST | `/api/agent/confirm` | 执行一次性令牌对应的写操作 |
+| POST | `/api/agent/clear` | 清除当前会话 |
+
+请求中的 `user_id` 必须绑定会话；生产接入身份系统后由登录态注入，不能信任浏览器自由传入。
+
+## 18. 首页实时风控折线图
+
+### 18.1 指标
+
+首页“最近交易”表格替换为折线图，默认展示最近24小时：
+
+- 交易事件数：按 `payment_transaction.create_time` 聚合。
+- 高风险评估数：`risk_assessment.risk_level in (高, 极高)`。
+- 新增待审案件数：按 `risk_case.create_time` 聚合。
+
+支持 `1h / 6h / 24h / 7d` 时间窗口。服务端根据窗口选择5分钟、30分钟、1小时或6小时桶，并补齐无数据时间点为0。
+
+### 18.2 实时机制
+
+- 新接口：`GET /api/dashboard/risk-trend?window=24h`。
+- 第一阶段前端每15秒轮询，仅刷新折线数据，不刷新整个页面。
+- 页面显示最后更新时间、刷新状态和手动刷新按钮。
+- 使用原生 Canvas 绘图，避免增加重量级前端框架；提供图例、悬浮提示和无障碍数据摘要。
+- 后续数据量增大时可迁移到Redis预聚合或时序数据库，本轮不引入额外基础设施。
+
+## 19. 人工审核操作设计
+
+### 19.1 案件队列
+
+`/cases` 增加状态、分类、用户、事件类型、创建时间筛选和分页。每条案件提供“详情”按钮；详情聚合案件、评估、事件、规则结果和来源业务摘要。
+
+### 19.2 审核动作
+
+待审核或审核中的案件支持：
+
+- 通过：状态改为 `已通过`。
+- 拒绝：状态改为 `已拒绝`。
+- 拒绝并加入黑名单：同一事务内拒绝案件并创建用户黑名单。
+
+接口：
+
+| 方法 | 路径 | 功能 |
+|---|---|---|
+| GET | `/api/cases` | 筛选、分页 |
+| GET | `/api/cases/{case_id}` | 聚合详情 |
+| POST | `/api/cases/{case_id}/review` | 通过或拒绝，可选择加入黑名单 |
+
+审核请求包含 `decision, reviewer, review_comment, add_to_blacklist, blacklist_reason, blacklist_expire_time`。
+
+事务规则：
+
+- 只有 `待审核 / 审核中` 可审核；重复审核返回409。
+- `add_to_blacklist=true` 只允许与“拒绝”一起使用。
+- 用户黑名单统一写为 `blacklist_type=用户`、`blacklist_value=USER:{user_id}`，与现有风险入口完全一致。
+- 已存在有效黑名单时复用，不因唯一约束导致审核失败。
+- 案件更新、黑名单写入和 `risk_action_log` 审计必须在同一数据库事务中提交。
+
+## 20. 黑名单管理界面
+
+新增 `/blacklist` 页面和导航入口：
+
+- 统计有效用户黑名单、过期黑名单和总量。
+- 按类型、值、原因、创建时间、过期状态进行服务端筛选和分页。
+- 查看来源原因、创建时间、过期时间和是否有效。
+- 操作员可手动添加用户黑名单或软删除现有黑名单；每次操作写入 `risk_action_log`。
+
+接口：
+
+| 方法 | 路径 | 功能 |
+|---|---|---|
+| GET | `/api/blacklist` | 筛选、分页、统计 |
+| POST | `/api/blacklist` | 手工添加，值规范化为 `USER:{user_id}` |
+| DELETE | `/api/blacklist/{blacklist_id}` | 设置 `deleted_at`，不物理删除 |
+
+本轮页面以“非法/高风险用户”为核心，只开放用户类型；设备指纹、IP、证件号等类型保留为后续扩展。
+
+## 21. v0.4安全与测试
+
+### 21.1 安全
+
+- Agent工具在SQL查询层强制当前用户所有权，不能依赖系统提示词隔离数据。
+- 工具参数使用Pydantic验证；LLM不得生成任意SQL。
+- 风险规则细节、内部特征、黑名单来源和其他用户数据不向客户Agent完整披露。
+- Agent写操作必须二次确认，并记录操作者、会话、目标和参数摘要。
+- 后台审核和黑名单接口预留RBAC边界；Demo阶段使用显式 `reviewer`，README标注生产必须接入OIDC/RBAC。
+
+### 21.2 测试与验收
+
+- LLM配置解析、禁用模式、Key不泄漏和超时测试。
+- Agent工具所有权测试：客户不能读取或操作其他用户的交易、案件和客服记录。
+- Agent确认令牌的过期、重复使用、参数篡改和幂等测试。
+- 风控趋势的时间桶、补零、窗口校验和前端轮询测试。
+- 案件通过、拒绝、拒绝加黑、重复审核、黑名单已存在和事务回滚测试。
+- 黑名单筛选、规范化、软删除及风险入口拦截联动测试。
+- MySQL实际验证和页面HTTP/交互检查；现有15项测试必须继续通过。
+
+## 22. v0.4建议实施顺序（确认后执行）
+
+1. 实现案件详情/审核事务、黑名单服务/API/页面，先修复当前不可操作问题。
+2. 实现首页风险趋势聚合API和Canvas折线图。
+3. 增加LLM配置与依赖，建立Agent工具权限层和二次确认机制。
+4. 实现Agent API与聊天页面，增加导航和禁用状态处理。
+5. 补自动化测试、MySQL验收、README和DESIGN实施记录。
+
+## 23. v0.4待确认项
+
+- Agent定位为客户自助客服，只能查看和操作当前客户自己的数据；不能代替后台风控审核员。
+- Agent写操作（提交人工审核）必须由客户二次确认。
+- 默认模型配置采用阿里云百炼 `qwen-plus`，同时兼容其他OpenAI-compatible模型。
+- 首页实时状态第一阶段使用15秒轮询，不引入WebSocket。
+- 黑名单页面第一阶段只管理用户黑名单，值统一为 `USER:{user_id}`。
+
+## 24. v0.4实施记录
+
+实施日期：2026-08-11
+
+- 已增加客户智能客服页面、Agent状态/聊天/确认/清空接口、7个支付领域工具和客户所有权SQL约束。
+- 已实现一次性确认令牌，绑定会话、客户、工具和目标，5分钟过期且使用后立即失效；前端读取结构化令牌，不依赖LLM复述。
+- 已将 AI_Risk 的LLM选型安全写入 PP_Risk `.env`，新增provider/model/base URL/temperature/timeout/tool rounds/session TTL配置，未输出或提交Key。
+- 已实现首页 `1h/6h/24h/7d` 风控趋势API、时间桶补零、原生Canvas三折线和15秒轮询。
+- 已实现案件筛选分页、聚合详情、通过/拒绝/拒绝加黑；审核、用户黑名单和操作日志同事务提交。
+- 已实现用户黑名单列表、筛选、统计、手工添加和软删除，统一值格式 `USER:{user_id}`。
+- 已增加LangChain/OpenAI-compatible运行依赖，Agent惰性初始化，缺少Key时不影响主应用。
+
+验证结果：
+
+- Python编译通过，自动化测试18项全部通过。
+- MySQL只读验收：趋势、案件、黑名单和Agent页面均为HTTP 200。
+- Agent状态确认 `qwen-plus` 已启用，状态接口不暴露API Key。
+- 真实LLM对话验收因会向外部DashScope发送客户账户数据而被安全审批阻止；未绕过，需用户明确授权后单独执行。
+
+已知生产边界：Demo客户身份仍由页面输入，正式部署前必须接入OIDC/RBAC并由服务端登录态注入；Agent内存会话生产环境应迁移Redis。

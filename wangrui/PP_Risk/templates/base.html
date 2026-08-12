@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ title }} · PP Risk</title>
+  <link rel="stylesheet" href="/static/app.css?v=20260811-4">
+</head>
+<body>
+<div class="shell">
+  <aside class="sidebar" aria-label="主导航">
+    <div class="brand"><div class="brand-mark">PP</div><div><strong>PP Risk</strong><small>Global Trust Operations</small></div></div>
+    <div class="nav-label">Operations</div>
+    <nav>
+      <a class="nav-link {{ 'active' if active == 'dashboard' else '' }}" href="/"><span class="nav-icon">◫</span>全球风险总览</a>
+      <a class="nav-link {{ 'active' if active == 'transactions' else '' }}" href="/transactions"><span class="nav-icon">⇄</span>交易监控</a>
+      <a class="nav-link {{ 'active' if active == 'cases' else '' }}" href="/cases"><span class="nav-icon">◇</span>人工审核案件</a>
+      <a class="nav-link {{ 'active' if active == 'risk-check' else '' }}" href="/risk-check"><span class="nav-icon">⌁</span>实时风险检查</a>
+      <a class="nav-link {{ 'active' if active == 'interactions' else '' }}" href="/interactions"><span class="nav-icon">◌</span>客服交互监控</a>
+      <a class="nav-link {{ 'active' if active == 'agent' else '' }}" href="/agent"><span class="nav-icon">✦</span>智能客服</a>
+      <a class="nav-link {{ 'active' if active == 'blacklist' else '' }}" href="/blacklist"><span class="nav-icon">⊘</span>用户黑名单</a>
+    </nav>
+    <div class="sidebar-foot"><strong>AML / Fraud / Sanctions</strong><br>生产设计基线 · v0.2</div>
+  </aside>
+  <main class="main">
+    <header class="topbar"><div><div class="eyebrow">Risk Operations Center</div><h1>{{ title }}</h1></div><div class="status-pill"><span class="status-dot"></span>服务运行中</div></header>
+    {% block content %}{% endblock %}
+  </main>
+</div>
+<script src="/static/app.js?v=20260811-3"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>
