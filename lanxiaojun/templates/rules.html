@@ -1,0 +1,531 @@
+{% extends "base.html" %}
+{% block title %}规则管理 - 教育风控系统{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="page-title mb-0">
+        <i class="bi bi-list-check"></i> 规则管理
+    </div>
+    <button class="btn btn-primary btn-sm" onclick="showCreateModal()">
+        <i class="bi bi-plus-circle"></i> 新建规则
+    </button>
+</div>
+
+<!-- 筛选 -->
+<div class="d-flex gap-2 align-items-center flex-wrap mb-3 p-3 bg-white rounded-3 shadow-sm">
+    <select class="form-select form-select-sm w-auto" id="filterCategory" onchange="loadRules(1)">
+        <option value="">全部分类</option>
+        <option value="订单欺诈">订单欺诈</option>
+        <option value="支付风险">支付风险</option>
+        <option value="账户风险">账户风险</option>
+        <option value="售后滥用">售后滥用</option>
+        <option value="地址风险">地址风险</option>
+        <option value="物流风险">物流风险</option>
+    </select>
+    <span class="text-muted small">每页</span>
+    <select class="form-select form-select-sm w-auto" id="pageSize" onchange="onPageSizeChange()">
+        <option value="20">20 条</option>
+        <option value="50">50 条</option>
+        <option value="100">100 条</option>
+    </select>
+    <span class="text-muted small ms-2" id="rulesCount"></span>
+</div>
+
+<!-- 规则列表 -->
+<div class="card stat-card">
+    <div class="table-responsive">
+        <table class="table table-hover mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th style="width:90px">规则ID</th><th>名称</th><th>分类</th><th>事件类型</th>
+                    <th>等级</th><th>分值</th><th>动作</th><th>优先级</th>
+                    <th style="width:70px">状态</th><th style="width:100px">操作</th>
+                </tr>
+            </thead>
+            <tbody id="rules-table"></tbody>
+        </table>
+    </div>
+</div>
+
+<nav class="pagination-bottom"><ul class="pagination justify-content-center mb-0" id="pagination"></ul></nav>
+
+<!-- 创建/编辑模态框 -->
+<div class="modal fade" id="ruleModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                    <h5 class="modal-title" id="ruleModalTitle">新建规则</h5>
+                    <button type="button" class="btn-close-risk" data-bs-dismiss="modal" title="关闭" aria-label="Close"><i class="bi bi-x-lg"></i></button>
+                </div>
+            <div class="modal-body">
+                <form id="ruleForm">
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <label class="form-label">规则ID</label>
+                            <input type="text" class="form-control" id="f_rule_id" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">规则名称</label>
+                            <input type="text" class="form-control" id="f_rule_name" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">分类</label>
+                            <select class="form-select" id="f_category" required>
+                                <option value="订单欺诈">订单欺诈</option>
+                                <option value="支付风险">支付风险</option>
+                                <option value="账户风险">账户风险</option>
+                                <option value="售后滥用">售后滥用</option>
+                                <option value="地址风险">地址风险</option>
+                                <option value="物流风险">物流风险</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-3">
+                            <label class="form-label">事件类型</label>
+                            <select class="form-select" id="f_event_type">
+                                <option value="通用">通用</option>
+                                <option value="下单">下单</option>
+                                <option value="支付">支付</option>
+                                <option value="售后申请">售后申请</option>
+                                <option value="物流投诉">物流投诉</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">风险等级</label>
+                            <select class="form-select" id="f_risk_level" required>
+                                <option value="低">低</option>
+                                <option value="中">中</option>
+                                <option value="高">高</option>
+                                <option value="极高">极高</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">分值 (0-100)</label>
+                            <input type="number" class="form-control" id="f_score" min="0" max="100" required>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">动作</label>
+                            <select class="form-select" id="f_action" required>
+                                <option value="通过">通过</option>
+                                <option value="标记">标记</option>
+                                <option value="人工审核">人工审核</option>
+                                <option value="拒绝">拒绝</option>
+                            </select>
+                        </div>
+                    </div>
+                    <!-- 可视化条件构建器 -->
+                    <div class="mb-3">
+                        <label class="form-label">条件表达式</label>
+                        <div class="d-flex gap-2 mb-2 flex-wrap" id="conditionRows">
+                            <!-- 由 JS 动态渲染 -->
+                        </div>
+                        <div class="d-flex gap-2 align-items-center">
+                            <button type="button" class="btn btn-outline-success btn-sm" onclick="addConditionRow()">
+                                <i class="bi bi-plus-circle"></i> 添加条件
+                            </button>
+                            <select class="form-select form-select-sm w-auto" id="f_logic_op">
+                                <option value="and">and (全部满足)</option>
+                                <option value="or">or (任一满足)</option>
+                            </select>
+                            <button type="button" class="btn btn-outline-info btn-sm" onclick="previewJson()">
+                                <i class="bi bi-eye"></i> 预览 JSON
+                            </button>
+                        </div>
+                        <textarea class="form-control mt-2" id="f_condition" rows="2" required style="display:none"
+                            placeholder='{"field": "user_refund_rate", "op": ">=", "value": 0.5}'></textarea>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-3">
+                            <label class="form-label">优先级</label>
+                            <input type="number" class="form-control" id="f_priority" value="0">
+                        </div>
+                        <div class="col-md-9">
+                            <label class="form-label">描述</label>
+                            <input type="text" class="form-control" id="f_description">
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-primary" onclick="saveRule()">保存</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- JSON 预览弹窗 -->
+<div class="modal fade" id="jsonPreviewModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">条件 JSON 表达式</h5>
+                <button type="button" class="btn-close-risk" data-bs-dismiss="modal" title="关闭" aria-label="Close"><i class="bi bi-x-lg"></i></button>
+            </div>
+            <div class="modal-body">
+                <pre id="jsonPreviewContent" style="background:#f8f9fa;padding:16px;border-radius:8px;font-size:13px;max-height:400px;overflow-y:auto;"></pre>
+                <button type="button" class="btn btn-sm btn-outline-secondary mt-2" onclick="copyJson()">
+                    <i class="bi bi-clipboard"></i> 复制到剪贴板
+                </button>
+                <button type="button" class="btn btn-sm btn-primary mt-2 ms-2" onclick="applyJson()">
+                    <i class="bi bi-check-lg"></i> 填入并关闭
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let currentPage = 1;
+let editingRuleId = null;
+const PAGE_SIZE_KEY = 'rules_pageSize';
+
+// 从 localStorage 恢复 pageSize, 默认 20
+(function initPageSize() {
+    const saved = localStorage.getItem(PAGE_SIZE_KEY) || '20';
+    document.getElementById('pageSize').value = saved;
+})();
+
+// 用户切换 pageSize 时保存到 localStorage
+function onPageSizeChange() {
+    localStorage.setItem(PAGE_SIZE_KEY, document.getElementById('pageSize').value);
+    loadRules(1);
+}
+
+function riskBadge(level) {
+    const cls = {'低':'badge-risk-low','中':'badge-risk-mid','高':'badge-risk-high','极高':'badge-risk-critical'}[level] || 'bg-secondary';
+    return `<span class="badge ${cls}">${level}</span>`;
+}
+
+async function loadRules(page) {
+    currentPage = page || 1;
+    const category = document.getElementById('filterCategory').value;
+    const pageSize = document.getElementById('pageSize').value;
+    const params = new URLSearchParams({page: currentPage, page_size: pageSize});
+    if (category) params.set('category', category);
+    const res = await fetch('/api/rules?' + params);
+    const data = await res.json();
+    document.getElementById('rulesCount').textContent =
+        `共 ${data.total} 条, 当前 ${data.items.length} 条/页`;
+    const tbody = document.getElementById('rules-table');
+    if (data.items.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="10" class="text-center text-muted">暂无规则</td></tr>';
+    } else {
+        tbody.innerHTML = data.items.map(r => `
+            <tr>
+                <td><code>${r.rule_id}</code></td>
+                <td>${r.rule_name}</td>
+                <td><span class="badge bg-info">${r.rule_category}</span></td>
+                <td>${r.event_type}</td>
+                <td>${riskBadge(r.risk_level)}</td>
+                <td><strong>${r.risk_score}</strong></td>
+                <td>${r.action}</td>
+                <td>${r.priority}</td>
+                <td>
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" ${r.is_enabled ? 'checked' : ''}
+                            onchange="toggleRule('${r.rule_id}')">
+                    </div>
+                </td>
+                <td>
+                    <button class="btn btn-outline-primary btn-sm" onclick="editRule('${r.rule_id}')">
+                        <i class="bi bi-pencil"></i>
+                    </button>
+                    <button class="btn btn-outline-danger btn-sm" onclick="deleteRule('${r.rule_id}')">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </td>
+            </tr>
+        `).join('');
+    }
+    // 分页 (P4-L4 2026-08-08: 用通用分页组件 app.js::buildPaginationHtml, 与评估/案件一致)
+    // 智能省略号, 总页数 > 7 时显示 ...
+    const totalPages = Math.ceil(data.total / pageSize);
+    document.getElementById('pagination').innerHTML =
+        buildPaginationHtml(currentPage, totalPages, pageSize, 'loadRules');
+}
+
+function showCreateModal() {
+    editingRuleId = null;
+    document.getElementById('ruleModalTitle').textContent = '新建规则';
+    document.getElementById('ruleForm').reset();
+    document.getElementById('f_rule_id').disabled = false;
+    new bootstrap.Modal(document.getElementById('ruleModal')).show();
+}
+
+async function editRule(ruleId) {
+    const res = await fetch(`/api/rules/${ruleId}`);
+    const r = await res.json();
+    editingRuleId = ruleId;
+    document.getElementById('ruleModalTitle').textContent = '编辑规则';
+    document.getElementById('f_rule_id').value = r.rule_id;
+    document.getElementById('f_rule_id').disabled = true;
+    document.getElementById('f_rule_name').value = r.rule_name;
+    document.getElementById('f_category').value = r.rule_category;
+    document.getElementById('f_event_type').value = r.event_type;
+    document.getElementById('f_risk_level').value = r.risk_level;
+    document.getElementById('f_score').value = r.risk_score;
+    document.getElementById('f_action').value = r.action;
+    document.getElementById('f_condition').value = JSON.stringify(r.rule_condition, null, 2);
+    document.getElementById('f_priority').value = r.priority;
+    document.getElementById('f_description').value = r.description || '';
+    new bootstrap.Modal(document.getElementById('ruleModal')).show();
+}
+
+async function saveRule() {
+    let condition;
+    try {
+        condition = JSON.parse(document.getElementById('f_condition').value);
+    } catch (e) {
+        alert('条件表达式JSON格式错误');
+        return;
+    }
+    const data = {
+        rule_id: document.getElementById('f_rule_id').value,
+        rule_name: document.getElementById('f_rule_name').value,
+        rule_category: document.getElementById('f_category').value,
+        event_type: document.getElementById('f_event_type').value,
+        rule_condition: condition,
+        risk_level: document.getElementById('f_risk_level').value,
+        risk_score: parseInt(document.getElementById('f_score').value),
+        action: document.getElementById('f_action').value,
+        priority: parseInt(document.getElementById('f_priority').value) || 0,
+        description: document.getElementById('f_description').value,
+    };
+    const url = editingRuleId ? `/api/rules/${editingRuleId}` : '/api/rules';
+    const method = editingRuleId ? 'PUT' : 'POST';
+    const res = await fetch(url, { method, headers: {'Content-Type':'application/json'}, body: JSON.stringify(data) });
+    if (res.ok) {
+        bootstrap.Modal.getInstance(document.getElementById('ruleModal')).hide();
+        loadRules(currentPage);
+    } else {
+        const err = await res.json();
+        alert(err.detail || '保存失败');
+    }
+}
+
+async function toggleRule(ruleId) {
+    await fetch(`/api/rules/${ruleId}/toggle`, { method: 'PUT' });
+}
+
+async function deleteRule(ruleId) {
+    if (!confirm('确定要删除这条规则吗？')) return;
+    await fetch(`/api/rules/${ruleId}`, { method: 'DELETE' });
+    loadRules(currentPage);
+}
+
+loadRules();
+
+// ============================================================
+// 可视化条件构建器 - Field / Op / Value 下拉选择 + JSON 预览
+// ============================================================
+
+const CONDITION_FIELDS = [
+    { value: "user_account_age_days",      label: "账户年龄(天)" },
+    { value: "user_is_real_name",          label: "是否实名" },
+    { value: "user_role_code",             label: "角色编码" },
+    { value: "user_total_enrollments",     label: "总报名数" },
+    { value: "user_enrollments_30d",       label: "近30天报名数" },
+    { value: "user_avg_completion_rate",   label: "平均完成率" },
+    { value: "user_refund_rate",           label: "退费率" },
+    { value: "user_complaint_count",       label: "投诉次数" },
+    { value: "course_price",               label: "课程价格" },
+    { value: "course_category_code",       label: "课程分类编码" },
+    { value: "course_total_hours",         label: "课程总学时" },
+    { value: "course_teacher_rating",      label: "教师评分" },
+    { value: "order_amount",               label: "订单金额" },
+    { value: "order_pay_hour",             label: "支付时段(小时)" },
+    { value: "user_multi_course_count",    label: "同时学习课程数" },
+    { value: "user_payment_account_count", label: "支付账户数" },
+    { value: "behavior_today_minutes",     label: "今日学习时长(分)" },
+    { value: "behavior_active_courses",    label: "活跃课程数" },
+    { value: "behavior_night_session",     label: "凌晨学习标记" },
+    { value: "behavior_device_count",      label: "设备数量" },
+];
+
+const CONDITION_OPS = [
+    { value: ">",   label: "大于 (>)" },
+    { value: ">=",  label: "大于等于 (>=)" },
+    { value: "<",   label: "小于 (<)" },
+    { value: "<=",  label: "小于等于 (<=)" },
+    { value: "==",  label: "等于 (==)" },
+    { value: "!=",  label: "不等于 (!=)" },
+    { value: "between", label: "区间 (between)" },
+    { value: "in",  label: "在集合中 (in)" },
+    { value: "not_in", label: "不在集合中 (not_in)" },
+];
+
+function _fieldOpts(sel) {
+    return CONDITION_FIELDS.map(f => `<option value="${f.value}" ${f.value===sel?'selected':''}>${f.label}</option>`).join('');
+}
+function _opOpts(sel) {
+    return CONDITION_OPS.map(o => `<option value="${o.value}" ${o.value===sel?'selected':''}>${o.label}</option>`).join('');
+}
+
+/** 切换 op 时重渲染 value 输入区 */
+function _renderValueInput(container, op, val) {
+    if (op === 'between') {
+        const v = Array.isArray(val) ? val : ['', ''];
+        container.innerHTML = `
+            <input type="text" class="form-control form-control-sm" placeholder="最小值" style="width:100px" value="${v[0]||''}">
+            <span class="mx-1">~</span>
+            <input type="text" class="form-control form-control-sm" placeholder="最大值" style="width:100px" value="${v[1]||''}">
+        `;
+    } else if (op === 'in' || op === 'not_in') {
+        const v = Array.isArray(val) ? val.join(',') : (val || '');
+        container.innerHTML = `
+            <input type="text" class="form-control form-control-sm" placeholder="逗号分隔, 如: 1,2,3" style="width:200px" value="${v}">
+        `;
+    } else {
+        const v = Array.isArray(val) ? val[0] : (val ?? '');
+        container.innerHTML = `
+            <input type="text" class="form-control form-control-sm" placeholder="值" style="width:120px" value="${v}">
+        `;
+    }
+}
+
+function onOpChange(select) {
+    const row = select.closest('.condition-row');
+    _renderValueInput(row.querySelector('.condition-value'), select.value, null);
+}
+
+/** 添加一条条件行 (Field | Op | Value | 删除) */
+function addConditionRow(field, op, values) {
+    field = field || 'order_amount';
+    op = op || '>=';
+    const container = document.getElementById('conditionRows');
+    const row = document.createElement('div');
+    row.className = 'condition-row d-flex align-items-center gap-1 mb-1';
+    row.innerHTML = `
+        <select class="form-select form-select-sm" style="width:190px">
+            ${_fieldOpts(field)}
+        </select>
+        <select class="form-select form-select-sm" style="width:130px" onchange="onOpChange(this)">
+            ${_opOpts(op)}
+        </select>
+        <div class="condition-value d-flex align-items-center">
+        </div>
+        <button type="button" class="btn btn-outline-danger btn-sm" onclick="this.closest('.condition-row').remove()">
+            <i class="bi bi-trash"></i>
+        </button>
+    `;
+    container.appendChild(row);
+    _renderValueInput(row.querySelector('.condition-value'), op, values);
+}
+
+/** 从可视化行构建 JSON 条件对象 */
+function buildConditionJson() {
+    const rows = document.querySelectorAll('.condition-row');
+    const logicOp = document.getElementById('f_logic_op').value; // 'and' or 'or'
+    const subs = [];
+    rows.forEach(row => {
+        const selects = row.querySelectorAll('select');
+        const field = selects[0].value;
+        const op = selects[1].value;
+        const valInputs = row.querySelectorAll('.condition-value input');
+        let value;
+        if (op === 'between') {
+            value = [valInputs[0].value, valInputs[1].value].map(v => isNaN(v) ? v : Number(v));
+        } else if (op === 'in' || op === 'not_in') {
+            value = valInputs[0].value.split(',').map(v => v.trim()).map(v => isNaN(v) ? v : Number(v));
+        } else {
+            value = isNaN(valInputs[0].value) ? valInputs[0].value : Number(valInputs[0].value);
+        }
+        subs.push({ field, op, value });
+    });
+    if (subs.length === 0) return {};
+    if (subs.length === 1) return subs[0];
+    return { [logicOp]: subs };
+}
+
+/** 预览 JSON 弹窗 */
+function previewJson() {
+    const json = buildConditionJson();
+    document.getElementById('jsonPreviewContent').textContent = JSON.stringify(json, null, 2);
+    new bootstrap.Modal(document.getElementById('jsonPreviewModal')).show();
+}
+
+function copyJson() {
+    const text = document.getElementById('jsonPreviewContent').textContent;
+    navigator.clipboard.writeText(text).then(() => {
+        alert('已复制到剪贴板');
+    }).catch(() => {
+        // 降级: 选中文本
+        const range = document.createRange();
+        const pre = document.getElementById('jsonPreviewContent');
+        range.selectNodeContents(pre);
+        const sel = window.getSelection();
+        sel.removeAllRanges(); sel.addRange(range);
+    });
+}
+
+function applyJson() {
+    const json = buildConditionJson();
+    document.getElementById('f_condition').value = JSON.stringify(json);
+    bootstrap.Modal.getInstance(document.getElementById('jsonPreviewModal')).hide();
+}
+
+/** 从 JSON 条件填充可视化行（编辑时用） */
+function populateConditionRows(condition) {
+    document.getElementById('conditionRows').innerHTML = '';
+    if (!condition || Object.keys(condition).length === 0) {
+        addConditionRow();
+        return;
+    }
+    // 检测逻辑组合 {"and":[...]} 或 {"or":[...]}
+    if (condition.and || condition.or) {
+        const logicOp = condition.and ? 'and' : 'or';
+        document.getElementById('f_logic_op').value = logicOp;
+        const items = condition.and || condition.or || [];
+        items.forEach(sub => addConditionRow(sub.field, sub.op, sub.value));
+    } else {
+        // 单条件
+        addConditionRow(condition.field, condition.op, condition.value);
+    }
+}
+
+// 重写 showCreateModal：初始化 1 行
+const _origShowCreate = showCreateModal;
+showCreateModal = function() {
+    _origShowCreate();
+    document.getElementById('conditionRows').innerHTML = '';
+    addConditionRow();
+    document.getElementById('f_condition').value = '';
+};
+
+// 重写 editRule：填充可视化行
+const _origEditRule = editRule;
+editRule = async function(ruleId) {
+    const res = await fetch(`/api/rules/${ruleId}`);
+    const r = await res.json();
+    editingRuleId = ruleId;
+    document.getElementById('ruleModalTitle').textContent = '编辑规则';
+    document.getElementById('f_rule_id').value = r.rule_id;
+    document.getElementById('f_rule_id').disabled = true;
+    document.getElementById('f_rule_name').value = r.rule_name;
+    document.getElementById('f_category').value = r.rule_category;
+    document.getElementById('f_event_type').value = r.event_type;
+    document.getElementById('f_risk_level').value = r.risk_level;
+    document.getElementById('f_score').value = r.risk_score;
+    document.getElementById('f_action').value = r.action;
+    document.getElementById('f_condition').value = JSON.stringify(r.rule_condition, null, 2);
+    populateConditionRows(r.rule_condition);
+    document.getElementById('f_priority').value = r.priority;
+    document.getElementById('f_description').value = r.description || '';
+    new bootstrap.Modal(document.getElementById('ruleModal')).show();
+};
+
+// saveRule 之前先注入可视化条件到 textarea (如果 textarea 为空)
+const _origSaveRule = saveRule;
+saveRule = async function() {
+    const ta = document.getElementById('f_condition');
+    if (!ta.value || ta.value.trim() === '') {
+        const json = buildConditionJson();
+        ta.value = JSON.stringify(json);
+    }
+    await _origSaveRule();
+};
+</script>
+{% endblock %}

@@ -1,0 +1,38 @@
+-- ============================================
+-- 教育风控系统 - 数据库初始化指南
+-- ============================================
+--
+-- 本系统共需初始化 4 个 SQL 脚本，按以下顺序执行:
+--
+--   1. init_business_tables.sql  -- 10 张教育业务表 (DDL)
+--   2. init_business_data.sql    -- 业务表测试数据
+--   3. init_risk_tables.sql      -- 9 张风控表 (DDL, 含 P4 2 张)
+--   4. init_risk_data.sql        -- 30 条预置教育风控规则 (ER001-ER030)
+--
+-- ============================================
+-- 使用方式
+-- ============================================
+--
+-- 方式1 (推荐): 一键 Python 脚本
+--   conda activate risk
+--   python scripts/init_db.py
+--
+-- 方式2: 手动按顺序执行 (在项目根目录下)
+--   mysql -u root -p123321 --default-character-set=utf8mb4 ecs < sql/init_business_tables.sql
+--   mysql -u root -p123321 --default-character-set=utf8mb4 ecs < sql/init_business_data.sql
+--   mysql -u root -p123321 --default-character-set=utf8mb4 ecs < sql/init_risk_tables.sql
+--   mysql -u root -p123321 --default-character-set=utf8mb4 ecs < sql/init_risk_data.sql
+--
+-- 方式3: 仅创建数据库结构 (不含数据)
+--   mysql -u root -p123321 --default-character-set=utf8mb4 ecs < sql/init_business_tables.sql
+--   mysql -u root -p123321 --default-character-set=utf8mb4 ecs < sql/init_risk_tables.sql
+--
+-- ============================================
+-- 注意事项
+-- ============================================
+-- - 数据库名: ecs (沿用原电商库名, 内容已替换为教育表)
+-- - 字符集: utf8mb4
+-- - 业务表推荐使用 KEY (索引) 而非 FK (外键), 避免初始化顺序约束
+-- - 业务数据脚本已包含 SET FOREIGN_KEY_CHECKS = 0 处理
+-- - 风控表 9 张 (7 张原风控 + 2 张 P4 系统管理表 risk_action_log / risk_alert)
+-- - 教育风控规则 30 条 (ER001-ER030), 覆盖 8 个风险场景

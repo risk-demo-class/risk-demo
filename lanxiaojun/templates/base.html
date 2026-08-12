@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}教育风控系统{% endblock %}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.2/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        /* ===== 全局 ===== */
+        html, body { height: 100%; margin: 0; }
+        body {
+            background: #f0f4f8;
+            overflow: hidden;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        }
+        .container-fluid, .row { padding: 0 !important; margin: 0 !important; }
+
+        /* ===== 侧边栏 ===== */
+        .sidebar {
+            position: fixed;
+            top: 0; left: 0; bottom: 0;
+            width: 16.66667%;
+            background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%);
+            overflow-y: auto;
+            z-index: 1000;
+        }
+        .sidebar-brand {
+            color: #fff;
+            font-size: 20px;
+            font-weight: 800;
+            padding: 24px 20px;
+            letter-spacing: 0.5px;
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .sidebar-brand i { font-size: 24px; }
+        .sidebar .nav-link {
+            color: #94a3b8;
+            padding: 10px 20px;
+            border-radius: 10px;
+            margin: 2px 10px;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .sidebar .nav-link i {
+            width: 20px;
+            text-align: center;
+            font-size: 16px;
+        }
+        .sidebar .nav-link:hover {
+            color: #fff;
+            background: rgba(255,255,255,0.08);
+            transform: translateX(4px);
+        }
+        .sidebar .nav-link.active {
+            color: #fff;
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            box-shadow: 0 4px 12px rgba(99,102,241,0.3);
+        }
+
+        /* ===== 主内容区 ===== */
+        .main-content {
+            margin-left: 16.66667%;
+            height: 100vh;
+            overflow-y: auto;
+            padding: 28px 32px;
+        }
+
+        /* ===== 分页栏 ===== */
+        .pagination-bottom {
+            position: sticky;
+            bottom: 0;
+            background: #ffffff;
+            padding: 8px 16px;
+            margin: 16px 0 0 0;
+            border-top: 1px solid #e2e8f0;
+            box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.04);
+            z-index: 100;
+            min-height: 38px;
+            border-radius: 0 0 12px 12px;
+        }
+        .pagination-bottom .pagination {
+            margin: 0;
+            display: flex;
+            list-style: none;
+            gap: 4px;
+            justify-content: center;
+            align-items: center;
+        }
+        .pagination-bottom .page-item .page-link {
+            color: #475569;
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            padding: 4px 10px;
+            font-size: 13px;
+            font-weight: 500;
+            min-width: 32px;
+            height: 30px;
+            text-align: center;
+            border-radius: 6px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.15s ease;
+        }
+        .pagination-bottom .page-item.active .page-link {
+            color: #ffffff;
+            background: #6366f1;
+            border-color: #6366f1;
+            font-weight: 600;
+            box-shadow: 0 2px 6px rgba(99,102,241,0.3);
+        }
+        .pagination-bottom .page-item.disabled .page-link {
+            color: #cbd5e1;
+            background: #f8fafc;
+            cursor: not-allowed;
+        }
+        .pagination-bottom .page-item .page-link:hover:not(.disabled) {
+            background: #eef2ff;
+            border-color: #6366f1;
+        }
+
+        /* ===== 通用卡片 ===== */
+        .stat-card {
+            border: none;
+            border-radius: 14px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+            background: #fff;
+            transition: all 0.2s ease;
+        }
+        .stat-card:hover {
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08), 0 2px 4px rgba(0,0,0,0.04);
+            transform: translateY(-1px);
+        }
+        .stat-card .stat-value { font-size: 30px; font-weight: 800; line-height: 1.2; }
+        .stat-card .stat-label { font-size: 13px; font-weight: 500; color: #64748b; }
+
+        /* ===== 页面标题 ===== */
+        .page-title {
+            font-weight: 700;
+            font-size: 22px;
+            color: #0f172a;
+            margin-bottom: 24px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .page-title i { color: #6366f1; font-size: 26px; }
+
+        /* ===== 风险徽章 ===== */
+        .badge-risk-low { background: #dcfce7; color: #166534; font-weight: 600; }
+        .badge-risk-mid { background: #fef9c3; color: #854d0e; font-weight: 600; }
+        .badge-risk-high { background: #fed7aa; color: #9a3412; font-weight: 600; }
+        .badge-risk-critical { background: #fecaca; color: #991b1b; font-weight: 600; }
+
+        /* ===== 表格 ===== */
+        .table th {
+            font-weight: 600;
+            font-size: 13px;
+            color: #475569;
+            border-bottom-width: 1px;
+            white-space: nowrap;
+            background: #f8fafc;
+        }
+        .table td {
+            font-size: 14px;
+            vertical-align: middle;
+        }
+        .table-hover tbody tr {
+            transition: background 0.15s ease;
+        }
+        .table-hover tbody tr:hover {
+            background: #f1f5f9;
+        }
+        .table-responsive {
+            border-radius: 12px;
+        }
+
+        /* ===== 按钮通用 ===== */
+        .btn {
+            font-weight: 500;
+            border-radius: 8px;
+            transition: all 0.15s ease;
+        }
+        .btn-sm { border-radius: 6px; }
+        .btn-primary {
+            background: #6366f1;
+            border-color: #6366f1;
+        }
+        .btn-primary:hover {
+            background: #4f46e5;
+            border-color: #4f46e5;
+            box-shadow: 0 2px 8px rgba(99,102,241,0.3);
+        }
+        .btn-outline-primary {
+            color: #6366f1;
+            border-color: #6366f1;
+        }
+        .btn-outline-primary:hover {
+            background: #6366f1;
+            border-color: #6366f1;
+        }
+
+        /* ===== 聊天气泡 ===== */
+        .chat-messages {
+            height: calc(100vh - 320px);
+            min-height: 300px;
+            max-height: calc(100vh - 160px);
+            overflow-y: auto;
+            background: #f8fafc;
+            border-radius: 12px;
+        }
+        .chat-bubble {
+            max-width: 80%;
+            padding: 12px 16px;
+            border-radius: 14px;
+            margin-bottom: 10px;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+        .chat-bubble.user {
+            background: linear-gradient(135deg, #6366f1, #4f46e5);
+            color: #fff;
+            margin-left: auto;
+            box-shadow: 0 2px 8px rgba(99,102,241,0.2);
+        }
+        .chat-bubble.ai {
+            background: #ffffff;
+            color: #1e293b;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+        }
+
+        /* ===== 红色关闭按钮 ===== */
+        .btn-close-risk {
+            background: transparent;
+            border: 2px solid #f87171;
+            border-radius: 8px;
+            color: #f87171;
+            width: 32px;
+            height: 32px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            font-weight: 700;
+            transition: all 0.15s ease;
+        }
+        .btn-close-risk:hover {
+            background: #f87171;
+            color: #fff;
+        }
+
+        /* ===== 表单控件 ===== */
+        .form-control, .form-select {
+            border-radius: 8px;
+            border-color: #e2e8f0;
+            font-size: 14px;
+            transition: all 0.15s ease;
+        }
+        .form-control:focus, .form-select:focus {
+            border-color: #6366f1;
+            box-shadow: 0 0 0 3px rgba(99,102,241,0.15);
+        }
+        .form-label { font-weight: 600; font-size: 13px; color: #334155; margin-bottom: 4px; }
+
+        /* ===== 模态框 ===== */
+        .modal-content {
+            border: none;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.12);
+        }
+        .modal-header {
+            border-bottom: 1px solid #e2e8f0;
+            padding: 20px 24px;
+        }
+        .modal-header .modal-title { font-weight: 700; font-size: 18px; }
+        .modal-body { padding: 24px; }
+        .modal-footer {
+            border-top: 1px solid #e2e8f0;
+            padding: 16px 24px;
+        }
+
+        /* ===== 滚动条 ===== */
+        .main-content::-webkit-scrollbar, .chat-messages::-webkit-scrollbar {
+            width: 6px;
+        }
+        .main-content::-webkit-scrollbar-track, .chat-messages::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .main-content::-webkit-scrollbar-thumb, .chat-messages::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 3px;
+        }
+        .main-content::-webkit-scrollbar-thumb:hover, .chat-messages::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+
+        /* ===== 响应式 ===== */
+        @media (max-width: 767.98px) {
+            body { overflow: auto; }
+            .sidebar {
+                position: relative;
+                width: 100%;
+                height: auto;
+                overflow-y: visible;
+            }
+            .main-content {
+                margin-left: 0;
+                height: auto;
+                overflow-y: visible;
+                padding: 16px;
+            }
+        }
+    </style>
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+<div class="container-fluid">
+    <div class="row">
+        <!-- 侧边栏 -->
+        <div class="col-md-2 sidebar px-0">
+            <div class="sidebar-brand">
+                <i class="bi bi-shield-fill-check"></i> 风控中心
+            </div>
+            <nav class="nav flex-column mt-3">
+                <a class="nav-link {% if request.url.path == '/' %}active{% endif %}" href="/">
+                    <i class="bi bi-speedometer2"></i> 仪表盘
+                </a>
+                <a class="nav-link {% if request.url.path == '/rules' %}active{% endif %}" href="/rules">
+                    <i class="bi bi-list-check"></i> 规则管理
+                </a>
+                <a class="nav-link {% if request.url.path == '/cases' %}active{% endif %}" href="/cases">
+                    <i class="bi bi-folder2-open"></i> 案件管理
+                </a>
+                <a class="nav-link {% if request.url.path == '/assessments' %}active{% endif %}" href="/assessments">
+                    <i class="bi bi-clipboard-data"></i> 评估历史
+                </a>
+                <a class="nav-link {% if request.url.path == '/risk-check' %}active{% endif %}" href="/risk-check">
+                    <i class="bi bi-search"></i> 风险检查
+                </a>
+                <a class="nav-link {% if request.url.path == '/chat' %}active{% endif %}" href="/chat">
+                    <i class="bi bi-robot"></i> AI 助手
+                </a>
+                <a class="nav-link {% if request.url.path == '/blacklist' %}active{% endif %}" href="/blacklist">
+                    <i class="bi bi-shield-x"></i> 黑名单
+                </a>
+            </nav>
+            <!-- 底部版本信息 -->
+            <div class="position-absolute" style="bottom:16px;left:0;right:0;text-align:center;">
+                <small style="color:#475569;font-size:11px;">教育风控系统 v2.0</small>
+            </div>
+        </div>
+        <!-- 主内容区 -->
+        <div class="col-md-10 main-content">
+            {% block content %}{% endblock %}
+        </div>
+    </div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="/static/app.js?v=20260808v4"></script>
+{% block extra_js %}{% endblock %}
+</body>
+</html>
