@@ -1,0 +1,31 @@
+﻿services:
+  mysql:
+    image: mysql:8.0
+    container_name: ai_risk_bank_mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-123321}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-ecs}
+      TZ: Asia/Shanghai
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_0900_ai_ci
+      - --default-authentication-plugin=mysql_native_password
+    ports:
+      - "${MYSQL_PORT:-3306}:3306"
+    volumes:
+      - ai_risk_bank_mysql_data:/var/lib/mysql
+      - ../sql/init_business_tables.sql:/docker-entrypoint-initdb.d/01_business_tables.sql:ro
+      - ../sql/init_business_data.sql:/docker-entrypoint-initdb.d/02_business_data.sql:ro
+      - ../sql/init_risk_tables.sql:/docker-entrypoint-initdb.d/03_risk_tables.sql:ro
+      - ../sql/init_risk_data.sql:/docker-entrypoint-initdb.d/04_risk_rules.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -uroot -p$$MYSQL_ROOT_PASSWORD || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+volumes:
+  ai_risk_bank_mysql_data:
+    name: ai_risk_bank_mysql_data
