@@ -1,0 +1,65 @@
+﻿# Python 铏氭嫙鐜
+.venv/
+venv/
+env/
+ENV/
+
+# Python 缂栬瘧缂撳瓨
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.pyx
+.Python
+*.egg-info
+dist/
+build/
+eggs/
+.eggs/
+wheels/
+
+# 椤圭洰杩愯涓存椂鐩綍
+.artifact-work/
+logs/
+outputs/
+
+# 鐜鍙橀噺銆佸瘑閽ラ厤缃紙缁濆涓嶈兘涓婁紶锛?.env
+.env.local
+.env.prod
+config.local.py
+secrets.json
+
+# 鏁版嵁闆嗐€佸ぇ妯″瀷鏉冮噸锛堜綋绉ぇ涓旀晱鎰燂級
+data/*.pth
+data/*.bin
+data/*.ckpt
+artifacts/
+*.model
+*.onnx
+
+# Docker 缂撳瓨
+docker/volumes/
+docker/.env
+
+# IDE 缂栬緫鍣ㄩ厤缃?.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# 娴嬭瘯鐩稿叧缂撳瓨
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+
+# 鎿嶄綔绯荤粺鍨冨溇鏂囦欢
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db

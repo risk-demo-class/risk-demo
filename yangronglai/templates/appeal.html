@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block content %}
+  <section class="hero-panel compact">
+    <div>
+      <span class="section-tag">CLIENT APPEAL</span>
+      <h2>拒绝决策申诉入口</h2>
+      <p>使用拒绝响应中签发的限时凭证提交申诉。原始风控决策保持不变，复议结果以独立审计记录追加。</p>
+    </div>
+  </section>
+
+  <section class="two-column align-start appeal-layout">
+    <article class="panel">
+      <div class="panel-heading"><div><span class="section-tag">SUBMIT</span><h2>提交申诉</h2></div></div>
+      <form id="appeal-submit-form" class="form-grid">
+        <label class="full-width">风险评估 ID<input name="assessment_id" required maxlength="64"></label>
+        <label class="full-width">申诉凭证<input name="appeal_token" type="password" required autocomplete="off"></label>
+        <label class="full-width">申诉理由<textarea name="reason" rows="6" minlength="10" maxlength="2000" required></textarea></label>
+        <label class="full-width">期望处理结果<input name="requested_resolution" maxlength="200" placeholder="例如：解除本次交易限制并人工复核"></label>
+        <button class="primary-button full-width" type="submit">提交申诉</button>
+      </form>
+      <p class="form-note">同一风险评估只能创建一条申诉；重复提交会返回原申诉，不会重复建单。</p>
+      <pre id="appeal-submit-result" class="small-result">等待提交</pre>
+    </article>
+
+    <article class="panel">
+      <div class="panel-heading"><div><span class="section-tag">TRACK</span><h2>查询申诉进度</h2></div></div>
+      <form id="appeal-query-form" class="form-grid">
+        <label class="full-width">申诉 ID<input name="appeal_id" required maxlength="64"></label>
+        <label class="full-width">申诉凭证<input name="appeal_token" type="password" required autocomplete="off"></label>
+        <button class="primary-button full-width" type="submit">查询状态</button>
+      </form>
+      <pre id="appeal-query-result" class="small-result">等待查询</pre>
+    </article>
+  </section>
+
+  <section class="panel appeal-evidence-panel">
+    <div class="panel-heading"><div><span class="section-tag">EVIDENCE</span><h2>补充申诉材料</h2></div></div>
+    <form id="appeal-evidence-form" class="form-grid">
+      <label>申诉 ID<input name="appeal_id" required maxlength="64"></label>
+      <label>材料类型<select name="evidence_type"><option value="STATEMENT">情况说明</option><option value="TRANSACTION_PROOF">交易证明</option><option value="IDENTITY_PROOF">身份核验材料</option><option value="OTHER">其他</option></select></label>
+      <label class="full-width">申诉凭证<input name="appeal_token" type="password" required autocomplete="off"></label>
+      <label class="full-width">文字说明<textarea name="statement" rows="5" maxlength="4000"></textarea></label>
+      <label>文件名（可选）<input name="file_name" maxlength="255"></label>
+      <label>文件 SHA-256（可选）<input name="file_sha256" minlength="64" maxlength="64"></label>
+      <button class="primary-button full-width" type="submit">补充材料</button>
+    </form>
+    <p class="form-note">当前接口保存文字与受控文件元数据；真实文件应先经过银行文件服务的病毒扫描和内容安全检查。</p>
+    <pre id="appeal-evidence-result" class="small-result">等待提交材料</pre>
+  </section>
+{% endblock %}

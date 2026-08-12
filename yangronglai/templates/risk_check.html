@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block content %}
+  <section class="two-column align-start">
+    <article class="panel">
+      <div class="panel-heading">
+        <div><span class="section-tag">RULE DECISION</span><h2>四场景风险检查</h2></div>
+        <span class="component-state on">规则已启用</span>
+      </div>
+      <form id="risk-check-form" class="form-grid">
+        <label class="full-width">演示事件
+          <select id="demo-event-picker">
+            <optgroup label="正常业务基线">
+              <option value="TRANSFER|TXN_SAFE|U_SAFE">安全样例 · 预期通过</option>
+            </optgroup>
+            <optgroup label="风险规则验证（预期触发策略）">
+            <option value="TRANSFER|TXN_R001|U_R001">R001 · 异地大额转账</option>
+            <option value="CARD|TXN_R002_3|U_R002">R002 · 凌晨密集操作</option>
+            <option value="TRANSFER|TXN_R005|U_R005">R005 · 新设备大额</option>
+            <option value="TRANSFER|TXN_R008_3|U_R008_C">R008 · 多卡归集</option>
+            <option value="LOAN|LOAN_R012_3|U_R012">R012 · 信贷申请突击</option>
+            <option value="LOGIN|LOGIN_R018|U_SHARED_1">R018 · 设备多人共用</option>
+            <option value="LOGIN|LOGIN_R025|U_R025">R025 · IP 代理/Tor</option>
+            <option value="TRANSFER|TXN_R030|U_R030">R030 · 黑卡拦截</option>
+            </optgroup>
+          </select>
+        </label>
+        <label>业务场景
+          <select name="scenario">
+            <option value="CARD">信用卡 CARD</option>
+            <option value="LOAN">贷款 LOAN</option>
+            <option value="TRANSFER" selected>转账 TRANSFER</option>
+            <option value="LOGIN">登录 LOGIN</option>
+          </select>
+        </label>
+        <label>业务事件 ID<input name="source_id" value="TXN_SAFE" required maxlength="64"></label>
+        <label>用户 ID<input name="user_id" value="U_SAFE" required maxlength="64"></label>
+        <label class="full-width">事件扩展数据（JSON）
+          <textarea name="event_data" rows="7">{}</textarea>
+        </label>
+        <button class="primary-button full-width" type="submit">执行规则评估</button>
+      </form>
+      <p class="form-note">风险规则样例本来就应触发“标记 / 人工审核 / 拒绝”；这表示风控策略生效，不是请求失败。你也可以换成不存在的 source_id，并在 event_data 中传入实时事件字段。</p>
+    </article>
+    <article class="panel result-panel">
+      <div class="panel-heading"><div><span class="section-tag">RESPONSE</span><h2>接口响应</h2></div><span id="request-status" class="component-state">等待请求</span></div>
+      <pre id="risk-result">等待提交测试请求……</pre>
+      <a id="appeal-cta" class="primary-button appeal-cta" href="/appeal" hidden>对本次拒绝发起申诉</a>
+    </article>
+  </section>
+{% endblock %}

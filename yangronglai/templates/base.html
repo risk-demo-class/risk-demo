@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="银行信用卡、贷款、转账、登录四场景智能风控平台">
+  <title>{{ page_title }} · {{ app_name }}</title>
+  <link rel="stylesheet" href="{{ url_for('static', path='/app.css') }}">
+</head>
+<body data-page="{{ request.url.path }}">
+  <aside class="sidebar">
+    <div class="brand">
+      <span class="brand-mark">BR</span>
+      <div>
+        <strong>{{ app_name }}</strong>
+        <small>银行智能风控平台</small>
+      </div>
+    </div>
+    <nav aria-label="主导航">
+      <a href="/" class="nav-link {% if request.url.path == '/' %}active{% endif %}">风控总览</a>
+      <a href="/risk-check" class="nav-link {% if request.url.path == '/risk-check' %}active{% endif %}">风险检查</a>
+      <a href="/agent" class="nav-link {% if request.url.path == '/agent' %}active{% endif %}">AI 风控助手</a>
+      <a href="/rules" class="nav-link {% if request.url.path == '/rules' %}active{% endif %}">规则中心</a>
+      <a href="/assessments" class="nav-link {% if request.url.path == '/assessments' %}active{% endif %}">评估历史</a>
+      <a href="/cases" class="nav-link {% if request.url.path == '/cases' %}active{% endif %}">案件工作台</a>
+      <a href="/appeal" class="nav-link {% if request.url.path == '/appeal' %}active{% endif %}">客户申诉</a>
+      <a href="/graph" class="nav-link {% if request.url.path == '/graph' %}active{% endif %}">关系图谱</a>
+    </nav>
+    <div class="sidebar-foot">
+      <span class="status-dot"></span>
+      <div>
+        <strong>{{ stage }}</strong>
+        <small>v{{ app_version }}</small>
+      </div>
+    </div>
+  </aside>
+
+  <main class="main-shell">
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">BANK RISK CONTROL</p>
+        <h1>{{ page_title }}</h1>
+      </div>
+      <div class="topbar-meta">
+        <span id="live-clock">--:--:--</span>
+        <span class="stage-pill">{{ stage }}</span>
+      </div>
+    </header>
+    <section class="page-content">
+      {% block content %}{% endblock %}
+    </section>
+  </main>
+  <script src="{{ url_for('static', path='/app.js') }}" defer></script>
+</body>
+</html>

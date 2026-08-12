@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block content %}
+  <section class="hero-panel compact">
+    <div>
+      <span class="section-tag">MANDATORY RULES</span>
+      <h2>银行规则中心</h2>
+      <p>规则条件存储于数据库 JSON 字段，通过白名单表达式执行，不使用 eval；命中时保留字段级证据。</p>
+    </div>
+    <a class="primary-button" href="/risk-check">测试规则</a>
+  </section>
+  <section class="panel rule-table-panel">
+    <div class="panel-heading">
+      <div><span class="section-tag">R001—R030</span><h2>已启用规则</h2></div>
+      <span id="rule-count" class="component-state pending">加载中</span>
+    </div>
+    <div class="table-scroll">
+      <table class="data-table">
+        <thead><tr><th>编号</th><th>规则名</th><th>场景</th><th>分值</th><th>等级</th><th>决策</th><th>说明</th></tr></thead>
+        <tbody id="rule-table-body"><tr><td colspan="7">正在加载规则……</td></tr></tbody>
+      </table>
+    </div>
+  </section>
+{% endblock %}

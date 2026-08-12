@@ -1,0 +1,5 @@
+{% extends "base.html" %}
+{% block content %}
+  <section class="hero-panel compact"><div><span class="section-tag">RELATIONSHIP INTELLIGENCE</span><h2>客户关系图谱</h2><p>设备、IP、银行卡和转账网络的二度关系；本地模式无需 Neo4j 即可运行。</p></div></section>
+  <section class="panel rule-table-panel"><form id="graph-query-form" class="inline-form"><input name="user_id" value="U_SHARED_1" required><select name="depth"><option value="1">1度</option><option value="2" selected>2度</option><option value="3">3度</option></select><button class="primary-button">查询图谱</button></form><div class="graph-layout"><svg id="graph-canvas" viewBox="0 0 800 480" role="img"></svg><pre id="graph-summary" class="small-result">等待查询</pre></div></section>
+{% endblock %}

@@ -1,0 +1,7 @@
+{% extends "base.html" %}
+{% block content %}
+  <section class="hero-panel compact"><div><span class="section-tag">AUDIT TRAIL</span><h2>全量评估历史</h2><p>查看规则分、模型分、图谱分、融合分及最终决策。</p></div></section>
+  <section class="panel rule-table-panel">
+    <div class="table-scroll"><table class="data-table"><thead><tr><th>评估ID</th><th>场景</th><th>用户</th><th>规则</th><th>模型</th><th>图谱</th><th>最终</th><th>等级</th><th>决策</th></tr></thead><tbody id="assessment-table-body"><tr><td colspan="9">加载中……</td></tr></tbody></table></div>
+  </section>
+{% endblock %}

@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block content %}
+  <section class="hero-panel">
+    <div>
+      <span class="section-tag">THREE-LAYER FUSION READY</span>
+      <h2>规则兜底、模型提准、图谱挖团已经融合</h2>
+      <p>五个校准模型、本地关系图谱、强规则与 Agent 工具共同工作；每个分量和最终决策均可回溯。</p>
+    </div>
+    <a class="primary-button" href="/docs">打开 Swagger API</a>
+  </section>
+
+  <section class="metric-grid" id="dashboard-metrics">
+    <article class="metric-card"><small>累计评估</small><strong id="metric-assessments">--</strong></article>
+    <article class="metric-card"><small>通过率</small><strong id="metric-pass-rate">--</strong></article>
+    <article class="metric-card"><small>待审案件</small><strong id="metric-cases">--</strong></article>
+    <article class="metric-card"><small>待审申诉</small><strong id="metric-appeals">--</strong></article>
+    <article class="metric-card"><small>模型就绪</small><strong id="metric-models">--</strong></article>
+  </section>
+  <p class="status-explainer" id="dashboard-status-note">
+    “标记 / 人工审核 / 拒绝”是风控引擎成功执行后的策略结果，不代表接口或系统运行失败。
+  </p>
+
+  <section class="scenario-grid" aria-label="四大风险场景">
+    <article class="scenario-card card-blue">
+      <span>01</span><h3>信用卡</h3><p>盗刷、卡测、套现、商户与终端风险</p><small>模型槽位：CARD</small>
+    </article>
+    <article class="scenario-card card-gold">
+      <span>02</span><h3>贷款</h3><p>信用违约、申请欺诈、合成身份与中介团伙</p><small>模型槽位：LOAN_DEFAULT / LOAN_FRAUD</small>
+    </article>
+    <article class="scenario-card card-red">
+      <span>03</span><h3>转账</h3><p>账户盗用、电诈、跑分卡与异常资金网络</p><small>模型槽位：TRANSFER</small>
+    </article>
+    <article class="scenario-card card-green">
+      <span>04</span><h3>登录</h3><p>撞库、机器人、异常设备与账号接管</p><small>模型槽位：LOGIN</small>
+    </article>
+  </section>
+
+  <section class="two-column">
+    <article class="panel">
+      <div class="panel-heading"><div><span class="section-tag">DECISION PIPELINE</span><h2>三层融合骨架</h2></div></div>
+      <div class="pipeline">
+        <div><b>规则兜底</b><span class="component-state on">已启用</span><p>8 条场景规则、名单拦截、评分与完整审计。</p></div>
+        <div><b>模型提准</b><span class="component-state on">已启用</span><p>5 个 XGBoost 模型、时间切分与 Platt 校准。</p></div>
+        <div><b>图谱挖团</b><span class="component-state on">已启用</span><p>NetworkX 本地评分与 Neo4j 同步接口。</p></div>
+      </div>
+    </article>
+    <article class="panel">
+      <div class="panel-heading"><div><span class="section-tag">STAGE STATUS</span><h2>当前交付</h2></div></div>
+      <ul class="check-list">
+        <li>规则、模型、图谱三层独立评分</li>
+        <li>最高分全额 + 其余层加权佐证</li>
+        <li>评估历史、案件审核与客户360</li>
+        <li>8 个 Agent 工具和审批控制</li>
+        <li>SQLite/MySQL 与本地图/Neo4j 双适配</li>
+        <li>完整审计、测试与容器编排</li>
+      </ul>
+    </article>
+  </section>
+{% endblock %}
