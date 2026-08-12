@@ -1,0 +1,571 @@
+{% extends "base.html" %}
+{% block title %}规则管理 - 旅游风控系统{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="mb-0">规则管理</h4>
+    <button class="btn btn-primary btn-sm" onclick="showCreateModal()">
+        <i class="bi bi-plus-circle"></i> 新建规则
+    </button>
+</div>
+
+<!-- 筛选 -->
+<div class="mb-3 d-flex gap-2 align-items-center flex-wrap">
+    <select class="form-select form-select-sm w-auto" id="filterCategory" onchange="loadRules(1)">
+        <option value="">全部分类</option>
+        <option value="预订欺诈">预订欺诈</option>
+        <option value="退改滥用">退改滥用</option>
+        <option value="账户风险">账户风险</option>
+        <option value="签证风险">签证风险</option>
+        <option value="设备风险">设备风险</option>
+        <option value="黑名单风险">黑名单风险</option>
+    </select>
+    <span class="text-muted small">每页</span>
+    <select class="form-select form-select-sm w-auto" id="pageSize" onchange="onPageSizeChange()">
+        <option value="20">20 条</option>
+        <option value="50">50 条</option>
+        <option value="100">100 条</option>
+    </select>
+    <span class="text-muted small ms-2" id="rulesCount"></span>
+</div>
+
+<!-- 规则列表 -->
+<div class="card stat-card">
+    <div class="table-responsive">
+        <table class="table table-hover mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>规则ID</th><th>名称</th><th>分类</th><th>事件类型</th>
+                    <th>等级</th><th>分值</th><th>动作</th><th>优先级</th>
+                    <th>状态</th><th>操作</th>
+                </tr>
+            </thead>
+            <tbody id="rules-table"></tbody>
+        </table>
+    </div>
+</div>
+
+<nav class="pagination-bottom"><ul class="pagination justify-content-center mb-0" id="pagination"></ul></nav>
+
+<!-- 创建/编辑模态框 -->
+<div class="modal fade" id="ruleModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                    <h5 class="modal-title" id="ruleModalTitle">新建规则</h5>
+                    <button type="button" class="btn-close-risk" data-bs-dismiss="modal" title="关闭" aria-label="Close"><i class="bi bi-x-lg"></i></button>
+                </div>
+            <div class="modal-body">
+                <form id="ruleForm">
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <label class="form-label">规则ID</label>
+                            <input type="text" class="form-control" id="f_rule_id" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">规则名称</label>
+                            <input type="text" class="form-control" id="f_rule_name" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">分类</label>
+                            <select class="form-select" id="f_category" required>
+                                <option value="预订欺诈">预订欺诈</option>
+                                <option value="退改滥用">退改滥用</option>
+                                <option value="账户风险">账户风险</option>
+                                <option value="签证风险">签证风险</option>
+                                <option value="设备风险">设备风险</option>
+                                <option value="黑名单风险">黑名单风险</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-3">
+                            <label class="form-label">事件类型</label>
+                            <select class="form-select" id="f_event_type">
+                                <option value="通用">通用</option>
+                                <option value="预订下单">预订下单</option>
+                                <option value="支付">支付</option>
+                                <option value="退改申请">退改申请</option>
+                                <option value="签证申请">签证申请</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">风险等级</label>
+                            <select class="form-select" id="f_risk_level" required>
+                                <option value="低">低</option>
+                                <option value="中">中</option>
+                                <option value="高">高</option>
+                                <option value="极高">极高</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">分值 (0-100)</label>
+                            <input type="number" class="form-control" id="f_score" min="0" max="100"
+                                   required oninput="autoMatchLevelAction()"
+                                   title="输入分值后自动匹配风险等级与动作 (阈值 30/60/80)">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">动作</label>
+                            <select class="form-select" id="f_action" required>
+                                <option value="通过">通过</option>
+                                <option value="标记">标记</option>
+                                <option value="人工审核">人工审核</option>
+                                <option value="拒绝">拒绝</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <label class="form-label mb-0">条件</label>
+                            <div class="form-check form-switch mb-0">
+                                <input class="form-check-input" type="checkbox" id="advancedMode" onchange="toggleConditionMode()">
+                                <label class="form-check-label small text-muted" for="advancedMode">高级模式 (JSON)</label>
+                            </div>
+                        </div>
+                        <!-- 傻瓜模式: 条件构建器 -->
+                        <div id="builderMode">
+                            <select class="form-select form-select-sm mb-2 w-auto" id="condLogic">
+                                <option value="and">所有条件需同时满足 (AND)</option>
+                                <option value="or">任一条件满足即可 (OR)</option>
+                            </select>
+                            <div id="condRows"></div>
+                            <button type="button" class="btn btn-outline-primary btn-sm" onclick="addCondRow()">
+                                <i class="bi bi-plus-lg"></i> 添加条件
+                            </button>
+                        </div>
+                        <!-- 高级模式: 手写 JSON -->
+                        <textarea class="form-control" id="f_condition" rows="4"
+                            placeholder='{"field": "order_total_amount", "op": ">=", "value": 5000}'
+                            style="display:none;"></textarea>
+                        <div class="form-text">选特征、选运算符、填值即可，保存时自动生成规则条件；复杂组合可切高级模式手写 JSON。</div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-3">
+                            <label class="form-label">优先级</label>
+                            <input type="number" class="form-control" id="f_priority" value="0">
+                        </div>
+                        <div class="col-md-9">
+                            <label class="form-label">描述</label>
+                            <input type="text" class="form-control" id="f_description">
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-primary" onclick="saveRule()">保存</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let currentPage = 1;
+let editingRuleId = null;
+const PAGE_SIZE_KEY = 'rules_pageSize';
+
+// 从 localStorage 恢复 pageSize, 默认 20
+(function initPageSize() {
+    const saved = localStorage.getItem(PAGE_SIZE_KEY) || '20';
+    document.getElementById('pageSize').value = saved;
+})();
+
+// 用户切换 pageSize 时保存到 localStorage
+function onPageSizeChange() {
+    localStorage.setItem(PAGE_SIZE_KEY, document.getElementById('pageSize').value);
+    loadRules(1);
+}
+
+// 分值 → 风险等级 / 动作 自动匹配
+// 阈值与 app/config.py 决策引擎一致: PASS=30 / MARK=60 / REVIEW=80
+//   0-29  → 低 / 通过
+//   30-59 → 中 / 标记
+//   60-79 → 高 / 人工审核
+//   80-100→ 极高 / 拒绝
+// 只在用户输入分值时触发 (程序赋值不触发, 编辑已有规则不会被覆盖)
+function autoMatchLevelAction() {
+    const scoreInput = document.getElementById('f_score');
+    const score = parseInt(scoreInput.value, 10);
+    if (isNaN(score)) return;
+    let level, action;
+    if (score < 30) {
+        level = '低'; action = '通过';
+    } else if (score < 60) {
+        level = '中'; action = '标记';
+    } else if (score < 80) {
+        level = '高'; action = '人工审核';
+    } else {
+        level = '极高'; action = '拒绝';
+    }
+    document.getElementById('f_risk_level').value = level;
+    document.getElementById('f_action').value = action;
+}
+
+// ============================================================
+// 条件构建器 (傻瓜模式) + 高级 JSON 模式
+// ============================================================
+let FEATURE_META = [];       // 从后端 /api/rules/features 加载
+const COND_OPS = ['>', '>=', '<', '<=', '==', '!=', 'in', 'not_in', 'between'];
+let condRowSeq = 0;          // 行号自增, 保证 DOM id 唯一
+
+async function loadFeatureMeta() {
+    try {
+        const res = await fetch('/api/rules/features');
+        const data = await res.json();
+        FEATURE_META = data.features || [];
+    } catch (e) {
+        console.warn('特征元数据加载失败:', e);
+    }
+}
+
+function featureType(field) {
+    const m = FEATURE_META.find(f => f.field === field);
+    return m ? m.type : 'int';
+}
+
+function opLabel(op) {
+    return {
+        '>': '大于', '>=': '大于等于', '<': '小于', '<=': '小于等于',
+        '==': '等于', '!=': '不等于',
+        'in': '属于 (多个值)', 'not_in': '不属于 (多个值)', 'between': '在区间内',
+    }[op] || op;
+}
+
+function addCondRow(cond) {
+    const seq = ++condRowSeq;
+    const row = document.createElement('div');
+    row.className = 'cond-row d-flex gap-2 align-items-center mb-2';
+    row.dataset.seq = seq;
+    const featureOpts = FEATURE_META.map(f =>
+        `<option value="${f.field}" ${cond && cond.field === f.field ? 'selected' : ''}>${f.label}</option>`
+    ).join('');
+    const opOpts = COND_OPS.map(op =>
+        `<option value="${op}" ${cond && cond.op === op ? 'selected' : ''}>${opLabel(op)}</option>`
+    ).join('');
+    row.innerHTML = `
+        <select class="form-select form-select-sm w-25 cond-feature" onchange="onCondRowChange(${seq})">
+            <option value="">选择特征...</option>${featureOpts}
+        </select>
+        <select class="form-select form-select-sm w-auto cond-op" onchange="onCondRowChange(${seq})">${opOpts}</select>
+        <div class="cond-value flex-grow-1"></div>
+        <button type="button" class="btn btn-outline-danger btn-sm"
+                title="删除条件" onclick="this.closest('.cond-row').remove()"><i class="bi bi-x-lg"></i></button>
+    `;
+    document.getElementById('condRows').appendChild(row);
+    if (cond) {
+        row.querySelector('.cond-feature').value = cond.field;
+        row.querySelector('.cond-op').value = cond.op;
+    }
+    onCondRowChange(seq);
+    if (cond) fillCondRowValue(seq, cond.value);
+}
+
+// 根据 特征类型 + 运算符 渲染值输入控件
+function onCondRowChange(seq) {
+    const row = document.querySelector(`.cond-row[data-seq="${seq}"]`);
+    if (!row) return;
+    const field = row.querySelector('.cond-feature').value;
+    const op = row.querySelector('.cond-op').value;
+    const valueBox = row.querySelector('.cond-value');
+    if (!field) {
+        valueBox.innerHTML = '<span class="text-muted small">先选择特征</span>';
+        return;
+    }
+    const type = featureType(field);
+    let html = '';
+    if (op === 'between') {
+        html = `
+            <div class="input-group input-group-sm">
+                <span class="input-group-text">最小</span>
+                <input type="number" class="form-control cond-min" step="any"
+                       ${type === 'ratio' ? 'min="0" max="1"' : ''}>
+                <span class="input-group-text">最大</span>
+                <input type="number" class="form-control cond-max" step="any"
+                       ${type === 'ratio' ? 'min="0" max="1"' : ''}>
+            </div>`;
+    } else if (op === 'in' || op === 'not_in') {
+        html = `<input type="text" class="form-control form-control-sm cond-in"
+                       placeholder="多个值用逗号分隔, 如 1,2,3">`;
+    } else if (type === 'binary') {
+        html = `<select class="form-select form-select-sm cond-bin">
+                    <option value="1">是 (1)</option>
+                    <option value="0">否 (0)</option>
+                </select>`;
+    } else if (type === 'ratio') {
+        html = `<input type="number" class="form-control form-control-sm cond-val"
+                       step="0.01" min="0" max="1" placeholder="0~1 之间的小数">`;
+    } else {
+        html = `<input type="number" class="form-control form-control-sm cond-val"
+                       step="any" placeholder="数值">`;
+    }
+    valueBox.innerHTML = html;
+}
+
+function fillCondRowValue(seq, value) {
+    const row = document.querySelector(`.cond-row[data-seq="${seq}"]`);
+    if (!row) return;
+    if (row.querySelector('.cond-bin')) {
+        row.querySelector('.cond-bin').value = String(value);
+    } else if (row.querySelector('.cond-in')) {
+        row.querySelector('.cond-in').value = Array.isArray(value) ? value.join(',') : String(value);
+    } else if (row.querySelector('.cond-min')) {
+        row.querySelector('.cond-min').value = Array.isArray(value) ? value[0] : '';
+        row.querySelector('.cond-max').value = Array.isArray(value) ? value[1] : '';
+    } else if (row.querySelector('.cond-val')) {
+        row.querySelector('.cond-val').value = value;
+    }
+}
+
+// 从构建器收集条件 → 规则条件 JSON; 校验失败返回 null
+function collectCondition() {
+    const rows = document.querySelectorAll('.cond-row');
+    if (rows.length === 0) {
+        alert('请至少添加一个条件');
+        return null;
+    }
+    const leaves = [];
+    for (const row of rows) {
+        const field = row.querySelector('.cond-feature').value;
+        const op = row.querySelector('.cond-op').value;
+        if (!field) {
+            alert('条件未选择特征');
+            return null;
+        }
+        let value = null;
+        if (row.querySelector('.cond-bin')) {
+            value = parseInt(row.querySelector('.cond-bin').value, 10);
+        } else if (row.querySelector('.cond-in')) {
+            const parts = row.querySelector('.cond-in').value.split(',').map(s => s.trim()).filter(Boolean);
+            if (parts.length === 0) {
+                alert('请填写值');
+                return null;
+            }
+            value = parts.map(Number);
+        } else if (row.querySelector('.cond-min')) {
+            const min = row.querySelector('.cond-min').value;
+            const max = row.querySelector('.cond-max').value;
+            if (min === '' || max === '') {
+                alert('请填写区间最小值与最大值');
+                return null;
+            }
+            value = [Number(min), Number(max)];
+        } else {
+            const raw = row.querySelector('.cond-val').value;
+            if (raw === '') {
+                alert('请填写值');
+                return null;
+            }
+            value = Number(raw);
+        }
+        if (Number.isNaN(value) || (Array.isArray(value) && value.some(v => Number.isNaN(v)))) {
+            alert('值格式不正确');
+            return null;
+        }
+        leaves.push({field, op, value});
+    }
+    if (leaves.length === 1) return leaves[0];
+    const logic = document.getElementById('condLogic').value;
+    return {[logic]: leaves};
+}
+
+// 把已有条件 JSON 回填成构建器 (支持单条件 / 单层 and/or); 不支持则返回 false
+function buildConditionFromJson(cond) {
+    if (!cond || typeof cond !== 'object') return false;
+    document.getElementById('condRows').innerHTML = '';
+    condRowSeq = 0;
+    let leaves = null;
+    if (cond.field) {
+        leaves = [cond];
+    } else if (cond.and && Array.isArray(cond.and)) {
+        document.getElementById('condLogic').value = 'and';
+        leaves = cond.and;
+    } else if (cond.or && Array.isArray(cond.or)) {
+        document.getElementById('condLogic').value = 'or';
+        leaves = cond.or;
+    } else {
+        return false;   // 嵌套组合不支持, 走高级模式
+    }
+    for (const leaf of leaves) {
+        if (!leaf.field || !COND_OPS.includes(leaf.op)) return false;
+        addCondRow(leaf);
+    }
+    return true;
+}
+
+function toggleConditionMode() {
+    const advanced = document.getElementById('advancedMode').checked;
+    document.getElementById('builderMode').style.display = advanced ? 'none' : '';
+    document.getElementById('f_condition').style.display = advanced ? '' : 'none';
+    if (advanced) {
+        // 把当前构建器内容生成 JSON 填进文本框 (空/不完整时保留文本框现状, 不弹窗)
+        const cond = collectCondition();
+        if (cond) {
+            document.getElementById('f_condition').value = JSON.stringify(cond, null, 2);
+        }
+    } else {
+        // 尝试把 JSON 解析回构建器
+        try {
+            const cond = JSON.parse(document.getElementById('f_condition').value || 'null');
+            if (!buildConditionFromJson(cond)) {
+                // 嵌套组合不支持回填: 自动留在高级模式, 保留原 JSON
+                document.getElementById('advancedMode').checked = true;
+                document.getElementById('builderMode').style.display = 'none';
+                document.getElementById('f_condition').style.display = '';
+                return;
+            }
+        } catch (e) {
+            // 空值或非法 JSON: 保留空构建器
+        }
+    }
+}
+
+function riskBadge(level) {
+    const cls = {'低':'badge-risk-low','中':'badge-risk-mid','高':'badge-risk-high','极高':'badge-risk-critical'}[level] || 'bg-secondary';
+    return `<span class="badge ${cls}">${level}</span>`;
+}
+
+async function loadRules(page) {
+    currentPage = page || 1;
+    const category = document.getElementById('filterCategory').value;
+    const pageSize = document.getElementById('pageSize').value;
+    const params = new URLSearchParams({page: currentPage, page_size: pageSize});
+    if (category) params.set('category', category);
+    const res = await fetch('/api/rules?' + params);
+    const data = await res.json();
+    document.getElementById('rulesCount').textContent =
+        `共 ${data.total} 条, 当前 ${data.items.length} 条/页`;
+    const tbody = document.getElementById('rules-table');
+    if (data.items.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="10" class="text-center text-muted">暂无规则</td></tr>';
+    } else {
+        tbody.innerHTML = data.items.map(r => `
+            <tr>
+                <td><code>${r.rule_id}</code></td>
+                <td>${r.rule_name}</td>
+                <td><span class="badge bg-info">${r.rule_category}</span></td>
+                <td>${r.event_type}</td>
+                <td>${riskBadge(r.risk_level)}</td>
+                <td><strong>${r.risk_score}</strong></td>
+                <td>${r.action}</td>
+                <td>${r.priority}</td>
+                <td>
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" ${r.is_enabled ? 'checked' : ''}
+                            onchange="toggleRule('${r.rule_id}')">
+                    </div>
+                </td>
+                <td>
+                    <button class="btn btn-outline-primary btn-sm" onclick="editRule('${r.rule_id}')">
+                        <i class="bi bi-pencil"></i>
+                    </button>
+                    <button class="btn btn-outline-danger btn-sm" onclick="deleteRule('${r.rule_id}')">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </td>
+            </tr>
+        `).join('');
+    }
+    // 分页 (P4-L4 2026-08-08: 用通用分页组件 app.js::buildPaginationHtml, 与评估/案件一致)
+    // 智能省略号, 总页数 > 7 时显示 ...
+    const totalPages = Math.ceil(data.total / pageSize);
+    document.getElementById('pagination').innerHTML =
+        buildPaginationHtml(currentPage, totalPages, pageSize, 'loadRules');
+}
+
+function showCreateModal() {
+    editingRuleId = null;
+    document.getElementById('ruleModalTitle').textContent = '新建规则';
+    document.getElementById('ruleForm').reset();
+    document.getElementById('f_rule_id').disabled = false;
+    // 默认傻瓜构建器: 清空条件区 + 添加一行
+    document.getElementById('advancedMode').checked = false;
+    document.getElementById('builderMode').style.display = '';
+    document.getElementById('f_condition').style.display = 'none';
+    document.getElementById('condRows').innerHTML = '';
+    condRowSeq = 0;
+    document.getElementById('condLogic').value = 'and';
+    addCondRow();
+    new bootstrap.Modal(document.getElementById('ruleModal')).show();
+}
+
+async function editRule(ruleId) {
+    const res = await fetch(`/api/rules/${ruleId}`);
+    const r = await res.json();
+    editingRuleId = ruleId;
+    document.getElementById('ruleModalTitle').textContent = '编辑规则';
+    document.getElementById('f_rule_id').value = r.rule_id;
+    document.getElementById('f_rule_id').disabled = true;
+    document.getElementById('f_rule_name').value = r.rule_name;
+    document.getElementById('f_category').value = r.rule_category;
+    document.getElementById('f_event_type').value = r.event_type;
+    document.getElementById('f_risk_level').value = r.risk_level;
+    document.getElementById('f_score').value = r.risk_score;
+    document.getElementById('f_action').value = r.action;
+    // 条件: 能解析成构建器就用表单, 否则切高级 JSON 模式
+    document.getElementById('advancedMode').checked = false;
+    document.getElementById('builderMode').style.display = '';
+    document.getElementById('f_condition').style.display = 'none';
+    if (!buildConditionFromJson(r.rule_condition)) {
+        document.getElementById('advancedMode').checked = true;
+        document.getElementById('builderMode').style.display = 'none';
+        document.getElementById('f_condition').style.display = '';
+        document.getElementById('f_condition').value = JSON.stringify(r.rule_condition, null, 2);
+    }
+    document.getElementById('f_priority').value = r.priority;
+    document.getElementById('f_description').value = r.description || '';
+    new bootstrap.Modal(document.getElementById('ruleModal')).show();
+}
+
+async function saveRule() {
+    let condition;
+    if (document.getElementById('advancedMode').checked) {
+        try {
+            condition = JSON.parse(document.getElementById('f_condition').value);
+        } catch (e) {
+            alert('条件表达式JSON格式错误');
+            return;
+        }
+    } else {
+        condition = collectCondition();
+        if (!condition) return;
+    }
+    const data = {
+        rule_id: document.getElementById('f_rule_id').value,
+        rule_name: document.getElementById('f_rule_name').value,
+        rule_category: document.getElementById('f_category').value,
+        event_type: document.getElementById('f_event_type').value,
+        rule_condition: condition,
+        risk_level: document.getElementById('f_risk_level').value,
+        risk_score: parseInt(document.getElementById('f_score').value),
+        action: document.getElementById('f_action').value,
+        priority: parseInt(document.getElementById('f_priority').value) || 0,
+        description: document.getElementById('f_description').value,
+    };
+    const url = editingRuleId ? `/api/rules/${editingRuleId}` : '/api/rules';
+    const method = editingRuleId ? 'PUT' : 'POST';
+    const res = await fetch(url, { method, headers: {'Content-Type':'application/json'}, body: JSON.stringify(data) });
+    if (res.ok) {
+        bootstrap.Modal.getInstance(document.getElementById('ruleModal')).hide();
+        loadRules(currentPage);
+    } else {
+        const err = await res.json();
+        alert(err.detail || '保存失败');
+    }
+}
+
+async function toggleRule(ruleId) {
+    await fetch(`/api/rules/${ruleId}/toggle`, { method: 'PUT' });
+}
+
+async function deleteRule(ruleId) {
+    if (!confirm('确定要删除这条规则吗？')) return;
+    await fetch(`/api/rules/${ruleId}`, { method: 'DELETE' });
+    loadRules(currentPage);
+}
+
+loadRules();
+loadFeatureMeta();
+</script>
+{% endblock %}
