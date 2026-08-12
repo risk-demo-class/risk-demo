@@ -1,4 +1,4 @@
-generated: 2026-08-12T02:17:41.445Z
+generated: 2026-08-12T02:59:48.183Z
 goalId: ud-yeel62
 goal: 实现 chaosorder010/AI-BankRisk 全部 10 个 GitHub
   tickets（#1-#10）：把电商风控系统全量改造为银行信贷风控系统（华信银行品牌），合并 bank-migration 到 main 并推送
@@ -12,7 +12,7 @@ verifyCommand: mise exec -- cd /home/leon/projects/尚硅谷大模型项目之�
   DB_PORT=3307 .venv/bin/python scripts/gen_train_dataset.py --reset &&
   DB_PORT=3307 .venv/bin/python scripts/train_xgb_model.py && DB_PORT=3307
   .venv/bin/python -m pytest tests/ -q
-phase: red
+phase: refactor
 askBefore:
   - git merge bank-migration
   - git push origin main
@@ -22,7 +22,7 @@ decisionStyle: 领域语义优先于引擎便捷性；引擎层零改动；每�
 budget:
   used: 1
   max: 60
-currentTaskId: T-006
+currentTaskId: T-020
 tasks:
   - id: T-001
     title: BOOTSTRAP：切 bank-migration 分支 + 基线 pytest 全绿 + 固化脚本名
@@ -240,7 +240,7 @@ tasks:
   - id: T-006
     title: RED：契约测试——4 银行事件/6 规则分类/客户归属校验（先行失败）
     phase: red
-    status: pending
+    status: done
     dependencies:
       - T-005
     blocks:
@@ -260,7 +260,8 @@ tasks:
     guardrails:
       - 不改引擎评分逻辑
       - request 字段名 order_id/receive_id 保留（D5）
-    learnings: []
+    learnings:
+      - RED 确认：8 个契约测试按预期失败（电商字面量）
     gotchas:
       - event_type 字面量改动会连锁影响 api.py/routers/前端——RED 阶段只写测试
       - 黑名单类型加'设备'影响 risk_blacklist 枚举与前端 tab
@@ -272,7 +273,7 @@ tasks:
   - id: T-007
     title: GREEN：T-03 契约——schemas/event 校验/decision 上下文银行化
     phase: green
-    status: pending
+    status: done
     dependencies:
       - T-006
     blocks:
@@ -306,10 +307,13 @@ tasks:
     guardrails:
       - 引擎 7 步流水线结构不动
       - 字段名 order_id/receive_id 保留
-    learnings: []
+    learnings:
+      - 决策链端到端跑通：贷款申请→校验→特征→规则→评分→响应；XGBoost 旧模型不匹配走兜底（T-013 重训）
     gotchas:
       - _update_user_profile 引用特征 key 名，需与 T-005 新特征名同步
       - 黑名单's设备'联动 risk_blacklist 表 enum + 黑名单 API + 前端 tab
+      - risk_event/risk_feature/risk_case 的 event_type/entity_type 也是 ENUM 列，需与
+        schema 同步改否则 INSERT 报 Data truncated
     context:
       - path: app/engine/decision.py
         why: _build_context/_update_user_profile 改点
@@ -318,7 +322,7 @@ tasks:
   - id: T-008
     title: RED：规则测试——银行规则命中（多头借贷等，先行失败）
     phase: red
-    status: pending
+    status: done
     dependencies:
       - T-007
     blocks:
@@ -337,7 +341,8 @@ tasks:
       - 沿用现有规则测试模式（构造特征 dict → match_rules）
     guardrails:
       - 不改 rule.py 匹配引擎
-    learnings: []
+    learnings:
+      - RED 确认：DB 集成测试失败（规则库空的预期）；纯函数命中测试通过
     gotchas:
       - 规则条件引用特征名必须是 T-005 的新特征名
       - 30 条规则 SQL 在 init_risk_data.sql（GREEN 改）
@@ -349,7 +354,7 @@ tasks:
   - id: T-009
     title: GREEN：T-04 规则——30 条银行规则 SQL（6 大场景）
     phase: green
-    status: pending
+    status: done
     dependencies:
       - T-008
     blocks:
@@ -374,19 +379,22 @@ tasks:
     guardrails:
       - rule_category 枚举与 T-007 的 6 类一致
       - event_type 与 4 银行事件一致
-    learnings: []
+    learnings:
+      - 30 条规则入库（6 分类各 6/6/4/5/5/4）；多头借贷场景端到端命中 R101/R303/R403
     gotchas:
       - 规则 SQL 里 ENUM
         类型（risk_rule.rule_category/event_type）需要同步改表结构——init_risk_tables.sql 的
         ENUM 定义也要改
       - init_risk_data 会 TRUNCATE risk_rule + risk_action_log
+      - init_db split_sql_statements 对 SQL 语句很敏感——R103 漏写 ')'
+        导致整条语句被吞并污染下一条；aiomysql 全局 engine 跨 asyncio.run loop 需 dispose
     context:
       - path: sql/init_risk_tables.sql
         why: risk_rule 表 ENUM 定义（需同步改）
   - id: T-010
     title: RED：生成器测试——画像分布 80/15/5 + 银行字段（先行失败）
     phase: red
-    status: pending
+    status: done
     dependencies:
       - T-009
     blocks:
@@ -404,7 +412,8 @@ tasks:
       - 沿用现有 gen 脚本测试模式（参数→输出断言）
     guardrails:
       - 脚本名保持 gen_10w_data.py（verifyCommand 依赖）
-    learnings: []
+    learnings:
+      - RED 确认：4 个生成器测试按预期失败（模块仍为电商版）
     gotchas:
       - 风险画像注入：高风险客户=多头+逾期+被拒史（PD 训练正例来源）
       - 设备/IP 数据需要生成（dev_* 特征依赖）
@@ -416,7 +425,7 @@ tasks:
   - id: T-011
     title: GREEN：T-05 生成器——gen_10w_data 银行化 + 风险画像注入
     phase: green
-    status: pending
+    status: done
     dependencies:
       - T-010
     blocks:
@@ -441,10 +450,14 @@ tasks:
     guardrails:
       - 脚本名保持 gen_10w_data.py
       - --users/--orders 参数语义保留（客户数/申请数）
-    learnings: []
+    learnings:
+      - 全量生成成功：5000 客户/3 万申请/65 万分期/50951 还款/1139 逾期（279 逾期客户）/923
+        投诉；gen_risky_users 等旧脚本标记 DEPRECATED
     gotchas:
       - 5000 客户 3 万申请生成时间需控制（演示流畅）
       - 高风险客户 5% = 250 人，逾期记录要覆盖足够 PD 正例
+      - contact 区划 FK 需从 region 表读取；SQLAlchemy 空 list execute 报 bind 缺失需 if
+        保护；路径中文时 PYTHONPATH 必须显式设置
     context:
       - path: docs/bank_risk_plan.md
         why: 数据规模 5000/3 万
@@ -453,7 +466,7 @@ tasks:
   - id: T-012
     title: RED：训练测试——PD 标签（逾期客户=1，先行失败）
     phase: red
-    status: pending
+    status: done
     dependencies:
       - T-011
     blocks:
@@ -472,7 +485,8 @@ tasks:
       - 沿用现有训练数据校验测试模式
     guardrails:
       - 不改 ml_model.py predict/_prob_to_decision（语义由数据保证）
-    learnings: []
+    learnings:
+      - RED 确认：4 个训练测试按预期失败（电商语义）
     gotchas:
       - 现有 test_train_data_purity/gen_train_dataset 测试断言'决策标签'，需重写为'逾期标签'
       - train_xgb_model.py 拉取评估数据的 SQL 条件（ml_score IS NULL）保持
@@ -484,7 +498,7 @@ tasks:
   - id: T-013
     title: GREEN：T-06 PD 训练——gen_train_dataset + train_xgb + backfill
     phase: green
-    status: pending
+    status: done
     dependencies:
       - T-012
     blocks:
@@ -510,10 +524,13 @@ tasks:
     guardrails:
       - 模型文件路径 app/engine/xgb_model.json 不变
       - XGB_ENABLED 降级逻辑不动
-    learnings: []
+    learnings:
+      - PD 模型训练成功：2500 样本 AUC=0.967/F1=0.83；backfill 正负分离度
+        0.376；逾期客户被一票否决拒绝（ml=0.14 真实推理）
     gotchas:
       - 新特征名下旧模型文件失效——训练前删除或覆盖 xgb_model.json
       - 训练样本下限 1250（25 维×50），3 万申请足够
+      - backfill_ml_score.py 引用 risk_event 旧列(order_id/receive_id)与旧特征签名，需同步改
     context:
       - path: scripts/gen_train_dataset.py
         why: PD 标签改造
@@ -522,7 +539,7 @@ tasks:
   - id: T-014
     title: RED：页面断言——仪表盘/风险检查/规则页银行文案（先行失败）
     phase: red
-    status: pending
+    status: done
     dependencies:
       - T-013
     blocks:
@@ -542,7 +559,8 @@ tasks:
       - 页面文案断言用子串匹配（防脆弱）
     guardrails:
       - RED 阶段只写测试
-    learnings: []
+    learnings:
+      - RED 确认：4 个页面测试按预期失败（前端仍电商文案）
     gotchas:
       - base.html 品牌栏/标题也要改（华信银行）
       - static/app.js 里 API 文案/事件类型常量同步
@@ -554,7 +572,7 @@ tasks:
   - id: T-015
     title: GREEN：T-07 前端核心页——华信银行品牌（仪表盘/风险检查/规则管理）
     phase: green
-    status: pending
+    status: done
     dependencies:
       - T-014
     blocks:
@@ -579,7 +597,8 @@ tasks:
     guardrails:
       - 页面结构/分页/粘底特性保留
       - URL 路由不变
-    learnings: []
+    learnings:
+      - 前端核心页银行化完成；app.js 仅 ML 文案需改（P(拒绝)→PD违约概率）
     gotchas:
       - dashboard 指标来自 API（routers/dashboard.py 的 SQL 聚合）——需同步改后端聚合字段
       - 评估历史/画像页在 T-017
@@ -591,7 +610,7 @@ tasks:
   - id: T-016
     title: RED：页面断言——案件/黑名单/画像/评估/Agent 页（先行失败）
     phase: red
-    status: pending
+    status: done
     dependencies:
       - T-015
     blocks:
@@ -612,7 +631,8 @@ tasks:
       - 子串断言防脆弱
     guardrails:
       - RED 只写测试
-    learnings: []
+    learnings:
+      - RED 确认：4 个业务页测试按预期失败
     gotchas:
       - user_profile API 响应字段已银行化（T-007），页面渲染字段同步
     context:
@@ -623,7 +643,7 @@ tasks:
   - id: T-017
     title: GREEN：T-08 前端业务页——案件/黑名单(4类)/画像/评估/Agent 页
     phase: green
-    status: pending
+    status: done
     dependencies:
       - T-016
     blocks:
@@ -645,9 +665,12 @@ tasks:
       - 中文文案+银行术语统一
     guardrails:
       - 页面结构/分页保留
-    learnings: []
+    learnings:
+      - 业务页银行化完成：8 个页面测试全绿；blacklist 4 类含设备
     gotchas:
       - blacklist tab 新增设备需同步黑名单 API 类型校验（T-007 已加）
+      - 画像 API (service/case.py get_user_profile) 同步映射新字段，否则 UserProfileResponse
+        构造报错
     context:
       - path: templates/
         why: 全部模板
@@ -656,7 +679,7 @@ tasks:
   - id: T-018
     title: RED：Agent 工具测试——银行查询语义（先行失败）
     phase: red
-    status: pending
+    status: done
     dependencies:
       - T-017
     blocks:
@@ -674,7 +697,8 @@ tasks:
       - 工具函数签名（tool 名/参数）尽量保持
     guardrails:
       - 不改 agent/chat.py 会话锁逻辑
-    learnings: []
+    learnings:
+      - RED 确认：tools.py 导入失败（OrderDetail 不存在）
     gotchas:
       - Agent 工具需要 LLM_API_KEY 才能完整对话，测试可只验工具函数本身
       - tools.py 引用 ORM 实体——同步 T-003 新模型
@@ -684,7 +708,7 @@ tasks:
   - id: T-019
     title: GREEN：T-09 Agent 8 工具银行化
     phase: green
-    status: pending
+    status: done
     dependencies:
       - T-018
     blocks:
@@ -703,9 +727,12 @@ tasks:
       - 工具 ≤30 LOC，单职责
     guardrails:
       - 不引入新依赖
-    learnings: []
+    learnings:
+      - Agent 工具端到端验证：query_business_data 返回银行字段（loan_id/loan_status/loan_amount）
     gotchas:
       - 工具返回 dict 字段名与前端/文档一致
+      - "@tool 包装对象无源码，inspect.getsource 会 TypeError；dispatch key
+        保留原名（user_orders 等）语义切换"
     context:
       - path: app/agent/tools.py
         why: 工具定义
@@ -714,7 +741,7 @@ tasks:
   - id: T-020
     title: CLEANUP：T-10 收尾——领域测试整理+引擎回归+README/述职文档+清理调试残留
     phase: refactor
-    status: pending
+    status: in_progress
     dependencies:
       - T-015
       - T-017

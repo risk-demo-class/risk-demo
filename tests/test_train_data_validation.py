@@ -92,12 +92,11 @@ class TestTrainDataValidation:
         else:
             min_time = datetime.now() - timedelta(days=span_days)
             max_time = datetime.now()
-        # 假评估: assessment_id, event_id, decision
-        # 80% 通过 + 20% 拒绝 (控制 pos 比例)
+        # 假评估: assessment_id, event_id, pd_label (0/1, PD 标签)
         assessments = []
         for i in range(num_assessments):
-            dec = "拒绝" if i < (num_assessments * db_pos // max(1, db_total)) else "通过"
-            assessments.append((f"AID{i:05d}", f"EID{i:05d}", dec))
+            label = 1 if i < (num_assessments * db_pos // max(1, db_total)) else 0
+            assessments.append((f"AID{i:05d}", f"EID{i:05d}", label))
         # 假特征: event_id, feature_name, feature_value (25 维)
         from app.engine.ml_model import FEATURE_COLUMNS
         feat_rows = []

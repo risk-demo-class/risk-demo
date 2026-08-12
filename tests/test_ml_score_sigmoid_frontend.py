@@ -42,7 +42,7 @@ def _run_js(expr: str) -> str:
 
 
 class TestMLProbToRiskScore:
-    """app.js::mlProbToRiskScore P(拒绝) → 0-100 风险分 sigmoid 校准"""
+    """app.js::mlProbToRiskScore PD违约概率 → 0-100 风险分 sigmoid 校准"""
 
     def test_function_exists(self):
         src = APP_JS.read_text(encoding="utf-8")
@@ -95,7 +95,7 @@ class TestRenderMLScoreBlock:
     def test_with_score_includes_three_parts(self):
         """有 ml_score 时, 渲染应含 P(拒绝) + 风险分(sigmoid 校准) + ML 决策"""
         out = _run_js("renderMLScoreBlock(0.5, '拒绝')")
-        assert "P(拒绝)" in out, f"应含 P(拒绝), 实际: {out!r}"
+        assert "PD违约概率" in out, f"应含 PD违约概率, 实际: {out!r}"
         assert "风险分 (sigmoid 校准)" in out, f"应含'风险分 (sigmoid 校准)', 实际: {out!r}"
         assert "ML 决策" in out, f"应含 'ML 决策', 实际: {out!r}"
         assert "拒绝" in out, f"应含 ML 决策值 '拒绝', 实际: {out!r}"

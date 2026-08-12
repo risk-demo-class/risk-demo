@@ -116,7 +116,7 @@ class TestRuleRouterHook:
 
         data = RuleCreate(
             rule_id="R_TEST", rule_name="测试规则",
-            rule_category="订单欺诈", event_type="下单",
+            rule_category="欺诈风险", event_type="贷款申请",
             rule_condition={"field": "x", "op": ">", "value": 5},
             risk_level="高", risk_score=70, action="人工审核",
         )
@@ -200,7 +200,7 @@ class TestBlacklistHook:
             pass
         db.commit = fake_commit
 
-        request = BlacklistCreate(blacklist_type="用户", blacklist_value="u1", reason="test")
+        request = BlacklistCreate(blacklist_type="客户", blacklist_value="c1", reason="test")
         # 直接调用 add_blacklist 测 hook
         # 我们需要 mock 出添加的 RiskBlacklist
         # 简化: 用 monkeypatch 替换 RiskBlacklist 构造
