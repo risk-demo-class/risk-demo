@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+{% block title %}黑名单 - 制造业风控系统{% endblock %}
+{% block content %}
+<h4 class="mb-4"><i class="bi bi-shield-x me-2"></i>黑名单管理</h4>
+
+<div class="card stat-card">
+    <div class="card-body">
+        <div class="d-flex justify-content-between mb-3">
+            <div>
+                <span class="text-muted small me-2">风控黑名单 (risk_blacklist): 前置拦截不建案; 业务黑名单 (blacklist_extra) 走 R030 规则建案</span>
+            </div>
+            <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#blModal"><i class="bi bi-plus-lg"></i> 添加黑名单</button>
+        </div>
+        <table class="table table-hover align-middle">
+            <thead class="table-light">
+            <tr><th>ID</th><th>类型</th><th>值</th><th>原因</th><th>过期时间</th><th>创建时间</th><th></th></tr>
+            </thead>
+            <tbody id="blTable">
+            <tr><td colspan="7" class="text-center text-muted">加载中...</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- 添加黑名单 Modal -->
+<div class="modal fade" id="blModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">添加黑名单</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="blForm">
+                    <div class="mb-3">
+                        <label class="form-label">类型</label>
+                        <select class="form-select" id="blType">
+                            <option>经销商ID</option><option>设备SN</option><option>维修工</option><option>用户</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">值</label>
+                        <input class="form-control" id="blValue" placeholder="如 D009 / SN-XXX / T004">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">原因</label>
+                        <input class="form-control" id="blReason" placeholder="加入原因">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">过期时间 (小时, 留空=永久)</label>
+                        <input class="form-control" type="number" id="blExpireHours" placeholder="如 72">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-primary" onclick="addBlacklist()">添加</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let blPage = 1;
+
+async function loadBlacklist() {
+    try {
+        const data = await apiRequest(`/api/blacklist?page=${blPage}&page_size=20`);
+        const tbody = document.getElementById('blTable');
+        if (data.items.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">暂无黑名单记录</td></tr>';
+            return;
+        }
+        tbody.innerHTML = data.items.map(b => `
+            <tr>
+                <td>${b.blacklist_id}</td>
+                <td><span class="badge bg-dark">${b.blacklist_type}</span></td>
+                <td>${b.blacklist_value}</td>
+                <td class="small">${b.reason || '-'}</td>
+                <td class="small">${b.expire_time ? formatTime(b.expire_time) : '永久'}</td>
+                <td class="small text-muted">${formatTime(b.create_time)}</td>
+                <td><button class="btn btn-sm btn-outline-danger" onclick="removeBlacklist(${b.blacklist_id})">移除</button></td>
+            </tr>`).join('');
+    } catch (e) {
+        document.getElementById('blTable').innerHTML = `<tr><td colspan="7" class="text-center text-danger">${e.message}</td></tr>`;
+    }
+}
+
+async function addBlacklist() {
+    const value = document.getElementById('blValue').value.trim();
+    if (!value) { alert('请填值'); return; }
+    const expireHours = document.getElementById('blExpireHours').value;
+    const body = {
+        blacklist_type: document.getElementById('blType').value,
+        blacklist_value: value,
+        reason: document.getElementById('blReason').value.trim() || null,
+    };
+    if (expireHours) {
+        body.expire_time = new Date(Date.now() + parseInt(expireHours) * 3600 * 1000).toISOString();
+    }
+    try {
+        await apiRequest('/api/blacklist', { method: 'POST', body });
+        bootstrap.Modal.getInstance(document.getElementById('blModal')).hide();
+        document.getElementById('blValue').value = '';
+        document.getElementById('blReason').value = '';
+        document.getElementById('blExpireHours').value = '';
+        loadBlacklist();
+    } catch (e) {
+        alert('添加失败: ' + e.message);
+    }
+}
+
+async function removeBlacklist(id) {
+    if (!confirm('确认移除该黑名单?')) return;
+    try {
+        await apiRequest(`/api/blacklist/${id}`, { method: 'DELETE' });
+        loadBlacklist();
+    } catch (e) { alert(e.message); }
+}
+
+loadBlacklist();
+</script>
+{% endblock %}

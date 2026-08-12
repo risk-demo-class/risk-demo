@@ -1,0 +1,291 @@
+"""
+制造业风控系统 - 风控表 ORM (8 张)
+风控系统自建表, 跟业务表分开管理
+- 规则配置 (RiskRule)
+- 事件审计 (RiskEvent / RiskFeature / RiskAssessment)
+- 案件管理 (RiskCase)
+- 黑名单 (RiskBlacklist)
+- 画像 (RiskUserProfile)
+- 审计 (RiskActionLog)
+"""
+import json
+from datetime import datetime
+from decimal import Decimal
+from typing import Optional
+
+from sqlalchemy import (
+    BigInteger,
+    DateTime,
+    Enum,
+    Index,
+    Integer,
+    Numeric,
+    String,
+    Text,
+    UniqueConstraint,
+    func,
+)
+from sqlalchemy.orm import Mapped, mapped_column
+
+from app.database import Base
+
+
+# ============================================================
+# 规则配置
+# ============================================================
+
+class RiskRule(Base):
+    __tablename__ = "risk_rule"
+
+    rule_id: Mapped[str] = mapped_column(String(50), primary_key=True, comment="规则ID")
+    rule_name: Mapped[str] = mapped_column(String(100), nullable=False, comment="规则名称")
+    rule_category: Mapped[str] = mapped_column(
+        Enum("串货风险", "保修滥用", "囤货风险", "维修异常", "资质风险", "综合风险",
+             name="rule_category_enum"),
+        nullable=False, comment="风险场景分类",
+    )
+    event_type: Mapped[str] = mapped_column(
+        Enum("经销商订货", "保修申请", "售后维修", "串货举报", "通用", name="rule_event_type_enum"),
+        nullable=False, server_default="通用", comment="适用事件类型",
+    )
+    rule_condition: Mapped[str] = mapped_column(Text, nullable=False, comment="条件表达式(JSON)")
+    risk_level: Mapped[str] = mapped_column(
+        Enum("低", "中", "高", "极高", name="risk_level_enum"),
+        nullable=False, comment="风险等级",
+    )
+    risk_score: Mapped[int] = mapped_column(Integer, nullable=False, comment="命中分值(0-100)")
+    action: Mapped[str] = mapped_column(
+        Enum("通过", "标记", "人工审核", "拒绝", name="rule_action_enum"),
+        nullable=False, comment="触发动作",
+    )
+    is_enabled: Mapped[int] = mapped_column(Integer, default=1, comment="是否启用")
+    priority: Mapped[int] = mapped_column(Integer, default=0, comment="优先级(越高越先执行)")
+    description: Mapped[Optional[str]] = mapped_column(Text, comment="规则描述")
+    create_time: Mapped[Optional[datetime]] = mapped_column(
+        DateTime, server_default=func.now(), default=datetime.now, comment="创建时间",
+    )
+    update_time: Mapped[Optional[datetime]] = mapped_column(
+        DateTime, server_default=func.now(), default=datetime.now, onupdate=datetime.now, comment="更新时间",
+    )
+    # 软删除: NULL=未删, 有值=删除时间
+    deleted_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime, nullable=True, comment="软删除时间(NULL=未删)",
+    )
+
+    @property
+    def condition_dict(self) -> dict:
+        """将 JSON 字符串的 rule_condition 解析为字典"""
+        if isinstance(self.rule_condition, str):
+            return json.loads(self.rule_condition)
+        return self.rule_condition
+
+
+# ============================================================
+# 事件审计
+# ============================================================
+
+class RiskEvent(Base):
+    __tablename__ = "risk_event"
+
+    event_id: Mapped[str] = mapped_column(String(50), primary_key=True, comment="事件ID")
+    event_type: Mapped[str] = mapped_column(
+        Enum("经销商订货", "保修申请", "售后维修", "串货举报", name="event_type_enum"),
+        nullable=False, comment="事件类型",
+    )
+    event_source_id: Mapped[str] = mapped_column(String(50), nullable=False, comment="关联业务ID")
+    user_id: Mapped[str] = mapped_column(String(50), nullable=False, comment="用户ID")
+    event_data: Mapped[Optional[str]] = mapped_column(Text, comment="事件快照(JSON)")
+    create_time: Mapped[Optional[datetime]] = mapped_column(
+        DateTime, server_default=func.now(), default=datetime.now, comment="创建时间",
+    )
+
+    __table_args__ = (
+        Index("idx_risk_event_user_id", "user_id"),
+        Index("idx_risk_event_create_time", "create_time"),
+    )
+
+
+class RiskFeature(Base):
+    __tablename__ = "risk_feature"
+
+    feature_id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True, comment="特征ID")
+    event_id: Mapped[str] = mapped_column(String(50), nullable=False, comment="关联事件ID")
+    entity_type: Mapped[str] = mapped_column(
+        Enum("经销商", "订单", "产品", "保修", name="feature_entity_type_enum"),
+        nullable=False, comment="实体类型",
+    )
+    entity_id: Mapped[str] = mapped_column(String(50), nullable=False, comment="实体ID")
+    feature_name: Mapped[str] = mapped_column(String(100), nullable=False, comment="特征名称")
+    feature_value: Mapped[Optional[Decimal]] = mapped_column(Numeric(15, 4), comment="特征值")
+    compute_time: Mapped[Optional[datetime]] = mapped_column(
+        DateTime, server_default=func.now(), comment="计算时间",
+    )
+
+    __table_args__ = (
+        Index("idx_risk_feature_event_id", "event_id"),
+        Index("idx_risk_feature_entity", "entity_type", "entity_id"),
+    )
+
+
+class RiskAssessment(Base):
+    __tablename__ = "risk_assessment"
+
+    assessment_id: Mapped[str] = mapped_column(String(50), primary_key=True, comment="评估ID")
+    event_id: Mapped[str] = mapped_column(String(50), nullable=False, comment="关联事件ID")
+    user_id: Mapped[str] = mapped_column(String(50), nullable=False, comment="用户ID")
+    rule_results: Mapped[Optional[str]] = mapped_column(Text, comment="规则结果(JSON)")
+    rule_count: Mapped[int] = mapped_column(Integer, default=0, comment="命中规则数")
+    final_score: Mapped[int] = mapped_column(Integer, nullable=False, comment="最终评分(0-100)")
+    risk_level: Mapped[str] = mapped_column(
+        Enum("低", "中", "高", "极高", name="assessment_risk_level_enum"),
+        nullable=False, comment="风险等级",
+    )
+    decision: Mapped[str] = mapped_column(
+        Enum("通过", "标记", "人工审核", "拒绝", name="assessment_decision_enum"),
+        nullable=False, comment="决策",
+    )
+    create_time: Mapped[Optional[datetime]] = mapped_column(
+        DateTime, server_default=func.now(), default=datetime.now, comment="创建时间",
+    )
+    # XGBoost 双轨融合字段
+    ml_score: Mapped[Optional[float]] = mapped_column(
+        Numeric(5, 4), nullable=True, comment="XGBoost 拒绝概率 [0,1]",
+    )
+    ml_decision: Mapped[Optional[str]] = mapped_column(
+        String(10), nullable=True, comment="ML 决策: 通过/标记/人工审核/拒绝",
+    )
+
+    __table_args__ = (
+        Index("idx_risk_assessment_user_id", "user_id"),
+        Index("idx_risk_assessment_decision", "decision"),
+        Index("idx_risk_assessment_create_time", "create_time"),
+    )
+
+
+# ============================================================
+# 案件管理
+# ============================================================
+
+class RiskCase(Base):
+    __tablename__ = "risk_case"
+
+    case_id: Mapped[str] = mapped_column(String(50), primary_key=True, comment="案件ID")
+    assessment_id: Mapped[str] = mapped_column(String(50), nullable=False, comment="关联评估ID")
+    user_id: Mapped[str] = mapped_column(String(50), nullable=False, comment="用户ID")
+    case_status: Mapped[str] = mapped_column(
+        Enum("待审核", "审核中", "已通过", "已拒绝", "已关闭", name="case_status_enum"),
+        default="待审核", comment="案件状态",
+    )
+    case_category: Mapped[Optional[str]] = mapped_column(String(50), comment="案件分类")
+    risk_detail: Mapped[Optional[str]] = mapped_column(Text, comment="风险详情(JSON)")
+    reviewer: Mapped[Optional[str]] = mapped_column(String(50), comment="审核人")
+    review_comment: Mapped[Optional[str]] = mapped_column(Text, comment="审核意见")
+    review_time: Mapped[Optional[datetime]] = mapped_column(DateTime, comment="审核时间")
+    # 业务回溯字段 (重做检查时使用)
+    source_id: Mapped[Optional[str]] = mapped_column(String(50), comment="原始业务ID(订单/保修单/举报单)")
+    event_type: Mapped[Optional[str]] = mapped_column(
+        Enum("经销商订货", "保修申请", "售后维修", "串货举报", name="case_event_type_enum"),
+        comment="触发案件的事件类型",
+    )
+    create_time: Mapped[Optional[datetime]] = mapped_column(
+        DateTime, server_default=func.now(), default=datetime.now, comment="创建时间",
+    )
+    update_time: Mapped[Optional[datetime]] = mapped_column(
+        DateTime, server_default=func.now(), default=datetime.now, onupdate=datetime.now, comment="更新时间",
+    )
+
+    __table_args__ = (
+        Index("idx_risk_case_status", "case_status"),
+        Index("idx_risk_case_user_id", "user_id"),
+    )
+
+
+# ============================================================
+# 黑名单 + 画像
+# ============================================================
+
+class RiskBlacklist(Base):
+    __tablename__ = "risk_blacklist"
+
+    blacklist_id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True, comment="黑名单ID")
+    blacklist_type: Mapped[str] = mapped_column(
+        Enum("经销商ID", "设备SN", "维修工", "用户", name="blacklist_type_enum"),
+        nullable=False, comment="黑名单类型",
+    )
+    blacklist_value: Mapped[str] = mapped_column(String(200), nullable=False, comment="黑名单值")
+    reason: Mapped[Optional[str]] = mapped_column(Text, comment="加入原因")
+    expire_time: Mapped[Optional[datetime]] = mapped_column(DateTime, comment="过期时间(NULL=永久)")
+    create_time: Mapped[Optional[datetime]] = mapped_column(
+        DateTime, server_default=func.now(), default=datetime.now, comment="创建时间",
+    )
+    # 软删除: NULL=未删, 有值=删除时间
+    deleted_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime, nullable=True, comment="软删除时间(NULL=未删)",
+    )
+
+    __table_args__ = (
+        UniqueConstraint("blacklist_type", "blacklist_value", name="idx_blacklist_type_value"),
+    )
+
+
+class RiskUserProfile(Base):
+    __tablename__ = "risk_user_profile"
+
+    user_id: Mapped[str] = mapped_column(String(50), primary_key=True, comment="用户ID(经销商)")
+    risk_score: Mapped[int] = mapped_column(Integer, default=0, comment="综合风险评分(0-100)")
+    risk_level: Mapped[str] = mapped_column(
+        Enum("低", "中", "高", "极高", name="profile_risk_level_enum"),
+        default="低", comment="风险等级",
+    )
+    total_orders: Mapped[int] = mapped_column(Integer, default=0, comment="总订货单数")
+    total_amount: Mapped[Decimal] = mapped_column(Numeric(14, 2), default=0, comment="历史订货总金额")
+    avg_order_amount: Mapped[Decimal] = mapped_column(Numeric(12, 2), default=0, comment="平均订货金额")
+    warranty_count: Mapped[int] = mapped_column(Integer, default=0, comment="保修申请次数")
+    repair_count: Mapped[int] = mapped_column(Integer, default=0, comment="维修次数")
+    contract_expired: Mapped[int] = mapped_column(Integer, default=0, comment="合同是否过期(0/1)")
+    assessment_count: Mapped[int] = mapped_column(Integer, default=0, comment="评估次数")
+    last_assessment_time: Mapped[Optional[datetime]] = mapped_column(DateTime, comment="最近评估时间")
+    profile_data: Mapped[Optional[str]] = mapped_column(Text, comment="扩展画像数据(JSON)")
+    update_time: Mapped[Optional[datetime]] = mapped_column(
+        DateTime, server_default=func.now(), default=datetime.now, onupdate=datetime.now, comment="更新时间",
+    )
+
+
+# ============================================================
+# 系统管理表
+# ============================================================
+
+class RiskActionLog(Base):
+    """操作审计日志表: 任何规则/案件/黑名单的变更都写一行, 出事能追责"""
+
+    __tablename__ = "risk_action_log"
+
+    log_id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True, comment="日志ID")
+    operator: Mapped[str] = mapped_column(String(50), nullable=False, comment="操作人(admin/system)")
+    action_type: Mapped[str] = mapped_column(
+        Enum(
+            "CREATE_RULE", "UPDATE_RULE", "TOGGLE_RULE", "DELETE_RULE",
+            "REVIEW_CASE", "AUTO_REJECT_CASE",
+            "ADD_BLACKLIST", "REMOVE_BLACKLIST",
+            name="action_type_enum",
+        ),
+        nullable=False, comment="操作类型",
+    )
+    target_type: Mapped[str] = mapped_column(
+        Enum("rule", "case", "blacklist", name="action_target_type_enum"),
+        nullable=False, comment="对象类型",
+    )
+    target_id: Mapped[str] = mapped_column(String(50), nullable=False, comment="对象ID")
+    before_value: Mapped[Optional[str]] = mapped_column(Text, comment="变更前 JSON (NULL=新增)")
+    after_value: Mapped[Optional[str]] = mapped_column(Text, comment="变更后 JSON (NULL=删除)")
+    ip: Mapped[Optional[str]] = mapped_column(String(50), comment="操作 IP")
+    remark: Mapped[Optional[str]] = mapped_column(String(500), comment="备注")
+    create_time: Mapped[Optional[datetime]] = mapped_column(
+        DateTime, server_default=func.now(), default=datetime.now, comment="操作时间",
+    )
+
+    __table_args__ = (
+        Index("idx_action_log_operator", "operator"),
+        Index("idx_action_log_target", "target_type", "target_id"),
+        Index("idx_action_log_create_time", "create_time"),
+    )

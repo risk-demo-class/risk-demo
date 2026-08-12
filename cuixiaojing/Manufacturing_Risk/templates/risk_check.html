@@ -1,0 +1,187 @@
+{% extends "base.html" %}
+{% block title %}风险检查 - 制造业风控系统{% endblock %}
+{% block content %}
+<h4 class="mb-4"><i class="bi bi-search me-2"></i>风险检查</h4>
+
+<div class="row g-3">
+    <!-- 表单 -->
+    <div class="col-md-5">
+        <div class="card stat-card">
+            <div class="card-body">
+                <h6 class="mb-3">发起风控检查 (7 步流水线)</h6>
+                <form id="riskForm">
+                    <div class="mb-3">
+                        <label class="form-label">事件类型</label>
+                        <select class="form-select" id="eventType">
+                            <option value="经销商订货">经销商订货</option>
+                            <option value="保修申请">保修申请</option>
+                            <option value="售后维修">售后维修</option>
+                            <option value="串货举报">串货举报</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">示例数据 (一键填充)</label>
+                        <select class="form-select" id="sampleSelect">
+                            <option value="">-- 选一个演示场景 --</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">source_id (业务ID: 订单/保修单/举报单)</label>
+                        <input class="form-control" id="sourceId" placeholder="如 ORD003">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">user_id (经销商ID / 举报人ID)</label>
+                        <input class="form-control" id="userId" placeholder="如 D002">
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="bi bi-lightning-charge me-1"></i>执行风险检查
+                    </button>
+                </form>
+                <div class="mt-2 text-muted small" id="formError"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 结果 -->
+    <div class="col-md-7">
+        <div class="card stat-card">
+            <div class="card-body">
+                <h6 class="mb-3">检查结果</h6>
+                <div id="resultEmpty" class="text-muted text-center py-5">
+                    提交后这里显示评分 / 等级 / 决策 / 命中规则 / 特征快照
+                </div>
+                <div id="resultBody" style="display:none">
+                    <div class="row g-2 mb-3">
+                        <div class="col-md-3 text-center">
+                            <div class="text-muted small">最终评分</div>
+                            <div class="stat-value" id="resScore">-</div>
+                        </div>
+                        <div class="col-md-3 text-center">
+                            <div class="text-muted small">风险等级</div>
+                            <div id="resLevel">-</div>
+                        </div>
+                        <div class="col-md-3 text-center">
+                            <div class="text-muted small">决策</div>
+                            <div id="resDecision">-</div>
+                        </div>
+                        <div class="col-md-3 text-center">
+                            <div class="text-muted small">命中规则</div>
+                            <div class="stat-value" id="resRuleCount">-</div>
+                        </div>
+                    </div>
+                    <div id="resBlocked" class="alert alert-danger py-2" style="display:none"></div>
+                    <h6 class="mt-3">命中规则</h6>
+                    <table class="table table-sm table-hover">
+                        <thead class="table-light">
+                        <tr><th>规则ID</th><th>规则名</th><th>分类</th><th>等级</th><th>分值</th><th>动作</th></tr>
+                        </thead>
+                        <tbody id="resRules"><tr><td colspan="6" class="text-center text-muted">无命中</td></tr></tbody>
+                    </table>
+                    <h6 class="mt-3">特征快照 (26 维)</h6>
+                    <div class="table-responsive" style="max-height:280px;overflow-y:auto">
+                        <table class="table table-sm table-striped">
+                            <tbody id="resFeatures"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// 加载示例数据
+async function loadSamples() {
+    try {
+        const samples = await apiRequest('/api/risk/samples');
+        const sel = document.getElementById('sampleSelect');
+        const evt = document.getElementById('eventType').value;
+        (samples[evt] || []).forEach(s => {
+            const opt = document.createElement('option');
+            opt.value = JSON.stringify(s);
+            opt.textContent = `${s.source_id} (${s.desc})`;
+            sel.appendChild(opt);
+        });
+    } catch (e) { /* 示例数据失败不阻塞 */ }
+}
+
+document.getElementById('eventType').addEventListener('change', () => {
+    const sel = document.getElementById('sampleSelect');
+    sel.innerHTML = '<option value="">-- 选一个演示场景 --</option>';
+    loadSamples();
+});
+
+document.getElementById('sampleSelect').addEventListener('change', (e) => {
+    if (!e.target.value) return;
+    const s = JSON.parse(e.target.value);
+    document.getElementById('sourceId').value = s.source_id;
+    document.getElementById('userId').value = s.user_id;
+});
+
+document.getElementById('riskForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const errBox = document.getElementById('formError');
+    errBox.textContent = '';
+    const payload = {
+        event_type: document.getElementById('eventType').value,
+        source_id: document.getElementById('sourceId').value.trim(),
+        user_id: document.getElementById('userId').value.trim(),
+    };
+    if (!payload.source_id || !payload.user_id) {
+        errBox.textContent = '请填写 source_id 和 user_id';
+        return;
+    }
+    try {
+        const r = await apiRequest('/api/risk/check', { method: 'POST', body: payload });
+        document.getElementById('resultEmpty').style.display = 'none';
+        document.getElementById('resultBody').style.display = 'block';
+
+        document.getElementById('resScore').textContent = r.final_score;
+        document.getElementById('resLevel').innerHTML = riskBadge(r.risk_level);
+        document.getElementById('resDecision').innerHTML = decisionBadge(r.decision);
+        document.getElementById('resRuleCount').textContent = r.rule_count;
+
+        const blocked = document.getElementById('resBlocked');
+        if (r.blocked_by) {
+            blocked.style.display = 'block';
+            blocked.textContent = `黑名单前置拦截: 命中「${r.blocked_by}」黑名单 (不建案, 直接拒绝)`;
+        } else {
+            blocked.style.display = 'none';
+        }
+
+        // 命中规则
+        const rulesTbody = document.getElementById('resRules');
+        if (r.triggered_rules.length === 0) {
+            rulesTbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">无命中</td></tr>';
+        } else {
+            rulesTbody.innerHTML = r.triggered_rules.map(ru => `
+                <tr>
+                    <td>${ru.rule_id}</td>
+                    <td>${ru.rule_name}</td>
+                    <td>${ru.rule_category}</td>
+                    <td>${riskBadge(ru.risk_level)}</td>
+                    <td>${ru.risk_score}</td>
+                    <td>${decisionBadge(ru.action)}</td>
+                </tr>`).join('');
+        }
+
+        // 特征快照
+        const featsTbody = document.getElementById('resFeatures');
+        const feats = r.features || {};
+        const keys = Object.keys(feats);
+        if (keys.length === 0) {
+            featsTbody.innerHTML = '<tr><td class="text-center text-muted">特征已脱敏 (RISK_FEATURES_FULL_RETURN=false)</td></tr>';
+        } else {
+            featsTbody.innerHTML = keys.map(k => `
+                <tr><td class="small">${k}</td><td class="text-end">${feats[k]}</td></tr>`).join('');
+        }
+    } catch (err) {
+        errBox.textContent = '检查失败: ' + err.message;
+    }
+});
+
+loadSamples();
+</script>
+{% endblock %}

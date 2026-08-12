@@ -1,0 +1,150 @@
+{% extends "base.html" %}
+{% block title %}仪表盘 - 制造业风控系统{% endblock %}
+{% block content %}
+<h4 class="mb-4"><i class="bi bi-speedometer2 me-2"></i>仪表盘</h4>
+
+<!-- 统计卡片 -->
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="card stat-card">
+            <div class="card-body">
+                <div class="text-muted small">今日评估数</div>
+                <div class="stat-value text-primary" id="statAssessments">-</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card">
+            <div class="card-body">
+                <div class="text-muted small">待审核案件</div>
+                <div class="stat-value text-warning" id="statPending">-</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card">
+            <div class="card-body">
+                <div class="text-muted small">已拒绝案件</div>
+                <div class="stat-value text-danger" id="statRejected">-</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card">
+            <div class="card-body">
+                <div class="text-muted small">启用规则数</div>
+                <div class="stat-value text-success" id="statRules">-</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3">
+    <!-- 决策分布 + 等级分布 -->
+    <div class="col-md-6">
+        <div class="card stat-card">
+            <div class="card-body">
+                <h6 class="mb-3">评估决策分布</h6>
+                <canvas id="chartDecision" height="220"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card stat-card">
+            <div class="card-body">
+                <h6 class="mb-3">近 7 天评估趋势</h6>
+                <canvas id="chartTrend" height="220"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card stat-card mt-4">
+    <div class="card-body">
+        <h6 class="mb-3">最近评估</h6>
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+            <tr>
+                <th>评估ID</th><th>用户</th><th>评分</th><th>等级</th><th>决策</th><th>命中规则</th><th>时间</th>
+            </tr>
+            </thead>
+            <tbody id="recentTable">
+            <tr><td colspan="7" class="text-center text-muted">加载中...</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+async function loadOverview() {
+    try {
+        const data = await apiRequest('/api/dashboard/overview');
+        document.getElementById('statAssessments').textContent = data.assessments_today;
+        document.getElementById('statPending').textContent = data.pending_cases;
+        document.getElementById('statRejected').textContent = data.rejected_cases;
+        document.getElementById('statRules').textContent = data.rule_count;
+
+        // 决策分布饼图
+        const labels = ['通过', '标记', '人工审核', '拒绝'];
+        const values = labels.map(l => data.decision_distribution[l] || 0);
+        new Chart(document.getElementById('chartDecision'), {
+            type: 'doughnut',
+            data: {
+                labels,
+                datasets: [{
+                    data: values,
+                    backgroundColor: ['#22c55e', '#eab308', '#3b82f6', '#ef4444'],
+                }],
+            },
+            options: { plugins: { legend: { position: 'bottom' } } },
+        });
+
+        // 最近评估表
+        const tbody = document.getElementById('recentTable');
+        if (data.recent_assessments.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">暂无评估, 去"风险检查"页跑一条</td></tr>';
+            return;
+        }
+        tbody.innerHTML = data.recent_assessments.map(a => `
+            <tr>
+                <td class="small">${a.assessment_id}</td>
+                <td>${a.user_id}</td>
+                <td><strong>${a.final_score}</strong></td>
+                <td>${riskBadge(a.risk_level)}</td>
+                <td>${decisionBadge(a.decision)}</td>
+                <td>${a.rule_count}</td>
+                <td class="small text-muted">${formatTime(a.create_time)}</td>
+            </tr>`).join('');
+    } catch (e) {
+        document.getElementById('recentTable').innerHTML =
+            `<tr><td colspan="7" class="text-center text-danger">加载失败: ${e.message}</td></tr>`;
+    }
+}
+
+async function loadTrend() {
+    try {
+        const data = await apiRequest('/api/dashboard/trend');
+        new Chart(document.getElementById('chartTrend'), {
+            type: 'line',
+            data: {
+                labels: data.days.map(d => d.date),
+                datasets: [{
+                    label: '评估数',
+                    data: data.days.map(d => d.count),
+                    borderColor: '#3b82f6',
+                    backgroundColor: 'rgba(59,130,246,0.1)',
+                    fill: true,
+                    tension: 0.3,
+                }],
+            },
+            options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } },
+        });
+    } catch (e) { /* 趋势图失败不阻塞 */ }
+}
+
+loadOverview();
+loadTrend();
+</script>
+{% endblock %}
