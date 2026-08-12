@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="grid check-layout">
+  <article class="panel sticky"><div class="panel-head"><div><p class="eyebrow">NEW ASSESSMENT</p><h3>选择医疗业务单据</h3></div></div>
+    <form id="check-form" class="form-stack">
+      <label>事件类型<select id="event-type"><option>医保结算</option><option>处方开立</option><option>挂号申请</option><option>挂号退号</option></select></label>
+      <label>本地合成单据<select id="source"><option>加载中…</option></select></label>
+      <div class="identity"><span>患者标识</span><b id="patient-id">—</b></div>
+      <button class="button primary" type="submit">运行完整风险检查</button>
+      <p class="help">系统将校验单据归属，并在同一事务中保存事件、特征、评估和案件。</p>
+    </form>
+  </article>
+  <article class="panel result-panel"><div class="panel-head"><div><p class="eyebrow">ASSESSMENT RESULT</p><h3>检查结果</h3></div></div>
+    <div id="result" class="empty"><div class="empty-icon">⌁</div><h3>等待检查</h3><p>从左侧选择一条合成医疗记录开始。</p></div>
+  </article>
+</section>
+{% endblock %}
+{% block scripts %}<script>
+let sources=[];
+async function loadSources(){ const type=q('#event-type').value; q('#source').innerHTML='<option>加载中…</option>'; sources=await api(`/api/medical/sources?event_type=${encodeURIComponent(type)}&limit=100`); q('#source').innerHTML=sources.map((x,i)=>`<option value="${i}">${x.source_id} · ${x.patient_id}</option>`).join(''); syncPatient(); }
+function syncPatient(){ const x=sources[Number(q('#source').value||0)]; q('#patient-id').textContent=x?.patient_id||'—'; }
+q('#event-type').addEventListener('change',()=>loadSources().catch(showError)); q('#source').addEventListener('change',syncPatient);
+q('#check-form').addEventListener('submit',async e=>{e.preventDefault(); const x=sources[Number(q('#source').value)]; if(!x)return; const box=q('#result'); box.innerHTML='<div class="loading">25 维医疗特征计算中…</div>'; try{const r=await api('/api/risk/check',{method:'POST',body:JSON.stringify({event_type:q('#event-type').value,source_id:x.source_id,user_id:x.patient_id,event_data:{channel:'medical-console'}})}); box.innerHTML=`<div class="decision ${decisionClass(r.decision)}"><div><p>最终决策</p><h2>${r.decision}</h2></div><strong>${r.final_score}<small>/100</small></strong></div><div class="score-tracks"><div><span>规则命中</span><b>${r.rule_count} 条</b></div><div><span>XGBoost 概率</span><b>${r.ml_score===null?'纯规则':(r.ml_score*100).toFixed(1)+'%'}</b></div><div><span>风险等级</span><b>${r.risk_level}</b></div></div><h4>命中规则</h4>${r.triggered_rules.length?`<div class="rule-hits">${r.triggered_rules.map(x=>`<div><b>${x.rule_id} · ${x.rule_name}</b><span class="badge ${levelClass(x.risk_level)}">${x.risk_level}</span><p>${x.description||x.rule_category}</p></div>`).join('')}</div>`:'<p class="muted">本次未命中启用规则。</p>'}<details><summary>查看 25 维特征快照</summary><pre>${JSON.stringify(r.features,null,2)}</pre></details>`;}catch(err){box.innerHTML=`<div class="error-box">${escapeHtml(err.message)}</div>`;}});
+loadSources().catch(showError);
+</script>{% endblock %}

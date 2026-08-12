@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block head %}
+<style>
+  .metric-link { display:block; color:inherit; text-decoration:none; transition:transform .18s ease, box-shadow .18s ease, border-color .18s ease; }
+  .metric-link:hover { transform:translateY(-2px); border-color:#b8d8d3; box-shadow:0 20px 48px rgba(21,60,57,.13); }
+  .metric-link i { display:block; margin-top:12px; color:var(--teal); font-size:11px; font-style:normal; font-weight:700; text-decoration:none; }
+</style>
+{% endblock %}
+{% block content %}
+<section class="hero">
+  <div><p>今日风险态势</p><h2>让每一次医疗业务检查<br><em>可解释、可审计、可降级</em></h2></div>
+  <a class="button primary" href="/risk-check">发起风险检查 →</a>
+</section>
+<section id="metrics" class="metric-grid"><div class="loading">正在读取本地风控数据…</div></section>
+<section class="grid two">
+  <article class="panel"><div class="panel-head"><div><p class="eyebrow">DECISION FLOW</p><h3>决策防线</h3></div></div>
+    <div class="flow"><div><b>01</b><span>医疗单据校验</span></div><div><b>02</b><span>25 维特征计算</span></div><div><b>03</b><span>规则 + XGBoost</span></div><div><b>04</b><span>案件与审计留痕</span></div></div>
+  </article>
+  <article class="panel"><div class="panel-head"><div><p class="eyebrow">MODEL STATUS</p><h3>双轨引擎状态</h3></div></div><div id="model-status" class="model-card loading">加载中…</div></article>
+</section>
+{% endblock %}
+{% block scripts %}<script>
+document.addEventListener('DOMContentLoaded', async () => {
+  try {
+    const data = await api('/api/dashboard/overview');
+    const cards = [
+      ['累计评估', data.assessment_count, '全部医疗风险检查'],
+      ['高风险评估', data.high_risk_count, '人工审核与拒绝'],
+      ['待处理案件', data.pending_case_count, '待审核与审核中'],
+      ['患者', data.patient_count, '患者档案数量']
+    ];
+    const links=['/assessments','/assessments?high_risk=1','/cases?status=pending','/patients'];
+    document.querySelector('#metrics').innerHTML = cards.map((x,i) => `<a class="metric metric-link" href="${links[i]}"><span>0${i+1}</span><strong>${x[1]}</strong><h3>${x[0]}</h3><p>${x[2]}</p><i>查看详情 →</i></a>`).join('');
+    const m=data.ml_model;
+    document.querySelector('#model-status').innerHTML = `<div class="model-line"><span class="dot ${m.loaded?'ok':'warn'}"></span><div><b>${m.loaded?'XGBoost 已加载':'纯规则降级运行'}</b><p>${m.loaded?'概率经独立校准集 Platt 校准':'运行训练脚本后自动启用双轨融合'}</p></div></div><dl><dt>验证 AUC</dt><dd>${fmt(m.validation_auc)}</dd><dt>验证 F1</dt><dd>${fmt(m.validation_f1)}</dd><dt>规则引擎</dt><dd>正常</dd></dl>`;
+  } catch(e) { showError(e); }
+});
+</script>{% endblock %}

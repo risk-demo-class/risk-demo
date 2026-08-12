@@ -1,0 +1,5 @@
+-- 总入口说明：为保证 ORM 与数据库结构一致，实际初始化请执行：
+--   uv run python scripts/init_db.py --yes
+-- 手工执行 SQL 时，先创建并选中目标数据库，再依次执行：
+--   1. sql/init_risk_tables.sql
+--   2. sql/init_business_tables.sql

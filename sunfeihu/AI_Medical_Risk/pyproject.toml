@@ -1,0 +1,75 @@
+[project]
+name = "medical-risk-ai"
+version = "0.4.0"
+description = "Medical Risk AI - 医疗智能风控系统"
+authors = [
+    { name = "Medical Risk AI Team", email = "dev@example.com" },
+]
+readme = "README.md"
+requires-python = ">=3.11,<3.13"
+license = { text = "MIT" }
+# ============================================================
+# 项目运行依赖，由 uv 统一锁定。
+# ============================================================
+dependencies = [
+    # Web 框架
+    "fastapi>=0.115.0,<0.116.0",
+    "uvicorn[standard]>=0.34.0,<0.35.0",
+    "pydantic>=2.10.0,<2.11.0",
+    "pydantic-settings>=2.7.0,<2.8.0",
+    "python-multipart>=0.0.18",
+    "jinja2>=3.1.0,<4.0.0",
+    # 数据库 (异步 SQLAlchemy + aiomysql 驱动)
+    "sqlalchemy>=2.0.0,<2.1.0",
+    "pymysql>=1.1.0,<1.2.0",
+    "aiomysql>=0.2.0,<0.3.0",
+    # 工具
+    "python-dotenv>=1.0.0,<2.0.0",
+    "numpy>=2.0,<3.0",
+    "pandas>=2.2,<3.0",
+    "scikit-learn>=1.5,<2.0",
+    "xgboost>=2.1,<4.0",
+    "openai>=1.60,<3.0",
+    "pwdlib[argon2]>=0.2,<1.0",
+    "itsdangerous>=2.2,<3.0",
+]
+
+[project.optional-dependencies]
+# 测试依赖
+test = [
+    "pytest>=8.3.0,<8.4.0",
+    "pytest-asyncio>=0.25.0,<0.26.0",
+    "httpx>=0.28.0,<0.29.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["app", "scripts"]
+
+# ============================================================
+# uv 工具配置
+# ============================================================
+
+[dependency-groups]
+# 开发依赖 (pytest 等) - uv 0.5+ 推荐写法
+dev = [
+    "pytest>=8.3.0",
+    "pytest-asyncio>=0.25.0",
+    "httpx>=0.28.0",
+]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+asyncio_mode = "strict"
+asyncio_default_fixture_loop_scope = "function"
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+# 自定义标记: DB 集成测试 (需要真实 MySQL, 不可用时自动跳过)
+markers = [
+    "integration: 需要真实 MySQL 的集成测试, 不可用时自动跳过",
+]

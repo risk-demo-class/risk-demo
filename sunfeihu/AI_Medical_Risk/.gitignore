@@ -1,0 +1,51 @@
+# ============================================================
+# AI_Risk_Medical - .gitignore
+# 不提交虚拟环境 / 密钥 / 日志 / 缓存 / 真实数据
+# ============================================================
+
+# 虚拟环境
+.venv/
+venv/
+env/
+
+# 密钥与本地配置 (含数据库密码 / LLM Key)
+.env
+*.env
+.env.local
+
+# Python 缓存
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+build/
+dist/
+
+# 测试缓存
+.pytest_cache/
+.cache/
+
+# 日志
+logs/
+*.log
+
+# 模型文件 (XGBoost 等, P2 生成)
+app/engine/*.json
+app/engine/*.pkl
+app/engine/*.bin
+
+# IDE
+.idea/
+.vscode/
+
+# 操作系统
+.DS_Store
+Thumbs.db
+
+# uv 内部目录
+uv/
+
+# 真实数据导出 (绝不提交真实个人医疗信息)
+data/
+*.sql.bak

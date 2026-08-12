@@ -1,0 +1,29 @@
+.sidebar nav{overflow-y:auto;min-height:0}
+/* 全站数字规范：统一字形、基线与宽度，避免 Georgia 数字视觉大小不一。 */
+body, input, select, textarea, button, table {
+  font-variant-numeric: tabular-nums lining-nums;
+  font-feature-settings: "tnum" 1, "lnum" 1;
+}
+
+.metric strong,
+.metric > span,
+.flow b,
+.identity b,
+.decision > strong,
+.decision > strong small,
+.score-tracks b,
+.model-card dd,
+.detail-meta b,
+td strong {
+  font-family: Inter, "Segoe UI", Arial, sans-serif !important;
+  font-style: normal !important;
+  font-variant-numeric: tabular-nums lining-nums;
+  font-feature-settings: "tnum" 1, "lnum" 1;
+}
+
+.metric strong { font-size:31px; line-height:1; font-weight:750; }
+.metric > span { font-size:18px; line-height:1; font-weight:600; }
+.flow b { font-size:16px; line-height:1; font-weight:600; }
+.identity b { font-size:17px; line-height:1.25; font-weight:600; }
+.decision > strong { font-size:46px; line-height:1; font-weight:750; }
+.decision > strong small { font-size:12px; line-height:1; font-weight:600; }

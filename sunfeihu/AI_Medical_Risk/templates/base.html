@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>{{ title }} · 医疗智能风控系统</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <link rel="stylesheet" href="/static/p3.css">
+  <link rel="stylesheet" href="/static/p4.css">
+  <link rel="stylesheet" href="/static/p4_fix.css">
+  {% block head %}{% endblock %}
+</head>
+<body>
+  <aside class="sidebar">
+    <div class="brand"><span class="brand-mark">M</span><div><b>Medical Risk AI</b><small>医疗智能风控系统</small></div></div>
+    <nav>
+      <a class="{{ 'active' if current == 'dashboard' else '' }}" href="/dashboard"><span>◫</span>风险仪表盘</a>
+      <a class="{{ 'active' if current == 'patients' else '' }}" href="/patients"><span>♙</span>患者管理</a>
+      <a class="{{ 'active' if current == 'risk_check' else '' }}" href="/risk-check"><span>⌁</span>风险检查</a>
+      <a class="{{ 'active' if current == 'rules' else '' }}" href="/rules"><span>≋</span>规则管理</a>
+      <a class="{{ 'active' if current == 'cases' else '' }}" href="/cases"><span>◇</span>案件审核</a>
+      <a class="{{ 'active' if current == 'assessments' else '' }}" href="/assessments"><span>◷</span>评估历史</a>
+      <a class="{{ 'active' if current == 'blacklist' else '' }}" href="/blacklist"><span>⊘</span>医疗黑名单</a>
+      <a class="{{ 'active' if current == 'assistant' else '' }}" href="/assistant"><span>✦</span>AI 风控助手</a>
+      <a class="{{ 'active' if current == 'system' else '' }}" href="/system"><span>⚑</span>告警与审计</a>
+      <a class="{{ 'active' if current == 'users' else '' }}" href="/users"><span>◎</span>用户与账户</a>
+    </nav>
+    <div class="session-card"><b>{{ session_user.username }}</b><span>{{ session_user.role }}</span><button id="logout-button">退出登录</button></div>
+  </aside>
+  <main>
+    <header><div><p class="eyebrow">MEDICAL RISK AI</p><h1>{{ title }}</h1></div><div class="status"><i></i>本地服务运行中</div></header>
+    {% block content %}{% endblock %}
+  </main>
+  <div id="toast" class="toast"></div>
+  <script src="/static/app.js"></script>
+  <script>document.querySelector('#logout-button')?.addEventListener('click',async()=>{await fetch('/api/auth/logout',{method:'POST'});location.href='/login'});</script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

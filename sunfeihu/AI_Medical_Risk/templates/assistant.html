@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="grid assistant-layout">
+  <article class="panel assistant-about"><p class="eyebrow">READ-ONLY AGENT</p><h2>只读数据，<br><em>专注解释风险</em></h2><p>助手只能读取脱敏画像、评估、规则和案件聚合信息。它无法修改业务单据、规则、案件或黑名单。</p><div class="guardrails"><span>✓ 凭据与敏感原文拦截</span><span>✓ 医疗建议安全边界</span><span>✓ 无 LLM Key 本地降级</span></div></article>
+  <article class="panel chat-panel"><div id="messages" class="messages"><div class="message assistant"><b>Medical Risk AI 助手</b><p>你好，我可以查询待审核案件、患者风险摘要或解释医疗规则。</p><small>仅供医疗风控辅助，不构成诊断、治疗或用药建议。</small></div></div><div class="suggestions"><button>当前待审核案件数量？</button><button>PAT000001 近期风险摘要</button><button>解释 MR001 为什么命中</button></div><form id="chat-form" class="chat-input"><input id="question" maxlength="500" placeholder="输入风控问题…" required><button class="button primary">发送</button></form></article>
+</section>
+{% endblock %}
+{% block scripts %}<script>
+function addMessage(text,role,meta=''){const box=q('#messages');const div=document.createElement('div');div.className=`message ${role}`;div.innerHTML=`<b>${role==='user'?'本地用户':'Medical Risk AI 助手'}</b><p>${escapeHtml(text).replaceAll('\n','<br>')}</p>${meta?`<small>${escapeHtml(meta)}</small>`:''}`;box.appendChild(div);box.scrollTop=box.scrollHeight;}
+async function ask(question){addMessage(question,'user');q('#question').value='';const submit=q('#chat-form button'),tips=document.querySelectorAll('.suggestions button');submit.disabled=true;tips.forEach(x=>x.disabled=true);const box=q('#messages'),thinking=document.createElement('div');thinking.className='message assistant thinking';thinking.innerHTML='<b>Medical Risk AI 助手</b><p><i></i><i></i><i></i><span>正在分析风险数据</span></p>';box.appendChild(thinking);box.scrollTop=box.scrollHeight;try{const r=await api('/api/agent/chat',{method:'POST',body:JSON.stringify({question})});thinking.remove();addMessage(r.answer,'assistant',`${r.llm_used?'LLM 增强回答':'本地只读回答'} · ${r.intent}`);}catch(e){thinking.remove();showError(e)}finally{submit.disabled=false;tips.forEach(x=>x.disabled=false)}}
+q('#chat-form').addEventListener('submit',e=>{e.preventDefault();const value=q('#question').value.trim();if(value)ask(value)});document.querySelectorAll('.suggestions button').forEach(button=>button.addEventListener('click',()=>ask(button.textContent)));
+</script>{% endblock %}
