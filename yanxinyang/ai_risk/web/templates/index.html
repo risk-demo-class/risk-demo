@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{ app_name }}</title>
+<link rel="icon" href="/favicon.ico">
+<link rel="stylesheet" href="/static/css/base.css">
+<link rel="stylesheet" href="/static/css/pages.css">
+</head>
+<body>
+
+<!-- ==================================================== 侧边栏 -->
+<aside class="sidebar" id="sidebar">
+  <div class="brand">
+    <span class="brand-logo" aria-hidden="true">
+      <svg viewBox="0 0 32 32" width="26" height="26">
+        <rect width="32" height="32" rx="8" fill="#2563eb"/>
+        <path d="M16 6l8 3.2v6.2c0 5-3.4 8.9-8 10.4-4.6-1.5-8-5.4-8-10.4V9.2L16 6z"
+              fill="none" stroke="#fff" stroke-width="2"/>
+        <path d="M12 16.2l2.8 2.8L20.4 13" fill="none" stroke="#fff"
+              stroke-width="2.2" stroke-linecap="round"/>
+      </svg>
+    </span>
+    <span class="brand-text">
+      <b>智学安</b>
+      <i>教育风控平台</i>
+    </span>
+  </div>
+
+  <nav class="nav" id="nav"><!-- 由 app.js 按 pages_json 渲染 --></nav>
+
+  <div class="side-foot">
+    <div class="side-stat">
+      <span><b id="sf-routers">-</b> router</span>
+      <span><b id="sf-endpoints">-</b> 端点</span>
+    </div>
+    <div class="side-links">
+      <a href="/docs" target="_blank">API 目录</a>
+      <span class="dot">·</span>
+      <a href="#/config">配置</a>
+    </div>
+    <div class="side-ver">{{ app_version }}</div>
+  </div>
+</aside>
+
+<!-- ==================================================== 主区 -->
+<main class="main">
+  <header class="topbar">
+    <button class="icon-btn only-mobile" id="btn-menu" title="菜单" aria-label="菜单">
+      <svg viewBox="0 0 24 24" width="18" height="18"><path d="M4 7h16M4 12h16M4 17h16"
+        stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/></svg>
+    </button>
+    <div class="crumb">
+      <h1 id="page-title">风控大盘</h1>
+      <p id="page-desc">实时监控风控核心指标</p>
+    </div>
+    <div class="topbar-right">
+      <div class="pill" id="model-pill" title="模型状态">
+        <span class="pill-dot"></span><span id="model-pill-text">检测中…</span>
+      </div>
+      <div class="pill" id="health-pill" title="服务健康">
+        <span class="pill-dot"></span><span id="health-pill-text">连接中…</span>
+      </div>
+      <button class="icon-btn" id="btn-refresh" title="刷新当前页">
+        <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor"
+             stroke-width="2" stroke-linecap="round">
+          <path d="M20 11a8 8 0 10-2.3 5.7"/><path d="M20 5v6h-6"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <div class="view" id="view">
+    <div class="loading-block"><span class="spinner"></span>加载中…</div>
+  </div>
+
+  <footer class="footer">
+    <span>{{ app_name }} {{ app_version }}</span>
+    <span class="dot">·</span>
+    <span>5 层架构 / 7 步流水线 / 25 维特征 / 30 条规则 / 14 个算子</span>
+    <span class="dot">·</span>
+    <span>{{ router_count }} router · {{ endpoint_count }} 端点</span>
+  </footer>
+</main>
+
+<!-- ==================================================== 全局组件 -->
+<div class="toast-wrap" id="toast-wrap"></div>
+<div class="modal-mask" id="modal-mask" hidden>
+  <div class="modal" role="dialog" aria-modal="true">
+    <header class="modal-head">
+      <h3 id="modal-title">标题</h3>
+      <button class="icon-btn" id="modal-close" aria-label="关闭">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor"
+             stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </header>
+    <div class="modal-body" id="modal-body"></div>
+    <footer class="modal-foot" id="modal-foot"></footer>
+  </div>
+</div>
+
+<script>
+window.__APP__ = {
+  name: "{{ app_name }}",
+  version: "{{ app_version }}",
+  routerCount: {{ router_count }},
+  endpointCount: {{ endpoint_count }},
+  pages: {{ pages_json | safe }}
+};
+</script>
+<script src="/static/js/core.js"></script>
+<script src="/static/js/charts.js"></script>
+<script src="/static/js/pages-monitor.js"></script>
+<script src="/static/js/pages-handle.js"></script>
+<script src="/static/js/pages-insight.js"></script>
+<script src="/static/js/pages-system.js"></script>
+<script src="/static/js/app.js"></script>
+</body>
+</html>
