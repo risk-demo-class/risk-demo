@@ -103,7 +103,6 @@ function AssessmentHistory() {
     { title: "决策", dataIndex: "decision", width: 90, align: "center" as const, render: (v: string) => { const dm = DECISION_META[v]; return <Tag color={dm?.color}>{dm?.label}</Tag>; } },
     { title: "命中", dataIndex: "rule_count", width: 70, align: "center" as const },
     { title: "ML分（P拒绝）", dataIndex: "ml_score", width: 110, align: "center" as const, render: (v: number | null) => v == null ? "-" : v.toFixed(3) },
-    { title: "风险分（sigmoid）", dataIndex: "final_score", width: 120, align: "center" as const, render: (v: number) => v },
     { title: "时间", dataIndex: "create_time", width: 140, render: (v: string) => <span className="text-[12px]">{formatTime(v)}</span> },
     {
       title: "操作", key: "action", width: 80, align: "center" as const,

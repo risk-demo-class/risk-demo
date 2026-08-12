@@ -15,7 +15,6 @@
 """
 import json
 import logging
-import math
 from collections import Counter
 from dataclasses import dataclass
 from datetime import datetime

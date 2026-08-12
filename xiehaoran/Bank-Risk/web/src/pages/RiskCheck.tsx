@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import {
-  Card, Form, Input, InputNumber, Select, Switch, Button, Tabs, Tag, Timeline,
-  Collapse, Alert, App, Descriptions, Divider,
+  Card, Form, Input, InputNumber, Switch, Button, Tabs, Tag, Timeline,
+  Collapse, Alert, App, Descriptions,
 } from "antd";
 import { SendOutlined, ReloadOutlined } from "@ant-design/icons";
 import { api, DECISION_META, EVENT_OPTIONS, RiskCheckResponse } from "../api";

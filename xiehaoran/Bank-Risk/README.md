@@ -54,7 +54,8 @@
 | vite | 5 | 前端开发 / 构建 |
 | react / react-dom | 18 | SPA 框架 |
 | antd | 5 | 企业级金融 UI 组件库 |
-| recharts | 2 | 模型评估图表 |
+| recharts | 2 | 仪表盘与模型评估图表 |
+| @ant-design/icons | 5 | 菜单与页面图标 |
 | tailwindcss | 3.4 | 样式系统 |
 
 ---
@@ -120,16 +121,28 @@ Bank-Risk/
 │   ├── main.py                # [新增] FastAPI 入口：挂载 /api 路由 + 托管 web/dist
 │   ├── __main__.py            # [新增] 支持 `python -m app` 启动
 │   ├── engine/
-│   │   └── feature.py         # 11 维特征工程（user/order/address 三族，归一化）
-│   └── service/
-│       ├── validator.py       # 规则引擎 DISPATCH_TABLE（8 条规则）+ TxnContext
-│       └── event.py           # 5 类事件分发路由 process_event
-│   └── routers/               # [新增] REST 接口层
-│       ├── decision.py        # POST /api/decision 包装 process_event；GET /api/rules 暴露规则
-│       ├── features.py        # GET /api/features 暴露 11 维特征 + 三族元数据
-│       └── model_eval.py      # GET /api/model-eval 读取 scripts/eval_history.jsonl
-├── web/                       # [新增] React + Vite + Ant Design 前端工程
-│   ├── src/pages/             # 事件决策控制台 / 规则看板 / 模型评估 / 特征展示 4 页
+│   │   ├── feature.py         # 11 维特征工程（客户/交易/设备等族，归一化到 [0,1]）
+│   │   ├── ml_model.py        # XGBoost 模型加载与推理（输出 ml_score）
+│   │   └── decision.py        # 7 步决策流水线：校验→事件→特征→快照→规则→决策→持久化
+│   ├── models_risk.py         # SQLAlchemy 模型（RiskRule/RiskEvent/RiskAssessment/RiskCase/...），SQLite 持久化
+│   ├── database.py            # 引擎与 init_db()（启动时 create_all 建表）
+│   ├── service/
+│   │   ├── validator.py       # 规则引擎 DISPATCH_TABLE（8 条规则）+ TxnContext
+│   │   └── event.py           # 5 类事件分发路由 process_event
+│   ├── agent/                 # LLM 风控辅助分析（tools.py 含仪表盘统计等 Agent 工具）
+│   └── routers/               # REST 接口层（12 个路由）
+│       ├── risk.py            # POST /api/risk 提交事件决策
+│       ├── rule.py            # /api/rules 规则增删改查
+│       ├── case.py            # /api/cases 案件管理
+│       ├── assessment.py      # /api/assessments 评估历史
+│       ├── dashboard.py       # /api/dashboard 统计概览
+│       ├── blacklist.py       # /api/blacklist 黑名单
+│       ├── features.py        # /api/features 特征计算展示
+│       ├── model_eval.py      # /api/model-eval 读取 scripts/eval_history.jsonl
+│       ├── agent.py           # /api/agent/chat AI 风控助手
+│       └── ...                # decision/alert/profile 等
+├── web/                       # React + Vite + Ant Design + Recharts 前端工程
+│   ├── src/pages/             # 风控仪表盘 / 规则管理 / 案件管理 / 评估历史 / 风险检查 / AI风控助手 / 黑名单 共 7 页
 │   └── dist/                  # 构建产物（FastAPI 静态托管）
 ├── scripts/
 │   ├── gen_business_data.py   # Faker 造数（精确 1:4 配比）
@@ -225,34 +238,42 @@ npm run build        # 产物输出 web/dist，由 FastAPI 托管
 ### 9.2 启动
 
 ```bash
-# 方式一：python -m app（内部用 uvicorn 拉起，端口 8000）
+# 方式一：python -m app（内部用 uvicorn 拉起，端口 8010）
 python -m app
 
 # 方式二：直接用 uvicorn
-uvicorn app.main:app --host 0.0.0.0 --port 8000
+uvicorn app.main:app --host 0.0.0.0 --port 8010
 ```
 
-浏览器访问 **http://127.0.0.1:8000/** 即可使用。
+浏览器访问 **http://127.0.0.1:8010/** 即可使用。
 
-> 开发期（前端未构建时）也可单独跑 Vite：`cd web && npm run dev`，Vite dev server（端口 5173）已配置 `/api` 代理到 FastAPI 8000，无需前后端分离部署。
+> 开发期（前端未构建时）也可单独跑 Vite：`cd web && npm run dev`，Vite dev server（端口 5173）已配置 `/api` 代理到 FastAPI 8010，无需前后端分离部署。
 
-### 9.3 四大页面
+### 9.3 七大页面
 
-| 页面 | 功能 |
-|------|------|
-| 事件决策控制台 | 录入 transfer/loan_apply/card_txn/repay/login 事件，实时返回五级决策 + 命中规则时间线 + 11 维特征向量 |
-| 规则命中看板 | 可视化 8 条反欺诈规则、决策分布、黑名单一票否决（severity=4）逻辑图解 |
-| 模型评估图表 | XGBoost BASE vs HARD 的 AUC/F1 对比柱状图 + 特征重要性 Top-N 条形/雷达图 |
-| 特征工程展示 | 11 维特征向量总览与 user/order/address 三大特征族对比 |
+| 页面 | 路由 key | 功能 |
+|------|----------|------|
+| 风控仪表盘 | `dashboard` | 今日评估/高风险/通过率/待处理统计卡 + 7 天评估趋势双折线图 + 风险等级分布环形图 + 今日决策动作分布条形图 + Top 命中规则 |
+| 规则管理 | `rules` | 反欺诈规则增删改查，事件类型以中文显示（转账/贷款申请/登录/卡片交易/还款/通用） |
+| 案件管理 | `cases` | 风险案件列表与处置，默认展示"全部状态" |
+| 评估历史 | `assessments` | 历史评估记录查询（评分/决策/命中规则） |
+| 风险检查 | `risk` | 录入 transfer/loan_apply/card_txn/repay/login 事件，实时返回五级决策 + 命中规则时间线 + 特征向量 |
+| AI 风控助手 | `agent` | 基于 LLM 的风控问答与辅助分析 |
+| 黑名单 | `blacklist` | 黑名单（账户/设备/IP 等维度）增删查 |
 
-### 9.4 REST 接口
+### 9.4 REST 接口（节选）
 
 | 方法 | 路径 | 说明 |
 |------|------|------|
-| POST | `/api/decision` | 执行一笔事件决策，包装 `process_event` |
-| GET  | `/api/rules` | 全部规则 + 各事件路由关系 + 黑名单维度 |
-| GET  | `/api/features` | 11 维特征说明 + 三大特征族元数据 |
+| POST | `/api/risk` | 提交一笔事件决策（event_type + event_data） |
+| GET  | `/api/rules` | 规则列表与增删改查 |
+| GET  | `/api/cases` | 案件列表（支持 `active_only` / `all` 状态筛选） |
+| GET  | `/api/assessments` | 评估历史 |
+| GET  | `/api/dashboard` | 仪表盘统计概览 |
+| GET  | `/api/blacklist` | 黑名单查询 |
+| GET  | `/api/features` | 特征计算展示 |
 | GET  | `/api/model-eval` | 读取 `scripts/eval_history.jsonl` 返回 BASE/HARD 对比与特征重要性 |
+| POST | `/api/agent/chat` | AI 风控助手对话 |
 | GET  | `/api/health` | 健康检查 |
 
 > 架构对齐基线 `AI_Risk` 的 `app/routers` REST 模式；前端调用同源 `/api/*`，由 FastAPI `StaticFiles` 挂载 `web/dist`，避免跨域与独立部署。

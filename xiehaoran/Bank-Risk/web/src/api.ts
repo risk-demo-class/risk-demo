@@ -139,15 +139,6 @@ export interface DashboardOverview {
   decision_distribution: { decision: string; count: number }[];
 }
 
-export interface UserProfile {
-  user_id: string;
-  risk_score: number;
-  risk_level: string;
-  assessment_count: number;
-  last_assessment_time: string | null;
-  profile_data: any;
-}
-
 export interface AgentChatResponse {
   reply: string;
   session_id: string;
@@ -260,9 +251,6 @@ export const api = {
   addBlacklist: (item: any) => post<BlacklistItem>("/blacklist", item),
   deleteBlacklist: (id: number) => del(`/blacklist/${id}`),
 
-  // 用户画像
-  userProfile: (userId: string) => get<UserProfile>(`/profile/${userId}`),
-
   // 模型评估 + 特征
   modelEval: () => get<ModelEval>("/model-eval"),
   features: () =>
@@ -276,7 +264,6 @@ export const api = {
   // AI Agent
   agentChat: (message: string, session_id?: string) =>
     post<AgentChatResponse>("/agent/chat", { message, session_id }),
-  agentClear: (session_id: string) => post(`/agent/clear`, { session_id }),
 };
 
 // ============================================================

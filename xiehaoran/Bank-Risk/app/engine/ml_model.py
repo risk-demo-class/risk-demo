@@ -40,10 +40,6 @@ _MODEL: Optional[xgb.Booster] = None
 _LOADED: bool = False
 
 
-def get_model() -> Optional[xgb.Booster]:
-    return _MODEL
-
-
 def is_model_loaded() -> bool:
     return _LOADED
 

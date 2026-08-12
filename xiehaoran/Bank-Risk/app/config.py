@@ -61,12 +61,6 @@ class Settings(BaseSettings):
         "极高": (85, 100),
     }
 
-    def get_risk_level_by_score(self, score: int) -> str:
-        for level, (low, high) in self.RISK_LEVEL_SCORE_MAP.items():
-            if low <= score <= high:
-                return level
-        return "极高" if score > 100 else "低"
-
     def get_event_thresholds(self, event_type: str) -> dict[str, int]:
         return self.RISK_EVENT_THRESHOLDS.get(
             event_type,

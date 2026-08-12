@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Card, Tag, Alert, Empty, Table, Switch, Button, Space, Modal, Form, Input, Select, InputNumber, App } from "antd";
+import { Card, Tag, Alert, Table, Switch, Button, Space, Modal, Form, Input, Select, InputNumber, App } from "antd";
 import { EditOutlined, DeleteOutlined } from "@ant-design/icons";
 import { api, DECISION_META, RuleMeta, RULE_CATEGORY_OPTIONS, RISK_LEVEL_OPTIONS } from "../api";
 
@@ -18,6 +18,11 @@ const ACTION_OPTS = [
   { value: "freeze", label: "冻结" },
   { value: "report", label: "报送" },
 ];
+
+// 事件类型值 -> 中文显示（用于列表展示）
+const EVENT_LABEL_MAP: Record<string, string> = Object.fromEntries(
+  EVENT_OPTS.map((o) => [o.value, o.label]).concat([["通用", "通用"]]),
+);
 
 export default function RuleBoard() {
   const { message } = App.useApp();
@@ -182,7 +187,7 @@ export default function RuleBoard() {
             { title: "规则ID", dataIndex: "rule_id", width: 90, sorter: true, sortOrder: sortBy === "rule_id" ? (sortOrder === "asc" ? "ascend" : "descend") : null, render: (v) => <span className="text-[#eb2f96] font-mono text-[13px]">{v}</span> },
             { title: "规则名", dataIndex: "rule_name", render: (v) => <span className="font-medium">{v}</span> },
             { title: "分类", dataIndex: "rule_category", width: 100, render: (v) => <Tag color={categoryColor(v)}>{v}</Tag> },
-            { title: "事件类型", dataIndex: "event_type", width: 90, render: (v) => <Tag>{v}</Tag> },
+            { title: "事件类型", dataIndex: "event_type", width: 90, render: (v) => <Tag>{EVENT_LABEL_MAP[v] ?? v}</Tag> },
             { title: "等级", dataIndex: "risk_level", width: 80, sorter: true, sortOrder: sortBy === "risk_level" ? (sortOrder === "asc" ? "ascend" : "descend") : null, render: (v) => <Tag color={v === "极高" ? "red" : v === "高" ? "volcano" : "default"}>{v}</Tag> },
             { title: "分值", dataIndex: "risk_score", align: "center" as const, width: 70, sorter: true, sortOrder: sortBy === "risk_score" ? (sortOrder === "asc" ? "ascend" : "descend") : null },
             { title: "动作", dataIndex: "action", width: 90, render: (v) => { const dm = DECISION_META[v]; return <Tag color={dm?.color}>{dm?.label}</Tag>; } },

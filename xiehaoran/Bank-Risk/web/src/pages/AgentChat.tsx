@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Card, Input, Button, App, Spin, Tag, Collapse } from "antd";
+import { Card, Input, Button, App, Tag, Collapse } from "antd";
 import { SendOutlined, RobotOutlined, UserOutlined, BulbOutlined, LoadingOutlined } from "@ant-design/icons";
 import { api } from "../api";
 

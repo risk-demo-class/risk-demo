@@ -70,5 +70,5 @@ def compute_features(event: dict) -> dict:
     return {
         "features": feats,
         "vector": feat.build_feature_vector(event),
-        "f_ext_json": feat.to_f_ext_json(event),
+        "features_all": feat.compute_all_features(event),
     }

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Card, Table, Tag, Alert, Button, Modal, Form, Select, Input, Statistic, Space, App } from "antd";
+import { Card, Table, Tag, Button, Modal, Form, Select, Input, Statistic, Space, App } from "antd";
 import { PlusOutlined, DeleteOutlined } from "@ant-design/icons";
 import { api, BlacklistItem, BLACKLIST_TYPE_OPTIONS } from "../api";
 
@@ -45,16 +45,6 @@ export default function BlacklistBoard() {
   };
 
   useEffect(() => { load(1, 20, ""); }, []);
-
-  const add = async (vals: any) => {
-    try {
-      await api.addBlacklist(vals);
-      message.success("已加入黑名单");
-      setModalOpen(false);
-      form.resetFields();
-      load(1, pageSize, "");
-    } catch (e: any) { message.error(e.message); }
-  };
 
   const del = async (id: number) => {
     try {
