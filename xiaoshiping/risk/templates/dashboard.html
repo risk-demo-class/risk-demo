@@ -1,0 +1,21 @@
+﻿{% extends "base.html" %}
+{% block page_title %}风险驾驶舱{% endblock %}
+{% block content %}
+<section class="hero-card"><div><p class="eyebrow">MANUFACTURING RISK CONTROL</p><h2>聚焦供应链、质量、设备与交付的运营风险</h2><p>将硬性规则与 XGBoost 组合评分，用于发现需要拦截、冻结或升级处理的制造业业务事件。</p></div><div class="hero-score"><span>模型可用</span><strong>{% if metrics.available %}在线{% else %}未训练{% endif %}</strong><small>{% if metrics.available %}验证 AUC {{ '%.4f'|format(metrics.val_auc) }}{% else %}请先运行训练脚本{% endif %}</small></div></section>
+<section class="stat-grid">
+  <article class="stat-card danger"><span>待处置风险事件</span><strong>{{ summary.open_events }}</strong><small>需要业务人员确认或关闭</small></article>
+  <article class="stat-card warning"><span>高危/拦截事件</span><strong>{{ summary.critical_events }}</strong><small>冻结、拒绝或升级处理</small></article>
+  <article class="stat-card"><span>供应商关注项</span><strong>{{ summary.supplier_attention }}</strong><small>资质异常或状态不可用</small></article>
+  <article class="stat-card"><span>设备关注项</span><strong>{{ summary.equipment_attention }}</strong><small>报警、维护或校准异常</small></article>
+  <article class="stat-card"><span>进行中工单</span><strong>{{ summary.active_work_orders }}</strong><small>在制或冻结状态</small></article>
+  <article class="stat-card danger"><span>异常发运</span><strong>{{ summary.blocked_shipments }}</strong><small>未放行或质量异常批次</small></article>
+</section>
+<section class="two-column">
+  <article class="panel"><div class="panel-head"><div><h3>高优先级风险事件</h3><p>按风险分降序排列</p></div><a href="/events">查看全部 →</a></div>
+    <div class="event-list">{% for event in events %}<div class="event-row"><div class="score-ring score-{{ event.decision|lower }}">{{ event.risk_score }}</div><div class="event-copy"><div class="event-top"><b>{{ event.rule_name or event.risk_category }}</b>{{ decision(event.decision) }}</div><p>{{ event.reason }}</p><small>{{ event.entity_type }} · {{ event.entity_id }} · {{ event.event_at }}</small></div></div>{% endfor %}</div>
+  </article>
+  <article class="panel"><div class="panel-head"><div><h3>模型质量概览</h3><p>当前训练产物</p></div><a href="/model">模型详情 →</a></div>
+    {% if metrics.available %}<div class="metric-stack"><div><span>验证集 AUC</span><strong>{{ '%.4f'|format(metrics.val_auc) }}</strong><div class="bar"><i style="width: {{ metrics.val_auc * 100 }}%"></i></div></div><div><span>验证集 F1</span><strong>{{ '%.4f'|format(metrics.val_f1) }}</strong><div class="bar purple"><i style="width: {{ metrics.val_f1 * 100 }}%"></i></div></div><div class="metric-foot">训练样本 {{ metrics.train_samples }} · 验证样本 {{ metrics.validation_samples }} · 正例比例 {{ '%.0f'|format(metrics.positive_ratio * 100) }}%</div></div>{% else %}<div class="empty">未找到模型，请执行训练脚本。</div>{% endif %}
+  </article>
+</section>
+{% endblock %}

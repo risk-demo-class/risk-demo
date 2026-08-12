@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block page_title %}工单风险评估{% endblock %}
+{% block content %}
+<section class="panel"><div class="panel-head"><div><h3>生产工单风险检查</h3><p>点击“评估”后，将读取工单关联的供应商、来料、质量、设备、发运和客诉数据，执行行业规则与 XGBoost 联合评估。</p></div><div class="legend"><span class="dot hold"></span>冻结 <span class="dot passed"></span>正常</div></div>
+<table class="data-table"><thead><tr><th>工单</th><th>产品 / 车间</th><th>进度</th><th>质量</th><th>设备</th><th>发运</th><th>模型评估</th></tr></thead><tbody>
+{% for work_order in work_orders %}<tr><td><b>{{ work_order.work_order_id }}</b><small>{{ work_order.status }} · 截止 {{ work_order.planned_end_at }}</small></td><td><b>{{ work_order.material_name }}</b><small>{{ work_order.plant_name }} / {{ work_order.workshop_name }}</small></td><td>{{ work_order.completed_qty }} / {{ work_order.planned_qty }}</td><td>{{ badge(work_order.quality_status) }}<small>{{ work_order.ipqc_status }}</small></td><td>{{ badge(work_order.equipment_status) }}</td><td>{{ badge(work_order.shipment_status) }}</td><td><button class="secondary-button assess-button" data-work-order-id="{{ work_order.work_order_id }}">评估</button></td></tr>{% endfor %}
+</tbody></table></section>
+<div class="modal-backdrop" id="assessmentModal"><section class="assessment-modal"><button class="close-modal" id="closeAssessment">×</button><p class="eyebrow">RULE + XGBOOST RISK ASSESSMENT</p><h2 id="assessmentTitle">工单风险评估</h2><div class="assessment-score"><strong id="assessmentScore">--</strong><span>最终风险分 / 100</span></div><div id="assessmentDecision"></div><p id="assessmentProbability"></p><p id="assessmentCase"></p><h3>命中行业规则</h3><ul class="assessment-rules" id="assessmentRules"></ul><h3>特征快照</h3><div class="feature-grid" id="assessmentFeatures"></div></section></div>
+{% endblock %}

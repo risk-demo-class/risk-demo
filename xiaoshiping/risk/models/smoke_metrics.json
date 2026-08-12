@@ -1,0 +1,26 @@
+{
+  "train_samples": 192,
+  "validation_samples": 48,
+  "positive_ratio": 0.4,
+  "val_auc": 1.0,
+  "val_f1": 1.0,
+  "threshold": 0.5,
+  "feature_importance": {
+    "supplier_risk_level": 4.682772,
+    "supplier_qualification_days": 1.309901,
+    "iqc_defect_rate": 7.752859,
+    "inventory_hold_flag": 0.0,
+    "material_critical_flag": 0.0,
+    "issue_over_bom_ratio": 2.395934,
+    "work_order_progress_ratio": 0.136088,
+    "scrap_rate": 5.010018,
+    "process_parameter_deviation": 7.057905,
+    "equipment_maintenance_overdue_days": 30.734173,
+    "equipment_calibration_overdue_days": 1.211768,
+    "equipment_alarm_flag": 0.0,
+    "quality_hold_flag": 37.424278,
+    "shipment_release_gap_flag": 14.215324,
+    "customer_complaint_count_30d": 14.378489,
+    "complaint_claim_amount": 0.520699
+  }
+}

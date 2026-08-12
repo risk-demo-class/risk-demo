@@ -1,0 +1,6 @@
+﻿-- 兼容入口：推荐使用 scripts/init_db.py，它会按依赖顺序执行下列文件：
+-- 1. init_database.sql
+-- 2. init_business_tables.sql
+-- 3. init_business_data.sql
+-- 4. init_risk_tables.sql
+-- 5. init_risk_data.sql

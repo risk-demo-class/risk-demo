@@ -1,0 +1,6 @@
+{% extends "base.html" %}
+{% block page_title %}业务数据管理{% endblock %}
+{% block content %}
+<section class="panel"><div class="panel-head"><div><h3>可编辑业务数据</h3><p>修改供应商、设备、工单、过程质检或发运数据；保存时可自动重新检查受影响工单。</p></div><span class="count-chip">数据写入 MySQL</span></div><div class="management-tabs" id="managementTabs"><button data-entity="supplier" class="active">供应商</button><button data-entity="equipment">设备</button><button data-entity="work_order">工单</button><button data-entity="ipqc_inspection">过程质检</button><button data-entity="shipment">发运</button></div><div class="management-table-wrap"><table class="data-table"><thead id="managementHead"></thead><tbody id="managementBody"></tbody></table></div></section>
+<div class="modal-backdrop" id="businessEditModal"><section class="assessment-modal business-edit-modal"><button class="close-modal" id="closeBusinessEdit">×</button><p class="eyebrow">BUSINESS DATA MANAGEMENT</p><h2 id="businessEditTitle">编辑业务数据</h2><form id="businessEditForm" class="edit-form"></form><label class="recheck-option"><input type="checkbox" id="businessRecheck" checked> 保存后自动重新执行关联工单风险检查</label><div class="form-actions"><button type="button" class="secondary-button" id="cancelBusinessEdit">取消</button><button type="submit" form="businessEditForm" class="primary-button">保存修改</button></div></section></div>
+{% endblock %}

@@ -1,0 +1,6 @@
+﻿{% extends "base.html" %}
+{% block page_title %}风险评估历史{% endblock %}
+{% block content %}
+<section class="panel"><div class="panel-head"><div><h3>评估审计轨迹</h3><p>每次执行 `run_risk_check` 都会记录规则分、模型分、最终决策和命中规则。</p></div><span class="count-chip">{{ assessments|length }} 次评估</span></div>
+<table class="data-table"><thead><tr><th>评估编号</th><th>工单</th><th>规则分</th><th>模型分</th><th>最终分</th><th>决策</th><th>命中规则</th><th>时间</th></tr></thead><tbody>{% for item in assessments %}<tr><td><b>{{ item.assessment_id }}</b></td><td>{{ item.source_id }}</td><td>{{ item.rule_score }}</td><td>{{ item.ml_score or '-' }}</td><td><strong class="risk-score">{{ item.final_score }}</strong></td><td>{{ decision(item.decision) }}</td><td>{{ item.rule_hit_count }}</td><td>{{ item.create_time }}</td></tr>{% endfor %}</tbody></table></section>
+{% endblock %}

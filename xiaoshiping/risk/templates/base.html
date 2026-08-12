@@ -1,0 +1,42 @@
+{% macro nav_item(path, key, label, icon) -%}
+<a class="nav-item {% if active_page == key %}active{% endif %}" href="{{ path }}"><span>{{ icon }}</span>{{ label }}</a>
+{%- endmacro %}
+{% macro badge(value) -%}
+<span class="badge badge-{{ value|lower }}">{{ value }}</span>
+{%- endmacro %}
+{% macro decision(value) -%}
+<span class="decision decision-{{ value|lower }}">{{ value }}</span>
+{%- endmacro %}
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}制造业智能风控平台{% endblock %}</title>
+  <link rel="stylesheet" href="/static/app.css">
+</head>
+<body>
+<div class="app-shell">
+  <aside class="sidebar">
+    <div class="brand"><div class="brand-mark">M</div><div><strong>智造风控</strong><small>Manufacturing Risk</small></div></div>
+    <nav>
+      {{ nav_item('/', 'dashboard', '风险驾驶舱', '◫') }}
+      {{ nav_item('/events', 'events', '风险事件', '△') }}
+      {{ nav_item('/work-orders', 'work_orders', '风险检查', '▣') }}
+      {{ nav_item('/cases', 'cases', '案件管理', '◉') }}
+      {{ nav_item('/assessments', 'assessments', '评估历史', '≡') }}
+      {{ nav_item('/data-management', 'data_management', '业务数据管理', '▤') }}
+      {{ nav_item('/rules', 'rules', '规则中心', '◇') }}
+      {{ nav_item('/model', 'model', '模型监控', '⌁') }}
+    </nav>
+    <div class="sidebar-note"><span class="status-dot"></span><div><b>演示环境</b><small>MySQL · XGBoost 已连接</small></div></div>
+  </aside>
+  <main class="main-content">
+    <header class="topbar"><div><p class="crumb">制造业 / 风险控制</p><h1>{% block page_title %}风险驾驶舱{% endblock %}</h1></div><div class="topbar-actions"><span class="date-chip">数据基准日：2026-08-12</span><a class="primary-button" href="/work-orders">评估工单</a></div></header>
+    {% block content %}{% endblock %}
+  </main>
+</div>
+<div id="toast" class="toast"></div>
+<script src="/static/app.js"></script>
+</body>
+</html>
+

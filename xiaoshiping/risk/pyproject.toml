@@ -1,0 +1,32 @@
+﻿[project]
+name = "manufacturing-risk-control"
+version = "0.1.0"
+description = "Manufacturing risk-control demo with MySQL, rule events, XGBoost scoring, and a FastAPI web console."
+readme = "README.md"
+requires-python = ">=3.11,<3.13"
+dependencies = [
+  "fastapi>=0.115,<1.0",
+  "jinja2>=3.1,<4.0",
+  "numpy>=1.26,<3.0",
+  "pymysql>=1.1,<2.0",
+  "scikit-learn>=1.4,<2.0",
+  "sqlalchemy>=2.0,<3.0",
+  "uvicorn[standard]>=0.30,<1.0",
+  "xgboost>=2.0,<3.0",
+]
+
+[dependency-groups]
+dev = [
+  "httpx>=0.27,<1.0",
+  "pytest>=8.0,<9.0",
+]
+
+[tool.uv]
+default-groups = ["dev"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
+
+
+
