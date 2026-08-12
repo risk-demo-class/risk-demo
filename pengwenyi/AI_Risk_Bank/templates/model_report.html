@@ -1,0 +1,157 @@
+{% extends "base.html" %}
+{% block title %}模型报告 - 桀哥风控 · 银行版{% endblock %}
+{% block content %}
+<h4 class="page-title">模型报告 <small>XGBoost 银行风控双轨模型 · 规则 + ML</small></h4>
+
+{% if not metrics %}
+<div class="alert alert-warning">
+    未找到 <code>app/engine/xgb_metrics.json</code>，请先运行 <code>python scripts/train_xgb_model.py</code> 生成模型与指标。
+</div>
+{% else %}
+
+<!-- 核心指标卡片 -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="stat-card p-3">
+            <div class="stat-label">验证集 AUC (val_auc)</div>
+            <div class="stat-value" id="m-val-auc" style="color:#1e6f3f;">-</div>
+            <div class="stat-unit">目标 ≥ 0.80</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card p-3">
+            <div class="stat-label">验证集 F1</div>
+            <div class="stat-value" id="m-val-f1">-</div>
+            <div class="stat-unit">决策点: P(拒绝) ≥ {{ metrics.best_f1_threshold }}</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card p-3">
+            <div class="stat-label">训练集 AUC</div>
+            <div class="stat-value" id="m-auc">-</div>
+            <div class="stat-unit">训练样本 {{ metrics.n_train }} 条</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card p-3">
+            <div class="stat-label">最佳迭代轮数</div>
+            <div class="stat-value" id="m-best-iter">-</div>
+            <div class="stat-unit">防假收敛阈值 ≥ 30</div>
+        </div>
+    </div>
+</div>
+
+<!-- 训练信息 + 假收敛检查 -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header"><i class="bi bi-clipboard-data"></i>训练信息</div>
+            <div class="card-body p-0">
+                <table class="table table-bank mb-0">
+                    <tr><td class="text-muted">模型类型</td><td>{{ metrics.model }}</td></tr>
+                    <tr><td class="text-muted">训练时间</td><td>{{ metrics.trained_at }}</td></tr>
+                    <tr><td class="text-muted">训练样本</td><td>{{ metrics.n_train }} 条 (正例 {{ metrics.n_pos }}, 占比 {{ (metrics.pos_ratio * 100) | round(1) }}%)</td></tr>
+                    <tr><td class="text-muted">训练集 F1</td><td>{{ metrics.f1 }}</td></tr>
+                    <tr><td class="text-muted">训练集准确率</td><td>{{ (metrics.accuracy * 100) | round(2) }}%</td></tr>
+                    <tr><td class="text-muted">验证集准确率</td><td>{{ (metrics.val_accuracy * 100) | round(2) }}%</td></tr>
+                    <tr><td class="text-muted">Precision / Recall</td><td>{{ metrics.precision }} / {{ metrics.recall }}</td></tr>
+                    <tr><td class="text-muted">scale_pos_weight</td><td>{{ metrics.scale_pos_weight }}</td></tr>
+                    <tr><td class="text-muted">模型文件</td><td><code>{{ metrics.model_path }}</code></td></tr>
+                </table>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header"><i class="bi bi-shield-check"></i>假收敛检查</div>
+            <div class="card-body p-0">
+                <table class="table table-bank mb-0">
+                    <tr>
+                        <td class="text-muted">检查结论</td>
+                        <td>
+                            {% if metrics.fake_convergence_check.ok %}
+                            <span class="badge badge-risk-low">通过 · 无假收敛嫌疑</span>
+                            {% else %}
+                            <span class="badge badge-risk-critical">未通过</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    <tr><td class="text-muted">阈值: 最小迭代轮数</td><td>best_iteration ≥ {{ metrics.fake_convergence_check.min_best_iter }} (实际 {{ metrics.best_iteration }})</td></tr>
+                    <tr><td class="text-muted">阈值: 最小 val_auc</td><td>val_auc ≥ {{ metrics.fake_convergence_check.min_val_auc }} (实际 {{ metrics.val_auc }})</td></tr>
+                    <tr><td class="text-muted">阈值: 最小 val_f1</td><td>val_f1 ≥ {{ metrics.fake_convergence_check.min_val_f1 }} (实际 {{ metrics.val_f1 }})</td></tr>
+                    {% if metrics.fake_convergence_check.issues and metrics.fake_convergence_check.issues|length > 0 %}
+                    <tr><td class="text-muted">问题</td><td>{{ metrics.fake_convergence_check.issues | join('; ') }}</td></tr>
+                    {% endif %}
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 特征重要性 TOP10 -->
+<div class="card">
+    <div class="card-header"><i class="bi bi-bar-chart"></i>特征重要性 TOP10 (gain 增益占比)</div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-7">
+                <canvas id="featureChart" height="330"></canvas>
+            </div>
+            <div class="col-md-5">
+                <table class="table table-bank mb-0">
+                    <thead><tr><th>#</th><th>特征</th><th>Gain</th><th>占比</th></tr></thead>
+                    <tbody>
+                    {% for f in metrics.feature_importance_top10 %}
+                        <tr>
+                            <td>{{ f.rank }}</td>
+                            <td><code>{{ f.feature }}</code></td>
+                            <td>{{ f.gain }}</td>
+                            <td><strong>{{ f.ratio }}%</strong></td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <p class="text-muted small mt-3 mb-0">
+            <i class="bi bi-info-circle"></i> 解读: 信贷特征 (额度收入比 / 负债率) 与交易金额、登录失败、代理 IP 等特征共同驱动风险判定,
+            与 12 条行业规则 (R001 异地大额 / R010 高负债申贷 / R003 深夜异常登录 / R025 代理 IP) 的业务逻辑相互印证。
+        </p>
+    </div>
+</div>
+
+<script>
+// 服务端渲染指标 + 前端 Chart.js 条形图
+(function renderModelReport() {
+    const metrics = {{ metrics_json | safe }};
+    document.getElementById('m-val-auc').textContent = metrics.val_auc;
+    document.getElementById('m-val-f1').textContent = metrics.val_f1;
+    document.getElementById('m-auc').textContent = metrics.auc;
+    document.getElementById('m-best-iter').textContent = metrics.best_iteration;
+
+    const top10 = metrics.feature_importance_top10 || [];
+    const labels = top10.map(f => f.feature);
+    const ratios = top10.map(f => f.ratio);
+    const ctx = document.getElementById('featureChart').getContext('2d');
+    new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: '增益占比 (%)',
+                data: ratios,
+                backgroundColor: '#0B2447',
+                hoverBackgroundColor: '#b08d57',
+                borderRadius: 2,
+            }]
+        },
+        options: {
+            indexAxis: 'y',
+            responsive: true,
+            plugins: { legend: { display: false } },
+            scales: { x: { beginAtZero: true, max: 40 }, y: { ticks: { font: { size: 12 } } } }
+        }
+    });
+})();
+</script>
+{% endif %}
+{% endblock %}

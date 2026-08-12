@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}桀哥风控 · 银行版{% endblock %}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.2/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@500;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* ============================================
+           桀哥风控 · 银行版 — 端庄沉着主题
+           主色: 深藏蓝 #0B2447 (渐变) / 鎏金 #B08D57
+           字体: Noto Serif SC 衬线标题 + 系统正文
+           ============================================ */
+        html, body { height: 100%; margin: 0; }
+        body {
+            background: #f2f4f7;
+            overflow: hidden;
+            font-family: "PingFang SC", "Microsoft YaHei", "Segoe UI", sans-serif;
+            color: #2c3340;
+        }
+        .container-fluid, .row { padding: 0 !important; margin: 0 !important; }
+
+        /* ---- 深藏蓝渐变侧边栏 ---- */
+        .sidebar {
+            position: fixed;
+            top: 0; left: 0; bottom: 0;
+            width: 16.66667%;
+            background: linear-gradient(180deg, #0B2447 0%, #123A6B 55%, #0B2447 100%);
+            overflow-y: auto;
+            z-index: 1000;
+            box-shadow: inset -1px 0 0 rgba(176, 141, 87, 0.18);
+        }
+        .sidebar-brand {
+            color: #f5ecd9;
+            font-family: "Noto Serif SC", serif;
+            font-size: 19px;
+            font-weight: 700;
+            letter-spacing: 2px;
+            padding: 22px 20px;
+            border-bottom: 1px solid rgba(176, 141, 87, 0.35);
+            background: rgba(176, 141, 87, 0.08);
+        }
+        .sidebar-brand small {
+            display: block;
+            font-family: "PingFang SC", sans-serif;
+            font-size: 11px;
+            font-weight: 400;
+            letter-spacing: 3px;
+            color: #b08d57;
+            margin-top: 4px;
+        }
+        .sidebar .nav-link {
+            color: #9db4d0;
+            padding: 11px 20px;
+            border-radius: 6px;
+            margin: 3px 10px;
+            font-size: 14px;
+            letter-spacing: 1px;
+            border-left: 3px solid transparent;
+            transition: all 0.18s ease;
+        }
+        .sidebar .nav-link:hover {
+            color: #f5ecd9;
+            background: rgba(176, 141, 87, 0.12);
+            border-left-color: #b08d57;
+        }
+        .sidebar .nav-link.active {
+            color: #fff;
+            background: rgba(176, 141, 87, 0.20);
+            border-left-color: #b08d57;
+            font-weight: 600;
+        }
+        .sidebar .nav-link i { margin-right: 10px; width: 20px; text-align: center; color: #b08d57; }
+        .sidebar-footer {
+            padding: 14px 20px;
+            color: #5f7ba1;
+            font-size: 11px;
+            border-top: 1px solid rgba(176, 141, 87, 0.25);
+            letter-spacing: 1px;
+            margin-top: 12px;
+        }
+
+        /* ---- 主内容区 ---- */
+        .main-content {
+            margin-left: 16.66667%;
+            height: 100vh;
+            overflow-y: auto;
+            padding: 26px 30px;
+        }
+        /* 页面大标题: 衬线 + 鎏金竖线 */
+        .page-title {
+            font-family: "Noto Serif SC", serif;
+            font-size: 22px;
+            font-weight: 700;
+            color: #0B2447;
+            letter-spacing: 2px;
+            border-left: 4px solid #b08d57;
+            padding-left: 12px;
+            margin: 2px 0 20px 0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .page-title small {
+            font-family: "PingFang SC", sans-serif;
+            font-size: 12px;
+            font-weight: 400;
+            color: #8a94a6;
+            letter-spacing: 0;
+        }
+        /* 卡片: 细边框 + 轻阴影 */
+        .card {
+            border: 1px solid #e3e7ee;
+            border-radius: 10px;
+            box-shadow: 0 1px 3px rgba(11, 36, 71, 0.06);
+            margin-bottom: 18px;
+        }
+        .card-header {
+            background: #ffffff;
+            border-bottom: 1px solid #eef1f6;
+            font-family: "Noto Serif SC", serif;
+            font-weight: 600;
+            color: #0B2447;
+            letter-spacing: 1px;
+            padding: 13px 18px;
+        }
+        .card-header i { color: #b08d57; margin-right: 8px; }
+
+        /* 统计卡: 鎏金上边线 */
+        .stat-card {
+            border: 1px solid #e3e7ee;
+            border-top: 3px solid #b08d57;
+            border-radius: 10px;
+            box-shadow: 0 1px 3px rgba(11, 36, 71, 0.06);
+            background: #fff;
+        }
+        .stat-card .stat-label { font-size: 13px; color: #8a94a6; letter-spacing: 1px; }
+        .stat-card .stat-value {
+            font-family: "Noto Serif SC", serif;
+            font-size: 30px;
+            font-weight: 700;
+            color: #0B2447;
+        }
+        .stat-card .stat-unit { font-size: 13px; color: #b08d57; }
+
+        /* ---- 银行式表格 ---- */
+        .table-bank { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+        .table-bank thead th {
+            background: #f6f8fb;
+            color: #0B2447;
+            font-weight: 600;
+            letter-spacing: 1px;
+            border-bottom: 2px solid #b08d57;
+            padding: 11px 12px;
+            white-space: nowrap;
+        }
+        .table-bank tbody td {
+            padding: 10px 12px;
+            border-bottom: 1px solid #eef1f6;
+            vertical-align: middle;
+        }
+        .table-bank tbody tr:hover { background: #fafbfd; }
+
+        /* ---- 风险徽章四色 (低绿/中琥珀/高橙/极高深红) ---- */
+        .badge-risk-low      { background: #e4f3e7; color: #1e6f3f; border: 1px solid #b9ddc4; }
+        .badge-risk-mid      { background: #fbf0d9; color: #9a6b1c; border: 1px solid #ecd9a8; }
+        .badge-risk-high     { background: #fde8d7; color: #b45309; border: 1px solid #f5cba5; }
+        .badge-risk-critical { background: #f8d7da; color: #9b1c2e; border: 1px solid #eeb4bb; }
+        .badge-risk-low, .badge-risk-mid, .badge-risk-high, .badge-risk-critical {
+            font-weight: 600; padding: 4px 10px; border-radius: 3px; font-size: 12.5px; letter-spacing: 1px;
+        }
+        /* 类型徽章: 深藏蓝 (黑名单类型等) */
+        .badge-navy { background: #0B2447; color: #fff; }
+        .badge-navy {
+            font-weight: 600; padding: 4px 10px; border-radius: 3px; font-size: 12.5px; letter-spacing: 1px;
+        }
+
+        /* ---- 按钮: 银行深蓝/鎏金 ---- */
+        .btn-bank { background: #0B2447; color: #fff; border: none; }
+        .btn-bank:hover { background: #123A6B; color: #f5ecd9; }
+        .btn-gold { background: #b08d57; color: #fff; border: none; }
+        .btn-gold:hover { background: #c4a26c; color: #fff; }
+        .btn-outline-bank { border: 1px solid #0B2447; color: #0B2447; background: transparent; }
+        .btn-outline-bank:hover { background: #0B2447; color: #fff; }
+
+        /* ---- 分页栏 sticky ---- */
+        .pagination-bottom {
+            position: sticky; bottom: 0;
+            background: #ffffff;
+            padding: 6px 12px; margin: 12px 0 0 0;
+            border-top: 1px solid #e5e7eb;
+            box-shadow: 0 -2px 6px rgba(0, 0, 0, 0.04);
+            z-index: 100; min-height: 38px;
+        }
+        .pagination-bottom .pagination { margin: 0; display: flex; list-style: none; gap: 3px; justify-content: center; align-items: center; }
+        .pagination-bottom .page-item .page-link {
+            color: #0B2447; background: #fff; border: 1px solid #dee2e6;
+            padding: 4px 10px; font-size: 13px; line-height: 1.4; min-width: 32px; height: 28px;
+            text-align: center; border-radius: 3px; display: inline-flex; align-items: center; justify-content: center;
+        }
+        .pagination-bottom .page-item.active .page-link { color: #fff; background: #0B2447; border-color: #0B2447; font-weight: 600; }
+        .pagination-bottom .page-item.disabled .page-link { color: #adb5bd; background: #f8f9fa; cursor: not-allowed; }
+        .pagination-bottom .page-item .page-link:hover:not(.disabled) { background: #e8edf5; border-color: #0B2447; }
+
+        /* ---- 聊天 ---- */
+        .chat-messages { height: calc(100vh - 340px); min-height: 300px; max-height: calc(100vh - 160px); overflow-y: auto; }
+        .chat-bubble { max-width: 80%; padding: 10px 14px; border-radius: 8px; margin-bottom: 8px; font-size: 14px; }
+        .chat-bubble.user { background: #0B2447; color: #fff; margin-left: auto; }
+        .chat-bubble.ai { background: #f4f1ea; color: #2c3340; border: 1px solid #e6ddca; }
+
+        /* 关闭按钮 (保持) */
+        .btn-close-risk {
+            background: transparent; border: 2px solid #9b1c2e; border-radius: 6px; color: #9b1c2e;
+            width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center;
+            font-size: 18px; font-weight: 900; line-height: 1; padding: 0; transition: all 0.15s ease;
+        }
+        .btn-close-risk:hover { background: #9b1c2e; color: #fff; }
+        .btn-close-risk:focus { box-shadow: 0 0 0 3px rgba(155, 28, 46, 0.25); outline: none; }
+
+        /* 响应式 */
+        @media (max-width: 767.98px) {
+            body { overflow: auto; }
+            .sidebar { position: relative; width: 100%; height: auto; overflow-y: visible; }
+            .main-content { margin-left: 0; height: auto; overflow-y: visible; }
+        }
+    </style>
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+<div class="container-fluid">
+    <div class="row">
+        <!-- 侧边栏 -->
+        <div class="col-md-2 sidebar px-0">
+            <div class="sidebar-brand">
+                桀哥风控
+                <small>JIEGE BANK · 银行版</small>
+            </div>
+            <nav class="nav flex-column mt-3">
+                <a class="nav-link {% if request.url.path == '/' %}active{% endif %}" href="/">
+                    <i class="bi bi-speedometer2"></i> 仪表盘
+                </a>
+                <a class="nav-link {% if request.url.path == '/model' %}active{% endif %}" href="/model">
+                    <i class="bi bi-graph-up-arrow"></i> 模型报告
+                </a>
+                <a class="nav-link {% if request.url.path == '/rules' %}active{% endif %}" href="/rules">
+                    <i class="bi bi-list-check"></i> 规则管理
+                </a>
+                <a class="nav-link {% if request.url.path == '/cases' %}active{% endif %}" href="/cases">
+                    <i class="bi bi-folder2-open"></i> 案件管理
+                </a>
+                <a class="nav-link {% if request.url.path == '/assessments' %}active{% endif %}" href="/assessments">
+                    <i class="bi bi-clipboard-data"></i> 评估历史
+                </a>
+                <a class="nav-link {% if request.url.path == '/risk-check' %}active{% endif %}" href="/risk-check">
+                    <i class="bi bi-search"></i> 风险检查
+                </a>
+                <a class="nav-link {% if request.url.path == '/chat' %}active{% endif %}" href="/chat">
+                    <i class="bi bi-robot"></i> AI 助手
+                </a>
+                <a class="nav-link {% if request.url.path == '/blacklist' %}active{% endif %}" href="/blacklist">
+                    <i class="bi bi-shield-x"></i> 黑名单
+                </a>
+            </nav>
+            <div class="sidebar-footer">
+                四大场景 · 转账 / 登录<br>贷款申请 / 信用卡
+            </div>
+        </div>
+        <!-- 主内容区 -->
+        <div class="col-md-10 main-content">
+            {% block content %}{% endblock %}
+        </div>
+    </div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<!-- 改版加 ?v=YYYYMMDD[vN] 破 FastAPI StaticFiles 强缓存 (max-age=1y), 否则浏览器永远用旧版 -->
+<script src="/static/app.js?v=20260811bank2"></script>
+{% block extra_js %}{% endblock %}
+</body>
+</html>

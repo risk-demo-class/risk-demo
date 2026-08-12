@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+{% block title %}仪表盘 - 桀哥风控 · 银行版{% endblock %}
+{% block content %}
+<h4 class="page-title">风控仪表盘 <small>四大场景 · 转账 / 登录 / 贷款申请 / 信用卡</small></h4>
+
+<!-- 统计卡片 -->
+<div class="row mb-4" id="stat-cards">
+    <div class="col-md-3">
+        <div class="stat-card p-3">
+            <div class="stat-label">今日评估</div>
+            <div class="stat-value" id="total-today">-</div>
+            <div class="stat-unit">笔</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card p-3">
+            <div class="stat-label">高风险交易</div>
+            <div class="stat-value" id="high-risk-today">-</div>
+            <div class="stat-unit">笔</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card p-3">
+            <div class="stat-label">待审案件</div>
+            <div class="stat-value" id="pending-cases">-</div>
+            <div class="stat-unit">件</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card p-3">
+            <div class="stat-label">今日拦截率</div>
+            <div class="stat-value" id="intercept-rate">-</div>
+            <div class="stat-unit">%</div>
+        </div>
+    </div>
+</div>
+
+<!-- 图表 -->
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header"><i class="bi bi-graph-up"></i>近 7 天评估趋势</div>
+            <div class="card-body">
+                <canvas id="trendChart" height="360"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header"><i class="bi bi-list-check"></i>规则命中 TOP5</div>
+            <div class="card-body p-0">
+                <ul class="list-group list-group-flush" id="top-rules">
+                    <li class="list-group-item text-muted">加载中...</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+async function loadDashboard() {
+    try {
+        const res = await fetch('/api/dashboard/overview');
+        const data = await res.json();
+
+        document.getElementById('total-today').textContent = data.today_assessments || 0;
+        document.getElementById('high-risk-today').textContent = data.today_high_risk || 0;
+        document.getElementById('pending-cases').textContent = data.pending_cases || 0;
+        // 拦截率 = 100 - 通过率 (通过以外均视为拦截)
+        const passRate = data.pass_rate || 0;
+        document.getElementById('intercept-rate').textContent =
+            Math.round((100 - passRate) * 10) / 10;
+
+        // 趋势图
+        const trend = data.trend_7d || [];
+        const ctx = document.getElementById('trendChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: trend.map(t => t.date),
+                datasets: [
+                    { label: '总评估', data: trend.map(t => t.count), borderColor: '#0B2447', tension: 0.3 },
+                    { label: '高风险', data: trend.map(t => t.high_risk_count), borderColor: '#9b1c2e', tension: 0.3 }
+                ]
+            },
+            options: { responsive: true, plugins: { legend: { position: 'top' } } }
+        });
+
+        // TOP5规则
+        const topRulesEl = document.getElementById('top-rules');
+        const topRules = data.top_rules || [];
+        if (topRules.length === 0) {
+            topRulesEl.innerHTML = '<li class="list-group-item text-muted">暂无数据</li>';
+        } else {
+            topRulesEl.innerHTML = topRules.map(r =>
+                `<li class="list-group-item d-flex justify-content-between align-items-center">
+                    <span><i class="bi bi-shield-check text-muted me-2"></i>${r.rule_name}</span>
+                    <span class="badge badge-risk-mid">${r.hit_count}</span>
+                </li>`
+            ).join('');
+        }
+    } catch (e) {
+        console.error('加载仪表盘失败:', e);
+    }
+}
+loadDashboard();
+</script>
+{% endblock %}

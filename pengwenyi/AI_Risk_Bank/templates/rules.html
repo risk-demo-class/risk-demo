@@ -1,0 +1,616 @@
+{% extends "base.html" %}
+{% block title %}规则管理 - 桀哥风控 · 银行版{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="page-title mb-0">规则管理 <small>12 条行业规则 · 交易 / 账户 / 信贷 / 设备 / 网络</small></h4>
+    <button class="btn btn-gold btn-sm" onclick="showCreateModal()">
+        <i class="bi bi-plus-circle"></i> 新建规则
+    </button>
+</div>
+
+<!-- 筛选 -->
+<div class="mb-3 d-flex gap-2 align-items-center flex-wrap">
+    <select class="form-select form-select-sm w-auto" id="filterCategory" onchange="loadRules(1)">
+        <option value="">全部分类</option>
+        <option value="交易风险">交易风险</option>
+        <option value="账户风险">账户风险</option>
+        <option value="信贷风险">信贷风险</option>
+        <option value="设备风险">设备风险</option>
+        <option value="网络风险">网络风险</option>
+    </select>
+    <span class="text-muted small">每页</span>
+    <select class="form-select form-select-sm w-auto" id="pageSize" onchange="onPageSizeChange()">
+        <option value="20">20 条</option>
+        <option value="50">50 条</option>
+        <option value="100">100 条</option>
+    </select>
+    <span class="text-muted small ms-2" id="rulesCount"></span>
+</div>
+
+<!-- 规则列表 -->
+<div class="card">
+    <div class="table-responsive">
+        <table class="table table-bank mb-0">
+            <thead>
+                <tr>
+                    <th>规则ID</th><th>名称</th><th>分类</th><th>事件类型</th>
+                    <th>等级</th><th>分值</th><th>动作</th><th>优先级</th>
+                    <th>状态</th><th>操作</th>
+                </tr>
+            </thead>
+            <tbody id="rules-table"></tbody>
+        </table>
+    </div>
+</div>
+
+<nav class="pagination-bottom"><ul class="pagination justify-content-center mb-0" id="pagination"></ul></nav>
+
+<!-- 创建/编辑模态框 -->
+<div class="modal fade" id="ruleModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                    <h5 class="modal-title" id="ruleModalTitle">新建规则</h5>
+                    <button type="button" class="btn-close-risk" data-bs-dismiss="modal" title="关闭" aria-label="Close"><i class="bi bi-x-lg"></i></button>
+                </div>
+            <div class="modal-body">
+                <form id="ruleForm">
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <label class="form-label">规则ID</label>
+                            <input type="text" class="form-control" id="f_rule_id" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">规则名称</label>
+                            <input type="text" class="form-control" id="f_rule_name" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">分类</label>
+                            <select class="form-select" id="f_category" required>
+                                <option value="交易风险">交易风险</option>
+                                <option value="账户风险">账户风险</option>
+                                <option value="信贷风险">信贷风险</option>
+                                <option value="设备风险">设备风险</option>
+                                <option value="网络风险">网络风险</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-3">
+                            <label class="form-label">事件类型</label>
+                            <select class="form-select" id="f_event_type">
+                                <option value="通用">通用</option>
+                                <option value="转账">转账</option>
+                                <option value="登录">登录</option>
+                                <option value="贷款申请">贷款申请</option>
+                                <option value="信用卡">信用卡</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">风险等级</label>
+                            <select class="form-select" id="f_risk_level" required>
+                                <option value="低">低</option>
+                                <option value="中">中</option>
+                                <option value="高">高</option>
+                                <option value="极高">极高</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">分值 (0-100)</label>
+                            <input type="number" class="form-control" id="f_score" min="0" max="100" required>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">动作</label>
+                            <select class="form-select" id="f_action" required>
+                                <option value="通过">通过</option>
+                                <option value="标记">标记</option>
+                                <option value="人工审核">人工审核</option>
+                                <option value="拒绝">拒绝</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">条件表达式 <span class="text-muted small fw-normal">(三种构建方式: 单条件 / 多条件组合 / 自定义 JSON)</span></label>
+                        <div class="btn-group btn-group-sm w-100 mb-2" role="group" aria-label="条件构建方式">
+                            <input type="radio" class="btn-check" name="condMode" id="condModeSimple" value="simple" checked onchange="switchCondMode('simple')">
+                            <label class="btn btn-outline-bank" for="condModeSimple"><i class="bi bi-sliders"></i> 单条件</label>
+                            <input type="radio" class="btn-check" name="condMode" id="condModeMulti" value="multi" onchange="switchCondMode('multi')">
+                            <label class="btn btn-outline-bank" for="condModeMulti"><i class="bi bi-collection"></i> 多条件组合</label>
+                            <input type="radio" class="btn-check" name="condMode" id="condModeJson" value="json" onchange="switchCondMode('json')">
+                            <label class="btn btn-outline-bank" for="condModeJson"><i class="bi bi-code-slash"></i> 自定义 JSON</label>
+                        </div>
+
+                        <!-- 方式一: 单条件 (字段 + 操作符 + 值) -->
+                        <div id="condSimple">
+                            <div class="row g-2">
+                                <div class="col-md-5">
+                                    <select class="form-select form-select-sm" id="s_field" onchange="onSimpleFieldChange()"></select>
+                                </div>
+                                <div class="col-md-2">
+                                    <select class="form-select form-select-sm" id="s_op" onchange="onSimpleOpChange()"></select>
+                                </div>
+                                <div class="col-md-3" id="s_value_host"></div>
+                                <div class="col-md-2" id="s_value2_wrap" style="display:none">
+                                    <input type="text" class="form-control form-control-sm" id="s_value2" placeholder="上限">
+                                </div>
+                            </div>
+                            <div class="form-text mt-1" id="s_hint"></div>
+                        </div>
+
+                        <!-- 方式二: 多条件组合 (AND / OR) -->
+                        <div id="condMulti" style="display:none">
+                            <div class="row g-2 mb-2">
+                                <div class="col-md-4">
+                                    <select class="form-select form-select-sm" id="m_logic">
+                                        <option value="and">全部满足 (AND)</option>
+                                        <option value="or">任一满足 (OR)</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-8"><span class="form-text">示例: 异地交易 (AND) 交易金额 ≥ 50000 → 异地大额转账</span></div>
+                            </div>
+                            <div id="m_rows" class="d-flex flex-column gap-2"></div>
+                            <button type="button" class="btn btn-outline-bank btn-sm mt-2" onclick="addMultiRow()">
+                                <i class="bi bi-plus-lg"></i> 添加条件
+                            </button>
+                        </div>
+
+                        <!-- 方式三: 自定义 JSON (高级) -->
+                        <div id="condJson" style="display:none">
+                            <textarea class="form-control" id="f_condition" rows="4"
+                                placeholder='{"field": "txn_amount", "op": ">=", "value": 50000}'></textarea>
+                            <div class="form-text">高级模式: 直接输入规则引擎 JSON 表达式, 支持 and / or 嵌套</div>
+                        </div>
+
+                        <div class="mt-2 p-2 bg-light border rounded small font-monospace text-muted" id="condPreview"></div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-3">
+                            <label class="form-label">优先级</label>
+                            <input type="number" class="form-control" id="f_priority" value="0">
+                        </div>
+                        <div class="col-md-9">
+                            <label class="form-label">描述 (行业有效性说明)</label>
+                            <input type="text" class="form-control" id="f_description">
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-bank" onclick="saveRule()">保存</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// ============ 条件构建器: 特征字段库 (48 维, 与 app/engine/ml_model.py::FEATURE_COLUMNS 对齐) ============
+const FIELD_GROUPS = [
+    {name: '用户画像 user_* (15)', fields: [
+        ['user_credit_score', '人行信用分 (300-850)', 'num'],
+        ['user_kyc_level', 'KYC 等级 (1-4)', 'num'],
+        ['user_register_days', '注册天数', 'num'],
+        ['user_total_txn_amount', '历史交易总额', 'num'],
+        ['user_total_txn_count', '历史交易笔数', 'num'],
+        ['user_avg_txn_amount', '平均交易金额', 'num'],
+        ['user_max_txn_amount', '最大单笔交易金额', 'num'],
+        ['user_total_loan_count', '历史贷款申请数', 'num'],
+        ['user_debt_ratio', '负债率 (0~1)', 'ratio'],
+        ['user_monthly_income', '月收入', 'num'],
+        ['user_card_count', '持卡数量', 'num'],
+        ['user_credit_utilization', '信用卡使用率 (0~1)', 'ratio'],
+        ['user_failed_login_7d', '近 7 天登录失败次数', 'num'],
+        ['user_device_count', '关联设备数', 'num'],
+        ['user_city_count', '常用城市数', 'num'],
+    ]},
+    {name: '转账 txn_* (9)', fields: [
+        ['txn_amount', '交易金额', 'num'],
+        ['txn_is_night', '是否凌晨 0-5 点', 'bool'],
+        ['txn_1h_count', '近 1 小时交易笔数', 'num'],
+        ['txn_1h_amount', '近 1 小时交易金额', 'num'],
+        ['txn_city_match', '是否异地交易', 'bool'],
+        ['txn_geo_risk', 'IP 是否代理/Tor', 'bool'],
+        ['txn_to_card_black', '收款卡是否黑卡', 'bool'],
+        ['txn_1h_into_count', '近 1 小时入账卡数 (多卡归集)', 'num'],
+        ['txn_device_user_count', '设备关联用户数', 'num'],
+    ]},
+    {name: '登录 login_* (7)', fields: [
+        ['login_success', '是否登录成功', 'bool'],
+        ['login_is_night', '是否凌晨登录', 'bool'],
+        ['login_1h_count', '近 1 小时登录次数', 'num'],
+        ['login_city_match', '是否常用城市登录', 'bool'],
+        ['login_geo_risk', 'IP 是否代理', 'bool'],
+        ['login_device_new', '是否新设备 (<7 天)', 'bool'],
+        ['login_device_user_count', '设备关联用户数', 'num'],
+    ]},
+    {name: '贷款 loan_* (9)', fields: [
+        ['loan_amount', '贷款金额', 'num'],
+        ['loan_term_months', '贷款期限 (月)', 'num'],
+        ['loan_debt_ratio', '负债率 (0~1)', 'ratio'],
+        ['loan_monthly_income', '申报月收入', 'num'],
+        ['loan_month_count', '当月申请次数', 'num'],
+        ['loan_3m_count', '近 3 月申请次数', 'num'],
+        ['loan_apply_gap_days', '距上次申请天数', 'num'],
+        ['loan_amount_income_ratio', '贷款额 / 月收入比', 'ratio'],
+        ['loan_geo_risk', 'IP 是否代理', 'bool'],
+    ]},
+    {name: '信用卡 card_* (8)', fields: [
+        ['card_amount', '消费金额', 'num'],
+        ['card_is_night', '是否凌晨消费', 'bool'],
+        ['card_credit_limit', '授信额度', 'num'],
+        ['card_utilization', '使用率 (0~1)', 'ratio'],
+        ['card_7d_txn_count', '近 7 天消费笔数', 'num'],
+        ['card_7d_txn_amount', '近 7 天消费金额', 'num'],
+        ['card_geo_count_7d', '近 7 天消费城市数', 'num'],
+        ['card_device_new', '是否新设备 (<7 天)', 'bool'],
+    ]},
+];
+const FIELD_TYPE = {}, FIELD_LABEL = {};
+FIELD_GROUPS.forEach(g => g.fields.forEach(f => { FIELD_TYPE[f[0]] = f[2]; FIELD_LABEL[f[0]] = f[1]; }));
+const COND_OPS = [
+    ['>=', '大于等于 ≥'], ['>', '大于 >'], ['<=', '小于等于 ≤'], ['<', '小于 <'],
+    ['==', '等于 ='], ['!=', '不等于 ≠'],
+    ['between', '介于 min~max'], ['in', '属于 (逗号分隔)'], ['not_in', '不属于 (逗号分隔)'],
+];
+const COND_HINTS = {
+    'txn_amount': '示例: 交易金额 ≥ 50000 → 异地大额转账阈值 (R001 组合条件)',
+    'txn_city_match': '示例: 是否异地交易 = 1 → 异地大额转账组合条件之一',
+    'txn_to_card_black': '示例: 收款卡是否黑卡 = 1 → 黑卡拦截 (R030)',
+    'txn_1h_into_count': '示例: 近 1 小时入账卡数 ≥ 3 → 多卡归集 (R008)',
+    'txn_is_night': '示例: 是否凌晨 0-5 点 = 1 → 凌晨密集操作 (R002)',
+    'txn_geo_risk': '示例: IP 是否代理 = 1 → IP 代理/秒拨 (R025)',
+    'login_is_night': '示例: 是否凌晨登录 = 1 → 深夜异常登录 (R003)',
+    'login_device_new': '示例: 是否新设备 = 1 → 新设备登录风险',
+    'loan_debt_ratio': '示例: 负债率 ≥ 0.6 → 高负债客群 (R010)',
+    'loan_month_count': '示例: 当月申请次数 ≥ 3 → 信贷申请突击 (R012)',
+    'loan_amount_income_ratio': '示例: 贷款额/月收入 ≥ 5 → 偿债能力不足 (R010)',
+    'user_credit_score': '示例: 人行信用分 < 500 → 低信用分客群 (R015)',
+    'user_failed_login_7d': '示例: 近 7 天登录失败 ≥ 3 → 撞库/暴力破解 (R003/R020)',
+    'card_device_new': '示例: 是否新设备 = 1 → 新设备信用卡大额 (R005)',
+};
+
+function fillFieldOptions(sel) {
+    sel.innerHTML = FIELD_GROUPS.map(g =>
+        `<optgroup label="${g.name}">` + g.fields.map(f =>
+            `<option value="${f[0]}">${f[1]} (${f[0]})</option>`).join('') + '</optgroup>'
+    ).join('');
+}
+
+function fillOpOptions(sel) {
+    sel.innerHTML = COND_OPS.map(o => `<option value="${o[0]}">${o[1]}</option>`).join('');
+}
+
+function switchCondMode(mode) {
+    document.querySelectorAll('input[name="condMode"]').forEach(r => { r.checked = (r.value === mode); });
+    document.getElementById('condSimple').style.display = (mode === 'simple') ? '' : 'none';
+    document.getElementById('condMulti').style.display = (mode === 'multi') ? '' : 'none';
+    document.getElementById('condJson').style.display = (mode === 'json') ? '' : 'none';
+    updatePreview();
+}
+
+function parseCondValue(type, op, v1, v2) {
+    if (op === 'between') return [parseFloat(v1), parseFloat(v2)];
+    if (op === 'in' || op === 'not_in') {
+        return String(v1).split(/[,，]/).map(s => s.trim()).filter(Boolean)
+            .map(s => { const n = parseFloat(s); return isNaN(n) ? s : n; });
+    }
+    if (type === 'bool') return parseInt(v1, 10) === 1 ? 1 : 0;
+    const n = parseFloat(v1);
+    return isNaN(n) ? v1 : n;
+}
+
+function buildCondition() {
+    const mode = document.querySelector('input[name="condMode"]:checked').value;
+    if (mode === 'simple') {
+        const field = document.getElementById('s_field').value;
+        const op = document.getElementById('s_op').value;
+        const v1 = document.getElementById('s_value').value.trim();
+        const v2 = document.getElementById('s_value2').value.trim();
+        if (!field || v1 === '') throw new Error('请选择字段并填写条件值');
+        if (op === 'between' && v2 === '') throw new Error('介于 (between) 还需填写上限值');
+        return {field, op, value: parseCondValue(FIELD_TYPE[field], op, v1, v2)};
+    }
+    if (mode === 'multi') {
+        const logic = document.getElementById('m_logic').value;
+        const subs = Array.from(document.querySelectorAll('#m_rows .m-row')).map(row => {
+            const field = row.querySelector('.m-field').value;
+            const op = row.querySelector('.m-op').value;
+            const v1 = row.querySelector('.m-value');
+            const v2 = row.querySelector('.m-value2');
+            if (!field || !v1 || v1.value.trim() === '') throw new Error('多条件中每一行都需要选择字段并填写值');
+            if (op === 'between' && (!v2 || v2.value.trim() === '')) throw new Error('介于 (between) 还需填写上限值');
+            return {field, op, value: parseCondValue(FIELD_TYPE[field], op, v1.value, v2 ? v2.value : '')};
+        });
+        if (subs.length === 0) throw new Error('请至少添加一个条件');
+        return {[logic]: subs};
+    }
+    const text = document.getElementById('f_condition').value.trim();
+    if (!text) throw new Error('请输入 JSON 条件表达式');
+    const parsed = JSON.parse(text);
+    if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+        throw new Error('JSON 必须是对象 (如 {"field":"txn_amount","op":">=","value":50000})');
+    }
+    return parsed;
+}
+
+function updatePreview() {
+    const el = document.getElementById('condPreview');
+    try {
+        el.textContent = '预览: ' + JSON.stringify(buildCondition());
+        el.classList.remove('text-danger');
+    } catch (e) {
+        el.textContent = '预览: ' + e.message;
+        el.classList.add('text-danger');
+    }
+}
+
+function renderSimpleValue() {
+    const type = FIELD_TYPE[document.getElementById('s_field').value];
+    const op = document.getElementById('s_op').value;
+    const host = document.getElementById('s_value_host');
+    const showV2 = (op === 'between');
+    document.getElementById('s_value2_wrap').style.display = showV2 ? '' : 'none';
+    if (type === 'bool' && !showV2) {
+        host.innerHTML = '<select class="form-select form-select-sm" id="s_value">' +
+            '<option value="1">1 - 是</option><option value="0">0 - 否</option></select>';
+    } else if (showV2) {
+        host.innerHTML = '<input type="text" class="form-control form-control-sm" id="s_value" placeholder="下限">';
+    } else {
+        const ph = (type === 'ratio') ? '比例, 如 0.6' : '阈值, 如 50000';
+        host.innerHTML = `<input type="text" class="form-control form-control-sm" id="s_value" placeholder="${ph}">`;
+    }
+    document.getElementById('s_hint').textContent =
+        COND_HINTS[document.getElementById('s_field').value] || '提示: 选择特征字段与操作符, 填入阈值即可生成条件';
+    updatePreview();
+}
+
+function onSimpleFieldChange() { renderSimpleValue(); }
+function onSimpleOpChange() { renderSimpleValue(); }
+
+function renderMultiRowValue(row, current) {
+    const type = FIELD_TYPE[row.querySelector('.m-field').value];
+    const op = row.querySelector('.m-op').value;
+    const host = row.querySelector('.m-value-host');
+    if (type === 'bool' && op !== 'between' && op !== 'in' && op !== 'not_in') {
+        host.innerHTML = '<select class="form-select form-select-sm m-value">' +
+            '<option value="1">1 - 是</option><option value="0">0 - 否</option></select>';
+    } else if (op === 'between') {
+        host.innerHTML = '<div class="row g-2">' +
+            '<div class="col-6"><input type="text" class="form-control form-control-sm m-value" placeholder="下限"></div>' +
+            '<div class="col-6"><input type="text" class="form-control form-control-sm m-value2" placeholder="上限"></div></div>';
+    } else if (op === 'in' || op === 'not_in') {
+        host.innerHTML = '<input type="text" class="form-control form-control-sm m-value" placeholder="多个值用逗号分隔, 如 1,2,3">';
+    } else {
+        const ph = (type === 'ratio') ? '比例, 如 0.6' : '阈值, 如 50000';
+        host.innerHTML = `<input type="text" class="form-control form-control-sm m-value" placeholder="${ph}">`;
+    }
+    if (current !== undefined && current !== null) {
+        const v1 = host.querySelector('.m-value');
+        const v2 = host.querySelector('.m-value2');
+        if (Array.isArray(current)) {
+            if (v1) v1.value = current[0] ?? '';
+            if (v2) v2.value = current[1] ?? '';
+        } else if (v1) {
+            v1.value = current;
+        }
+    }
+    updatePreview();
+}
+
+function addMultiRow(prefill) {
+    const rows = document.getElementById('m_rows');
+    const row = document.createElement('div');
+    row.className = 'row g-2 m-row';
+    row.innerHTML =
+        '<div class="col-md-5"><select class="form-select form-select-sm m-field"></select></div>' +
+        '<div class="col-md-2"><select class="form-select form-select-sm m-op"></select></div>' +
+        '<div class="col-md-4"><div class="m-value-host"></div></div>' +
+        '<div class="col-md-1"><button type="button" class="btn btn-outline-danger btn-sm" title="删除条件" onclick="removeMultiRow(this)"><i class="bi bi-trash"></i></button></div>';
+    rows.appendChild(row);
+    const sel = row.querySelector('.m-field');
+    fillFieldOptions(sel);
+    const opSel = row.querySelector('.m-op');
+    fillOpOptions(opSel);
+    sel.addEventListener('change', () => renderMultiRowValue(row));
+    opSel.addEventListener('change', () => renderMultiRowValue(row));
+    if (prefill) {
+        if (FIELD_TYPE[prefill.field]) sel.value = prefill.field;
+        if (COND_OPS.some(o => o[0] === prefill.op)) opSel.value = prefill.op;
+        renderMultiRowValue(row, prefill.value);
+    } else {
+        renderMultiRowValue(row);
+    }
+}
+
+function removeMultiRow(btn) {
+    btn.closest('.m-row').remove();
+    updatePreview();
+}
+
+function resetCondBuilder() {
+    document.getElementById('m_rows').innerHTML = '';
+    document.getElementById('f_condition').value = '';
+    document.getElementById('m_logic').value = 'and';
+    document.getElementById('s_field').value = 'txn_amount';
+    document.getElementById('s_op').value = '>=';
+    renderSimpleValue();
+    document.getElementById('s_value').value = '50000';
+    addMultiRow();
+    switchCondMode('simple');
+}
+
+let currentPage = 1;
+let editingRuleId = null;
+const PAGE_SIZE_KEY = 'rules_pageSize';
+
+// 从 localStorage 恢复 pageSize, 默认 20
+(function initPageSize() {
+    const saved = localStorage.getItem(PAGE_SIZE_KEY) || '20';
+    document.getElementById('pageSize').value = saved;
+})();
+
+// 用户切换 pageSize 时保存到 localStorage
+function onPageSizeChange() {
+    localStorage.setItem(PAGE_SIZE_KEY, document.getElementById('pageSize').value);
+    loadRules(1);
+}
+
+function riskBadge(level) {
+    const cls = {'低':'badge-risk-low','中':'badge-risk-mid','高':'badge-risk-high','极高':'badge-risk-critical'}[level] || 'bg-secondary';
+    return `<span class="badge ${cls}">${level}</span>`;
+}
+
+async function loadRules(page) {
+    currentPage = page || 1;
+    const category = document.getElementById('filterCategory').value;
+    const pageSize = document.getElementById('pageSize').value;
+    const params = new URLSearchParams({page: currentPage, page_size: pageSize});
+    if (category) params.set('category', category);
+    const res = await fetch('/api/rules?' + params);
+    const data = await res.json();
+    document.getElementById('rulesCount').textContent =
+        `共 ${data.total} 条, 当前 ${data.items.length} 条/页`;
+    const tbody = document.getElementById('rules-table');
+    if (data.items.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="10" class="text-center text-muted">暂无规则</td></tr>';
+    } else {
+        tbody.innerHTML = data.items.map(r => `
+            <tr>
+                <td><code>${r.rule_id}</code></td>
+                <td>${r.rule_name}</td>
+                <td><span class="badge badge-risk-mid">${r.rule_category}</span></td>
+                <td>${r.event_type}</td>
+                <td>${riskBadge(r.risk_level)}</td>
+                <td><strong>${r.risk_score}</strong></td>
+                <td>${r.action}</td>
+                <td>${r.priority}</td>
+                <td>
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" ${r.is_enabled ? 'checked' : ''}
+                            onchange="toggleRule('${r.rule_id}')">
+                    </div>
+                </td>
+                <td>
+                    <button class="btn btn-outline-bank btn-sm" onclick="editRule('${r.rule_id}')">
+                        <i class="bi bi-pencil"></i>
+                    </button>
+                    <button class="btn btn-outline-danger btn-sm" onclick="deleteRule('${r.rule_id}')">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </td>
+            </tr>
+        `).join('');
+    }
+    // 分页 (通用分页组件 app.js::buildPaginationHtml)
+    const totalPages = Math.ceil(data.total / pageSize);
+    document.getElementById('pagination').innerHTML =
+        buildPaginationHtml(currentPage, totalPages, pageSize, 'loadRules');
+}
+
+function showCreateModal() {
+    editingRuleId = null;
+    document.getElementById('ruleModalTitle').textContent = '新建规则';
+    document.getElementById('ruleForm').reset();
+    document.getElementById('f_rule_id').disabled = false;
+    resetCondBuilder();
+    new bootstrap.Modal(document.getElementById('ruleModal')).show();
+}
+
+async function editRule(ruleId) {
+    const res = await fetch(`/api/rules/${ruleId}`);
+    const r = await res.json();
+    editingRuleId = ruleId;
+    document.getElementById('ruleModalTitle').textContent = '编辑规则';
+    document.getElementById('f_rule_id').value = r.rule_id;
+    document.getElementById('f_rule_id').disabled = true;
+    document.getElementById('f_rule_name').value = r.rule_name;
+    document.getElementById('f_category').value = r.rule_category;
+    document.getElementById('f_event_type').value = r.event_type;
+    document.getElementById('f_risk_level').value = r.risk_level;
+    document.getElementById('f_score').value = r.risk_score;
+    document.getElementById('f_action').value = r.action;
+    // 条件回填: 按 JSON 结构自动选择构建模式 (and/or → 多条件, field → 单条件, 其他 → 自定义 JSON)
+    const cond = r.rule_condition || {};
+    if (cond.and || cond.or) {
+        switchCondMode('multi');
+        document.getElementById('m_logic').value = cond.and ? 'and' : 'or';
+        document.getElementById('m_rows').innerHTML = '';
+        (cond.and || cond.or || []).forEach(sub => addMultiRow(sub));
+    } else if (cond.field) {
+        switchCondMode('simple');
+        document.getElementById('s_field').value = cond.field;
+        document.getElementById('s_op').value = cond.op || '>=';
+        renderSimpleValue();
+        const sv = document.getElementById('s_value');
+        const sv2 = document.getElementById('s_value2');
+        if (Array.isArray(cond.value)) {
+            if (cond.op === 'between' && sv2) { sv.value = cond.value[0] ?? ''; sv2.value = cond.value[1] ?? ''; }
+            else if (sv) sv.value = cond.value.join(',');
+        } else if (sv) {
+            sv.value = cond.value ?? '';
+        }
+    } else {
+        switchCondMode('json');
+        document.getElementById('f_condition').value = JSON.stringify(cond, null, 2);
+    }
+    updatePreview();
+    document.getElementById('f_priority').value = r.priority;
+    document.getElementById('f_description').value = r.description || '';
+    new bootstrap.Modal(document.getElementById('ruleModal')).show();
+}
+
+async function saveRule() {
+    let condition;
+    try {
+        condition = buildCondition();
+    } catch (e) {
+        alert(e.message || '条件表达式格式错误');
+        return;
+    }
+    const data = {
+        rule_id: document.getElementById('f_rule_id').value,
+        rule_name: document.getElementById('f_rule_name').value,
+        rule_category: document.getElementById('f_category').value,
+        event_type: document.getElementById('f_event_type').value,
+        rule_condition: condition,
+        risk_level: document.getElementById('f_risk_level').value,
+        risk_score: parseInt(document.getElementById('f_score').value),
+        action: document.getElementById('f_action').value,
+        priority: parseInt(document.getElementById('f_priority').value) || 0,
+        description: document.getElementById('f_description').value,
+    };
+    const url = editingRuleId ? `/api/rules/${editingRuleId}` : '/api/rules';
+    const method = editingRuleId ? 'PUT' : 'POST';
+    const res = await fetch(url, { method, headers: {'Content-Type':'application/json'}, body: JSON.stringify(data) });
+    if (res.ok) {
+        bootstrap.Modal.getInstance(document.getElementById('ruleModal')).hide();
+        loadRules(currentPage);
+    } else {
+        const err = await res.json();
+        alert(err.detail || '保存失败');
+    }
+}
+
+async function toggleRule(ruleId) {
+    await fetch(`/api/rules/${ruleId}/toggle`, { method: 'PUT' });
+}
+
+async function deleteRule(ruleId) {
+    if (!confirm('确定要删除这条规则吗？')) return;
+    await fetch(`/api/rules/${ruleId}`, { method: 'DELETE' });
+    loadRules(currentPage);
+}
+
+loadRules();
+
+// 初始化条件构建器: 字段/操作符下拉 + 默认示例
+(function initCondBuilder() {
+    fillFieldOptions(document.getElementById('s_field'));
+    fillOpOptions(document.getElementById('s_op'));
+    resetCondBuilder();
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,88 @@
+{
+  "model": "XGBoost 银行风控双轨模型 (规则 + ML)",
+  "trained_at": "2026-08-11T18:09:47",
+  "n_train": 2937,
+  "n_pos": 1634,
+  "pos_ratio": 0.5564,
+  "best_iteration": 60,
+  "auc": 0.9999,
+  "f1": 0.9969,
+  "accuracy": 0.9966,
+  "precision": 0.9963,
+  "recall": 0.9976,
+  "val_auc": 0.9997,
+  "val_f1": 0.9939,
+  "val_accuracy": 0.9932,
+  "best_f1_threshold": 0.65,
+  "scale_pos_weight": 0.8,
+  "feature_importance_top10": [
+    {
+      "rank": 1,
+      "feature": "loan_amount_income_ratio",
+      "gain": 153.21,
+      "ratio": 30.64
+    },
+    {
+      "rank": 2,
+      "feature": "loan_debt_ratio",
+      "gain": 95.19,
+      "ratio": 19.04
+    },
+    {
+      "rank": 3,
+      "feature": "txn_amount",
+      "gain": 34.01,
+      "ratio": 6.8
+    },
+    {
+      "rank": 4,
+      "feature": "user_failed_login_7d",
+      "gain": 26.12,
+      "ratio": 5.22
+    },
+    {
+      "rank": 5,
+      "feature": "txn_geo_risk",
+      "gain": 20.34,
+      "ratio": 4.07
+    },
+    {
+      "rank": 6,
+      "feature": "txn_1h_amount",
+      "gain": 18.32,
+      "ratio": 3.66
+    },
+    {
+      "rank": 7,
+      "feature": "login_is_night",
+      "gain": 16.16,
+      "ratio": 3.23
+    },
+    {
+      "rank": 8,
+      "feature": "card_utilization",
+      "gain": 15.86,
+      "ratio": 3.17
+    },
+    {
+      "rank": 9,
+      "feature": "user_credit_score",
+      "gain": 14.64,
+      "ratio": 2.93
+    },
+    {
+      "rank": 10,
+      "feature": "user_avg_txn_amount",
+      "gain": 12.0,
+      "ratio": 2.4
+    }
+  ],
+  "fake_convergence_check": {
+    "ok": true,
+    "issues": [],
+    "min_best_iter": 30,
+    "min_val_auc": 0.7,
+    "min_val_f1": 0.5
+  },
+  "model_path": "C:\\Users\\NIUDA\\Desktop\\practice_rsc\\AI_Risk_Bank\\app\\engine\\xgb_model.json"
+}
