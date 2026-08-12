@@ -38,3 +38,6 @@ ml_models/
 # 环境配置
 .env
 .env.local
+
+# until-done 工作文件 (扩展运行状态, 不入仓库)
+.until-done/
