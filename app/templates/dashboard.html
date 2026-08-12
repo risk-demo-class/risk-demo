@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block title %}仪表盘 - 教育风控中心{% endblock %}
+{% block content %}
+<h4 class="mb-4">教育风控仪表盘</h4>
+<div class="row mb-4" id="stat-cards">
+  <div class="col-md-3 mb-3"><div class="card stat-card p-3"><div class="text-muted small">今日评估</div><div id="total-today" class="fs-2 fw-bold text-primary">-</div></div></div>
+  <div class="col-md-3 mb-3"><div class="card stat-card p-3"><div class="text-muted small">高风险事件</div><div id="high-risk-today" class="fs-2 fw-bold text-danger">-</div></div></div>
+  <div class="col-md-3 mb-3"><div class="card stat-card p-3"><div class="text-muted small">待审核案件</div><div id="pending-cases" class="fs-2 fw-bold text-warning">-</div></div></div>
+  <div class="col-md-3 mb-3"><div class="card stat-card p-3"><div class="text-muted small">通过率</div><div id="pass-rate" class="fs-2 fw-bold text-success">-</div></div></div>
+</div>
+<div class="row">
+  <div class="col-md-8 mb-3"><div class="card stat-card p-3"><h5 class="mb-3">近 7 天教育风险评估趋势</h5><div class="table-responsive"><table class="table table-sm mb-0"><thead><tr><th>日期</th><th>评估量</th><th>高风险</th></tr></thead><tbody id="trendTableBody"><tr><td colspan="3" class="text-center text-muted">加载中...</td></tr></tbody></table></div></div></div>
+  <div class="col-md-4 mb-3"><div class="card stat-card p-3"><h5 class="mb-3">规则命中 TOP5</h5><ul class="list-group list-group-flush" id="top-rules"><li class="list-group-item text-muted">加载中...</li></ul></div></div>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>
+function dashboardCell(value) { const node = document.createElement('td'); node.textContent = value; return node; }
+async function loadDashboard() {
+  try {
+    const response = await fetch('/api/dashboard/overview');
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.detail || '仪表盘加载失败');
+    document.getElementById('total-today').textContent = data.today_assessments;
+    document.getElementById('high-risk-today').textContent = data.today_high_risk;
+    document.getElementById('pending-cases').textContent = data.pending_cases;
+    document.getElementById('pass-rate').textContent = data.pass_rate + '%';
+    const trendBody = document.getElementById('trendTableBody');
+    trendBody.replaceChildren();
+    data.trend_7d.forEach(item => {
+      const row = document.createElement('tr');
+      row.append(dashboardCell(item.date), dashboardCell(item.count), dashboardCell(item.high_risk_count));
+      trendBody.append(row);
+    });
+    const topRules = document.getElementById('top-rules');
+    topRules.replaceChildren();
+    if (!data.top_rules.length) {
+      const empty = document.createElement('li');
+      empty.className = 'list-group-item text-muted';
+      empty.textContent = '暂无规则命中';
+      topRules.append(empty);
+      return;
+    }
+    data.top_rules.forEach(item => {
+      const row = document.createElement('li');
+      row.className = 'list-group-item d-flex justify-content-between align-items-center';
+      const name = document.createElement('span');
+      name.textContent = item.rule_name;
+      const count = document.createElement('span');
+      count.className = 'badge bg-primary rounded-pill';
+      count.textContent = item.hit_count;
+      row.append(name, count);
+      topRules.append(row);
+    });
+  } catch (error) {
+    const trendBody = document.getElementById('trendTableBody');
+    trendBody.replaceChildren();
+    const row = document.createElement('tr');
+    const message = dashboardCell(error.message || '仪表盘加载失败');
+    message.colSpan = 3;
+    message.className = 'text-center text-danger';
+    row.append(message);
+    trendBody.append(row);
+  }
+}
+loadDashboard();
+</script>
+{% endblock %}

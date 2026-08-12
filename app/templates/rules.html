@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}规则管理 - 教育风控中心{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4"><h4 class="mb-0">教育风控规则管理</h4><span class="text-muted small">当前展示已入库规则</span></div>
+<div class="card stat-card p-3"><div class="table-responsive"><table class="table table-hover align-middle mb-0">
+  <thead><tr><th>规则编号</th><th>规则名称</th><th>事件类型</th><th>风险分</th><th>动作</th><th>状态</th></tr></thead>
+  <tbody id="ruleTableBody"><tr><td colspan="6" class="text-center text-muted py-4">加载中...</td></tr></tbody>
+</table></div></div>
+{% endblock %}
+{% block extra_js %}
+<script>
+const tableBody = document.getElementById('ruleTableBody');
+function tableCell(value) { const cell = document.createElement('td'); cell.textContent = value; return cell; }
+async function loadRules() {
+  try {
+    const response = await fetch('/api/rules'); const data = await response.json(); if (!response.ok) throw new Error(data.detail || '规则加载失败');
+    tableBody.replaceChildren();
+    if (!data.items.length) { const row = document.createElement('tr'); const cell = tableCell('暂无规则'); cell.colSpan = 6; cell.className = 'text-center text-muted py-4'; row.append(cell); tableBody.append(row); return; }
+    data.items.forEach(rule => { const row = document.createElement('tr'); row.append(tableCell(rule.rule_id), tableCell(rule.rule_name), tableCell(rule.event_type), tableCell(rule.risk_score), tableCell(rule.action), tableCell(rule.is_enabled ? '启用' : '停用')); tableBody.append(row); });
+  } catch (error) { tableBody.replaceChildren(); const row = document.createElement('tr'); const cell = tableCell(error.message || '规则加载失败'); cell.colSpan = 6; cell.className = 'text-center text-danger py-4'; row.append(cell); tableBody.append(row); }
+}
+loadRules();
+</script>
+{% endblock %}

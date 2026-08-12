@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}案件管理 - 教育风控中心{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4"><div><h4 class="mb-1">教育风险案件管理</h4><p class="text-muted small mb-0">审核只更新案件处置状态，不改写当次风险评估和规则命中快照。</p></div></div>
+<div class="mb-3 d-flex gap-2 align-items-center"><label class="small text-muted" for="caseStatusFilter">查看范围</label><select id="caseStatusFilter" class="form-select form-select-sm w-auto"><option value="__active__">仅待办案件</option><option value="">全部状态</option><option value="待审核">待审核</option><option value="审核中">审核中</option><option value="已通过">已通过</option><option value="已拒绝">已拒绝</option><option value="已关闭">已关闭</option></select><span id="caseCount" class="small text-muted"></span></div>
+<div class="card stat-card p-3"><div class="table-responsive"><table class="table table-hover align-middle mb-0"><thead><tr><th>案件编号</th><th>学生编号</th><th>事件类型</th><th>业务编号</th><th>状态</th><th>操作</th></tr></thead><tbody id="caseTableBody"><tr><td colspan="6" class="text-center text-muted py-4">加载中...</td></tr></tbody></table></div></div>
+{% endblock %}
+{% block extra_js %}
+<script>
+const caseTableBody = document.getElementById('caseTableBody');
+function caseCell(value) { const cell = document.createElement('td'); cell.textContent = value || '-'; return cell; }
+function actionButton(label, color, callback) { const button = document.createElement('button'); button.type = 'button'; button.className = 'btn btn-outline-' + color + ' btn-sm me-1'; button.textContent = label; button.addEventListener('click', callback); return button; }
+function appendActions(cell, item) {
+  if (item.case_status === '待审核') {
+    cell.append(actionButton('开始审核', 'primary', () => reviewCase(item.case_id, '审核中')));
+    cell.append(actionButton('通过', 'success', () => reviewCase(item.case_id, '已通过')));
+    cell.append(actionButton('拒绝', 'danger', () => reviewCase(item.case_id, '已拒绝')));
+    cell.append(actionButton('关闭', 'secondary', () => reviewCase(item.case_id, '已关闭')));
+  } else if (item.case_status === '审核中') {
+    cell.append(actionButton('通过', 'success', () => reviewCase(item.case_id, '已通过')));
+    cell.append(actionButton('拒绝', 'danger', () => reviewCase(item.case_id, '已拒绝')));
+    cell.append(actionButton('关闭', 'secondary', () => reviewCase(item.case_id, '已关闭')));
+  } else { cell.textContent = '已结案'; }
+}
+async function loadCases() {
+  const selected = document.getElementById('caseStatusFilter').value;
+  const params = new URLSearchParams({page: '1', page_size: '20'});
+  if (selected === '__active__') params.set('active_only', 'true');
+  else if (selected) params.set('status', selected);
+  try {
+    const response = await fetch('/api/cases?' + params);
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.detail || '案件加载失败');
+    document.getElementById('caseCount').textContent = `共 ${data.total} 条`;
+    caseTableBody.replaceChildren();
+    if (!data.items.length) { const row = document.createElement('tr'); const empty = caseCell('暂无案件'); empty.colSpan = 6; empty.className = 'text-center text-muted py-4'; row.append(empty); caseTableBody.append(row); return; }
+    data.items.forEach(item => { const row = document.createElement('tr'); const actions = document.createElement('td'); appendActions(actions, item); row.append(caseCell(item.case_id), caseCell(item.user_id), caseCell(item.event_type), caseCell(item.source_id), caseCell(item.case_status), actions); caseTableBody.append(row); });
+  } catch (error) { caseTableBody.replaceChildren(); const row = document.createElement('tr'); const message = caseCell(error.message || '案件加载失败'); message.colSpan = 6; message.className = 'text-center text-danger py-4'; row.append(message); caseTableBody.append(row); }
+}
+async function reviewCase(caseId, decision) {
+  if (!window.confirm(`确认将案件处理为“${decision}”吗？`)) return;
+  const response = await fetch(`/api/cases/${caseId}/review`, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({decision})});
+  if (!response.ok) { const data = await response.json(); window.alert(data.detail || '案件审核失败'); return; }
+  loadCases();
+}
+document.getElementById('caseStatusFilter').addEventListener('change', loadCases);
+loadCases();
+</script>
+{% endblock %}

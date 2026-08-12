@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}评估历史 - 教育风控中心{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4"><h4 class="mb-0">教育风险评估历史</h4><span class="text-muted small">报名风控的完整评估留痕</span></div>
+<div class="card stat-card p-3"><div class="table-responsive"><table class="table table-hover align-middle mb-0"><thead><tr><th>评估编号</th><th>学生编号</th><th>报名编号</th><th>评分</th><th>风险等级</th><th>结论</th></tr></thead><tbody id="assessmentTableBody"><tr><td colspan="6" class="text-center text-muted py-4">加载中...</td></tr></tbody></table></div></div>
+{% endblock %}
+{% block extra_js %}<script>
+const assessmentTableBody = document.getElementById('assessmentTableBody');
+function assessmentCell(value) { const cell = document.createElement('td'); cell.textContent = value; return cell; }
+async function loadAssessments() { try { const response = await fetch('/api/assessments'); const data = await response.json(); if (!response.ok) throw new Error(data.detail || '评估历史加载失败'); assessmentTableBody.replaceChildren(); if (!data.items.length) { const row = document.createElement('tr'); const cell = assessmentCell('暂无评估记录'); cell.colSpan = 6; cell.className = 'text-center text-muted py-4'; row.append(cell); assessmentTableBody.append(row); return; } data.items.forEach(item => { const row = document.createElement('tr'); row.append(assessmentCell(item.assessment_id), assessmentCell(item.user_id), assessmentCell(item.source_id), assessmentCell(item.final_score), assessmentCell(item.risk_level), assessmentCell(item.decision)); assessmentTableBody.append(row); }); } catch (error) { assessmentTableBody.replaceChildren(); const row = document.createElement('tr'); const cell = assessmentCell(error.message || '评估历史加载失败'); cell.colSpan = 6; cell.className = 'text-center text-danger py-4'; row.append(cell); assessmentTableBody.append(row); } }
+loadAssessments();
+</script>{% endblock %}

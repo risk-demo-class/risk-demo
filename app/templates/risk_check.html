@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}风险检查 - 教育风控中心{% endblock %}
+{% block content %}
+<h4 class="mb-4">风险检查</h4>
+<div class="row">
+  <section class="col-md-5 mb-3"><div class="card stat-card p-4">
+    <h6>发起课程报名风险检查</h6>
+    <form id="checkForm">
+      <div class="mb-3"><label class="form-label" for="ck_event_type">事件类型</label><select class="form-select" id="ck_event_type"><option value="课程报名">课程报名</option><option value="退费申请">退费申请</option><option value="学历认证">学历认证</option></select></div>
+      <div class="mb-3"><label class="form-label" for="ck_user_id">学生编号</label><input class="form-control" id="ck_user_id" value="STU-NORMAL-001" required /></div>
+      <div class="mb-3"><label class="form-label" for="ck_source_id">业务编号</label><input class="form-control" id="ck_source_id" value="ENR-NORMAL-001" required /></div>
+      <button type="submit" class="btn btn-primary w-100" id="checkBtn"><i class="bi bi-search"></i> 执行检查</button>
+    </form>
+  </div></section>
+  <section class="col-md-7 mb-3"><div class="card stat-card p-4" id="resultPanel" hidden><h6>检查结果</h6><div id="resultContent"></div></div>
+    <div class="card stat-card p-4" id="emptyPanel"><div class="text-center text-muted py-5"><i class="bi bi-shield-check" style="font-size:48px"></i><p class="mt-3 mb-0">请填写报名信息并发起风险检查</p></div></div>
+  </section>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>
+const form = document.getElementById('checkForm');
+const resultPanel = document.getElementById('resultPanel');
+const emptyPanel = document.getElementById('emptyPanel');
+const resultContent = document.getElementById('resultContent');
+function appendLine(label, value) { const row = document.createElement('p'); row.className = 'mb-2'; const strong = document.createElement('strong'); strong.textContent = label + '：'; row.append(strong, document.createTextNode(value)); resultContent.append(row); }
+form.addEventListener('submit', async (event) => {
+  event.preventDefault(); const button = document.getElementById('checkBtn'); button.disabled = true; resultContent.replaceChildren();
+  try {
+    const response = await fetch('/api/risk/check', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({event_type: document.getElementById('ck_event_type').value, user_id: document.getElementById('ck_user_id').value.trim(), source_id: document.getElementById('ck_source_id').value.trim()}) });
+    const result = await response.json(); if (!response.ok) throw new Error(result.detail || '风险检查失败');
+    appendLine('处置结论', result.decision); appendLine('最终分数', String(result.final_score)); appendLine('风险等级', result.risk_level); appendLine('命中规则', String(result.rule_count));
+    if (result.blocked_by) appendLine('拦截原因', result.blocked_by);
+    if (result.triggered_rules.length) { const title = document.createElement('h6'); title.textContent = '命中规则'; resultContent.append(title); const list = document.createElement('ul'); result.triggered_rules.forEach(rule => { const item = document.createElement('li'); item.textContent = rule.rule_id + ' · ' + rule.rule_name + ' (+' + rule.risk_score + ')'; list.append(item); }); resultContent.append(list); }
+  } catch (error) { const alert = document.createElement('div'); alert.className = 'alert alert-danger mb-0'; alert.textContent = error.message || '请求失败'; resultContent.append(alert); }
+  finally { resultPanel.hidden = false; emptyPanel.hidden = true; button.disabled = false; }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{% block title %}教育风控中心{% endblock %}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.2/font/bootstrap-icons.css" rel="stylesheet" />
+    <style>
+      html, body { height: 100%; margin: 0; }
+      body { background: #f0f2f5; overflow: hidden; }
+      .container-fluid, .row { padding: 0 !important; margin: 0 !important; }
+      .sidebar { position: fixed; inset: 0 auto 0 0; width: 16.66667%; background: #1e293b; overflow-y: auto; z-index: 1000; }
+      .sidebar-brand { color: #fff; font-size: 18px; font-weight: 700; padding: 20px; border-bottom: 1px solid #334155; }
+      .sidebar .nav-link { color: #94a3b8; padding: 12px 20px; border-radius: 8px; margin: 2px 8px; }
+      .sidebar .nav-link:hover, .sidebar .nav-link.active { color: #fff; background: #334155; }
+      .main-content { margin-left: 16.66667%; width: 83.33333%; height: 100vh; overflow-y: auto; padding: 24px; }
+      .stat-card { border: 0; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+      @media (max-width: 767.98px) {
+        body { overflow: auto; }
+        .sidebar { position: relative; width: 100%; height: auto; }
+        .main-content { margin-left: 0; width: 100%; height: auto; }
+      }
+    </style>
+    {% block extra_css %}{% endblock %}
+  </head>
+  <body>
+    <div class="container-fluid"><div class="row">
+      <aside class="sidebar px-0">
+        <div class="sidebar-brand"><i class="bi bi-shield-check"></i> 教育风控中心</div>
+        <nav class="nav flex-column mt-3" aria-label="风控后台导航">
+          <a class="nav-link {% if request.url.path == '/' %}active{% endif %}" href="/"><i class="bi bi-speedometer2"></i> 仪表盘</a>
+          <a class="nav-link" href="/rules"><i class="bi bi-list-check"></i> 规则管理</a>
+          <a class="nav-link" href="/cases"><i class="bi bi-folder2-open"></i> 案件管理</a>
+          <a class="nav-link" href="/assessments"><i class="bi bi-clipboard-data"></i> 评估历史</a>
+          <a class="nav-link" href="/risk-check"><i class="bi bi-search"></i> 风险检查</a>
+          <a class="nav-link" href="/blacklist"><i class="bi bi-shield-x"></i> 黑名单</a>
+        </nav>
+      </aside>
+      <main class="main-content">{% block content %}{% endblock %}</main>
+    </div></div>
+    {% block extra_js %}{% endblock %}
+  </body>
+</html>

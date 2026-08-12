@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#102a43" />
+    <title>教育风控运营台</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <a class="skip-link" href="#main-content">跳到主要内容</a>
+    <header class="topbar">
+      <div class="brand" aria-label="教育风控运营台">
+        <span class="brand-mark" aria-hidden="true">R</span>
+        <span>教育风控运营台</span>
+      </div>
+      <div class="environment"><span class="status-dot" aria-hidden="true"></span>本地演示环境</div>
+    </header>
+
+    <main id="main-content" class="shell">
+      <section class="page-heading" aria-labelledby="page-title">
+        <div>
+          <p class="eyebrow">课程报名 · 实时决策</p>
+          <h1 id="page-title">报名风险核验</h1>
+          <p class="lede">提交报名事件，查看规则命中、风险评分与处置结论。</p>
+        </div>
+        <div class="engine-note" aria-label="当前引擎说明">
+          <span class="engine-note__number">7</span>
+          <span>步引擎审计留痕</span>
+        </div>
+      </section>
+
+      <section class="scenario-strip" aria-label="可用演示场景">
+        <p>演示场景</p>
+        <button class="scenario-button" type="button" data-scenario="normal">正常报名</button>
+        <button class="scenario-button" type="button" data-scenario="review">共享设备</button>
+        <button class="scenario-button" type="button" data-scenario="blocked">黑名单</button>
+      </section>
+
+      <div class="workspace">
+        <section class="panel form-panel" aria-labelledby="form-title">
+          <div class="panel-heading">
+            <div>
+              <p class="section-kicker">输入事件</p>
+              <h2 id="form-title">报名信息</h2>
+            </div>
+            <span class="step-badge">Step 01</span>
+          </div>
+
+          <form id="risk-form" novalidate>
+            <div class="field-group">
+              <label for="event-type">事件类型</label>
+              <select id="event-type" name="event_type" aria-describedby="event-help">
+                <option value="课程报名">课程报名</option>
+              </select>
+              <p id="event-help" class="field-help">第一期仅开放课程报名风控。</p>
+            </div>
+
+            <div class="field-group">
+              <label for="source-id">报名编号</label>
+              <input id="source-id" name="source_id" type="text" value="ENR-NORMAL-001" required autocomplete="off" />
+            </div>
+
+            <div class="field-group">
+              <label for="user-id">学生编号</label>
+              <input id="user-id" name="user_id" type="text" value="STU-NORMAL-001" required autocomplete="off" />
+            </div>
+
+            <div class="form-actions">
+              <button id="submit-button" class="primary-button" type="submit">
+                <span>执行风险核验</span>
+                <span aria-hidden="true">→</span>
+              </button>
+              <p>提交后将记录事件、特征和评估结果。</p>
+            </div>
+          </form>
+        </section>
+
+        <section class="panel result-panel" aria-labelledby="result-title" aria-live="polite">
+          <div class="panel-heading">
+            <div>
+              <p class="section-kicker">决策输出</p>
+              <h2 id="result-title">风险评估结果</h2>
+            </div>
+            <span id="result-state" class="result-state result-state--idle">等待核验</span>
+          </div>
+
+          <div id="result-empty" class="empty-state">
+            <div class="empty-icon" aria-hidden="true">◎</div>
+            <h3>尚未生成评估</h3>
+            <p>选择一个演示场景，或填写报名信息后执行核验。</p>
+          </div>
+
+          <div id="result-content" class="result-content" hidden>
+            <div class="decision-summary">
+              <div>
+                <p class="result-label">处置结论</p>
+                <p id="decision-value" class="decision-value">—</p>
+              </div>
+              <div class="score-block">
+                <p class="result-label">最终分数</p>
+                <p><strong id="score-value">0</strong><span>/100</span></p>
+              </div>
+            </div>
+
+            <dl class="result-details">
+              <div><dt>风险等级</dt><dd id="risk-level-value">—</dd></div>
+              <div><dt>命中规则</dt><dd id="rule-count-value">0 条</dd></div>
+              <div><dt>事件编号</dt><dd id="event-id-value">—</dd></div>
+              <div><dt>评估编号</dt><dd id="assessment-id-value">—</dd></div>
+            </dl>
+
+            <div class="rules-section">
+              <h3>规则明细</h3>
+              <ul id="rules-list" class="rules-list" aria-label="命中规则列表"></ul>
+            </div>
+            <p id="blocked-message" class="blocked-message" hidden></p>
+          </div>
+
+          <p id="form-error" class="form-error" role="alert" hidden></p>
+        </section>
+      </div>
+
+      <section class="process-card" aria-labelledby="process-title">
+        <div>
+          <p class="section-kicker">处理路径</p>
+          <h2 id="process-title">沿用四层风控骨架</h2>
+        </div>
+        <ol class="process-steps">
+          <li><span>01</span>Router 接收</li>
+          <li><span>02</span>Service 编排</li>
+          <li><span>03</span>Engine 决策</li>
+          <li><span>04</span>Model 留痕</li>
+        </ol>
+      </section>
+    </main>
+    <script src="/static/app.js" defer></script>
+  </body>
+</html>
