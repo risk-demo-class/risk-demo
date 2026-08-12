@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}规则管理 - 电信风控系统{% endblock %}
+{% block content %}
+<h4 class="mb-4">规则管理 <small class="text-muted fs-6">(15 条预置规则，覆盖 9 类欺诈场景)</small></h4>
+
+<div class="card stat-card p-3">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div class="text-muted small">规则引擎基于 JSON 条件表达式，规则与 XGBoost 模型并行工作，规则有一票否决权。</div>
+        <button onclick="loadRules()" class="btn btn-sm btn-outline-primary">刷新</button>
+    </div>
+    <div style="overflow-x:auto;">
+        <table class="table table-hover align-middle">
+            <thead>
+                <tr>
+                    <th>ID</th><th>名称</th><th>类别</th><th>事件</th>
+                    <th>等级</th><th>分值</th><th>动作</th>
+                    <th>优先级</th><th>启用</th>
+                </tr>
+            </thead>
+            <tbody id="rules-body"></tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+{% block script %}
+<script>
+async function loadRules() {
+    const data = await apiRequest('/api/rules?page=1&page_size=100');
+    const body = document.getElementById('rules-body');
+    const items = data.items || [];
+    if (items.length === 0) {
+        body.innerHTML = `<tr><td colspan="9" class="text-center text-muted py-5">暂无规则</td></tr>`;
+        return;
+    }
+    body.innerHTML = items.map(r => {
+        const cls = getRiskBadgeClass(r.risk_level);
+        const decisionCls = getDecisionBadgeClass(r.action);
+        return `<tr>
+            <td><code>${r.rule_id}</code></td>
+            <td>${r.rule_name}</td>
+            <td><span class="badge bg-info">${r.rule_category}</span></td>
+            <td>${r.event_type}</td>
+            <td><span class="badge ${cls}">${r.risk_level}</span></td>
+            <td><b>${r.risk_score}</b></td>
+            <td><span class="badge ${decisionCls}">${r.action}</span></td>
+            <td>${r.priority}</td>
+            <td>${r.is_enabled ? '<span class="badge bg-success">启用</span>' : '<span class="badge bg-secondary">禁用</span>'}</td>
+        </tr>`;
+    }).join('');
+}
+loadRules();
+</script>
+{% endblock %}

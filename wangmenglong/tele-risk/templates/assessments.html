@@ -1,0 +1,154 @@
+{% extends "base.html" %}
+{% block title %}评估历史 - 电信风控系统{% endblock %}
+{% block content %}
+<h4 class="mb-4">评估历史</h4>
+
+<div class="card stat-card p-3">
+    <div class="d-flex flex-wrap gap-2 align-items-center mb-3">
+        <input id="search-msisdn" class="form-control form-control-sm" style="width:180px;" placeholder="搜索号卡" onkeydown="if(event.key==='Enter'){currentPage=1; loadList();}">
+        <label class="text-muted small mb-0">决策</label>
+        <select id="filter-decision" class="form-select form-select-sm" style="width:130px;">
+            <option value="">全部</option>
+            <option value="通过">通过</option>
+            <option value="标记">标记</option>
+            <option value="人工审核">人工审核</option>
+            <option value="拒绝">拒绝</option>
+            <option value="关停号码">关停号码</option>
+            <option value="推送公安">推送公安</option>
+        </select>
+        <label class="text-muted small mb-0">等级</label>
+        <select id="filter-level" class="form-select form-select-sm" style="width:100px;">
+            <option value="">全部</option>
+            <option value="低">低</option>
+            <option value="中">中</option>
+            <option value="高">高</option>
+            <option value="极高">极高</option>
+        </select>
+        <label class="text-muted small mb-0">事件</label>
+        <select id="filter-event" class="form-select form-select-sm" style="width:130px;">
+            <option value="">全部</option>
+            <option value="开户">开户</option>
+            <option value="通话">通话</option>
+            <option value="国际来电">国际来电</option>
+            <option value="短信发送">短信发送</option>
+            <option value="物联网激活">物联网激活</option>
+        </select>
+        <button onclick="currentPage=1; loadList();" class="btn btn-sm btn-primary">筛选</button>
+    </div>
+    <div id="loading" class="text-center text-muted py-3" style="display:none;">加载中...</div>
+    <div style="overflow-x:auto;">
+        <table class="table table-hover align-middle">
+            <thead>
+                <tr>
+                    <th>评估ID</th>
+                    <th>号卡</th>
+                    <th>事件类型</th>
+                    <th>最终评分</th>
+                    <th>风险等级</th>
+                    <th>决策</th>
+                    <th>ML分</th>
+                    <th>命中规则</th>
+                    <th>创建时间</th>
+                </tr>
+            </thead>
+            <tbody id="data-body"></tbody>
+        </table>
+    </div>
+    <div class="pagination-bottom">
+        <ul class="pagination mb-0" id="pagination"></ul>
+    </div>
+</div>
+
+<!-- 详情模态框 -->
+<div id="detail-modal" class="modal-bg">
+    <div class="modal-box">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h6 class="mb-0">评估详情</h6>
+            <button onclick="closeDetail()" class="btn-close" aria-label="关闭"></button>
+        </div>
+        <div id="detail-content"></div>
+    </div>
+</div>
+{% endblock %}
+
+{% block script %}
+<script>
+let currentPage = 1;
+const pageSize = 20;
+
+async function loadList() {
+    const msisdn = document.getElementById('search-msisdn').value.trim();
+    const decision = document.getElementById('filter-decision').value;
+    const level = document.getElementById('filter-level').value;
+    const eventType = document.getElementById('filter-event').value;
+
+    document.getElementById('loading').style.display = 'block';
+    const body = document.getElementById('data-body');
+    body.innerHTML = '';
+
+    const url = `/api/assessments?page=${currentPage}&page_size=${pageSize}${msisdn ? '&msisdn=' + encodeURIComponent(msisdn) : ''}`;
+    const data = await apiRequest(url);
+
+    let items = data.items || [];
+    if (decision) items = items.filter(i => i.decision === decision);
+    if (level) items = items.filter(i => i.risk_level === level);
+    if (eventType) items = items.filter(i => i.event_type === eventType);
+
+    if (items.length === 0) {
+        body.innerHTML = `<tr><td colspan="9" class="text-center text-muted py-5">暂无数据</td></tr>`;
+    } else {
+        body.innerHTML = items.map(item => `
+            <tr style="cursor:pointer;" onclick="showDetail('${item.assessment_id}')">
+                <td><code>${item.assessment_id}</code></td>
+                <td>${item.msisdn}</td>
+                <td>${item.event_type}</td>
+                <td><b>${item.final_score}</b></td>
+                <td>${item.risk_level ? `<span class="badge ${getRiskBadgeClass(item.risk_level)}">${item.risk_level}</span>` : '-'}</td>
+                <td><span class="badge ${getDecisionBadgeClass(item.decision)}">${item.decision}</span></td>
+                <td>${item.ml_score != null ? Number(item.ml_score).toFixed(3) : '-'}</td>
+                <td>${item.rule_count}</td>
+                <td>${item.create_time ? new Date(item.create_time).toLocaleString('zh-CN') : '-'}</td>
+            </tr>
+        `).join('');
+    }
+    document.getElementById('loading').style.display = 'none';
+    // 本地筛选后数量如果比 total 小, 仅显示当前页数量做分页 (简化处理)
+    renderPaginationBar('pagination', currentPage, Math.max(1, Math.ceil((data.total || 0) / pageSize)), data.total || 0, pageSize, 'loadList');
+}
+
+async function showDetail(id) {
+    const data = await apiRequest(`/api/assessments/${id}`);
+    const content = document.getElementById('detail-content');
+    content.innerHTML = `
+        <div class="row mb-3">
+            <div class="col-md-4"><div class="card stat-card p-3 text-center"><div class="text-muted small">最终评分</div><div class="stat-value text-primary">${data.final_score}</div></div></div>
+            <div class="col-md-4"><div class="card stat-card p-3 text-center"><div class="text-muted small">风险等级</div><div class="stat-value"><span class="badge ${getRiskBadgeClass(data.risk_level)}">${data.risk_level}</span></div></div></div>
+            <div class="col-md-4"><div class="card stat-card p-3 text-center"><div class="text-muted small">决策</div><div class="stat-value">${data.decision}</div></div></div>
+        </div>
+        <h6>基本信息</h6>
+        <pre>assessment_id: ${data.assessment_id}
+event_id: ${data.event_id}
+msisdn: ${data.msisdn}
+event_type: ${data.event_type}
+source_id: ${data.event_source_id}
+rule_count: ${data.rule_count}
+ml_score: ${data.ml_score != null ? Number(data.ml_score).toFixed(4) : 'N/A'}
+ml_decision: ${data.ml_decision || 'N/A'}
+create_time: ${data.create_time ? new Date(data.create_time).toLocaleString('zh-CN') : '-'}</pre>
+        <h6 class="mt-3">ML 评分</h6>
+        <div class="p-2 bg-light rounded">${renderMLScoreBlock(data.ml_score, data.ml_decision)}</div>
+        <h6 class="mt-3">命中规则 (${data.triggered_rules ? data.triggered_rules.length : 0})</h6>
+        <pre>${data.triggered_rules ? JSON.stringify(data.triggered_rules, null, 2) : '[]'}</pre>
+        <h6 class="mt-3">事件数据</h6>
+        <pre>${data.event_data || '无'}</pre>
+    `;
+    document.getElementById('detail-modal').classList.add('show');
+}
+
+function closeDetail() {
+    document.getElementById('detail-modal').classList.remove('show');
+}
+
+loadList();
+</script>
+{% endblock %}

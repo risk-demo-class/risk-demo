@@ -1,0 +1,183 @@
+{% extends "base.html" %}
+{% block title %}黑名单管理 - 电信风控系统{% endblock %}
+{% block content %}
+<h4 class="mb-4">黑名单管理</h4>
+
+<!-- 统计卡片 -->
+<div class="row mb-4" id="stat-cards"></div>
+
+<div class="card stat-card p-3">
+    <div class="d-flex flex-wrap gap-2 align-items-center mb-3">
+        <label class="text-muted small mb-0">类型</label>
+        <select id="filter-type" class="form-select form-select-sm" style="width:120px;">
+            <option value="">全部</option>
+            <option value="号卡">号卡</option>
+            <option value="客户">客户</option>
+            <option value="设备">设备</option>
+            <option value="渠道">渠道</option>
+        </select>
+        <button onclick="currentPage=1; loadList();" class="btn btn-sm btn-primary">筛选</button>
+        <button onclick="currentPage=1; loadStats(); loadList();" class="btn btn-sm btn-outline-secondary">刷新</button>
+        <div class="flex-grow-1"></div>
+        <button onclick="openAddModal()" class="btn btn-sm btn-danger">
+            <i class="bi bi-plus-circle"></i> 添加黑名单
+        </button>
+    </div>
+    <div id="loading" class="text-center text-muted py-3" style="display:none;">加载中...</div>
+    <div style="overflow-x:auto;">
+        <table class="table table-hover align-middle">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>类型</th>
+                    <th>值</th>
+                    <th>原因</th>
+                    <th>创建时间</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody id="data-body"></tbody>
+        </table>
+    </div>
+    <div class="pagination-bottom">
+        <ul class="pagination mb-0" id="pagination"></ul>
+    </div>
+</div>
+
+<!-- 添加模态框 -->
+<div id="add-modal" class="modal-bg">
+    <div class="modal-box" style="max-width:480px;">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h6 class="mb-0">添加黑名单</h6>
+            <button onclick="closeAddModal()" class="btn-close" aria-label="关闭"></button>
+        </div>
+        <div class="mb-3">
+            <label class="form-label">类型</label>
+            <select id="add-type" class="form-select">
+                <option value="号卡">号卡</option>
+                <option value="客户">客户</option>
+                <option value="设备">设备</option>
+                <option value="渠道">渠道</option>
+            </select>
+        </div>
+        <div class="mb-3">
+            <label class="form-label">值</label>
+            <input id="add-value" class="form-control" placeholder="号卡/客户ID/IMEI/渠道ID">
+        </div>
+        <div class="mb-3">
+            <label class="form-label">原因</label>
+            <textarea id="add-reason" class="form-control" rows="3" placeholder="加入原因"></textarea>
+        </div>
+        <div class="d-flex gap-2 justify-content-end">
+            <button onclick="closeAddModal()" class="btn btn-outline-secondary">取消</button>
+            <button onclick="submitAdd()" class="btn btn-primary">确认添加</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block script %}
+<script>
+let currentPage = 1;
+const pageSize = 50;
+
+const typeClsMap = {
+    '号卡': 'bg-danger',
+    '客户': 'bg-warning text-dark',
+    '设备': 'bg-info',
+    '渠道': 'bg-secondary',
+};
+
+async function loadStats() {
+    const data = await apiRequest('/api/blacklist?page=1&page_size=1000');
+    const counts = { '号卡': 0, '客户': 0, '设备': 0, '渠道': 0 };
+    for (const item of data.items || []) {
+        if (counts[item.blacklist_type] !== undefined) counts[item.blacklist_type]++;
+    }
+    const total = data.total || 0;
+    const statCards = [
+        {label: '号卡', value: counts['号卡'], color: 'text-danger'},
+        {label: '客户', value: counts['客户'], color: 'text-warning'},
+        {label: '设备', value: counts['设备'], color: 'text-info'},
+        {label: '渠道', value: counts['渠道'], color: 'text-secondary'},
+        {label: '总计', value: total, color: 'text-primary'},
+    ];
+    document.getElementById('stat-cards').innerHTML = statCards.map(c => `
+        <div class="col-md-2">
+            <div class="card stat-card p-3 text-center">
+                <div class="text-muted small">${c.label}</div>
+                <div class="stat-value ${c.color}">${c.value}</div>
+            </div>
+        </div>
+    `).join('');
+}
+
+async function loadList() {
+    const type = document.getElementById('filter-type').value;
+    document.getElementById('loading').style.display = 'block';
+    const body = document.getElementById('data-body');
+    body.innerHTML = '';
+    const data = await apiRequest(`/api/blacklist?page=${currentPage}&page_size=${pageSize}`);
+    let items = data.items || [];
+    if (type) items = items.filter(i => i.blacklist_type === type);
+
+    if (items.length === 0) {
+        body.innerHTML = `<tr><td colspan="6" class="text-center text-muted py-5">暂无数据</td></tr>`;
+    } else {
+        body.innerHTML = items.map(item => `
+            <tr>
+                <td>${item.blacklist_id}</td>
+                <td><span class="badge ${typeClsMap[item.blacklist_type] || 'bg-secondary'}">${item.blacklist_type}</span></td>
+                <td><code>${item.blacklist_value}</code></td>
+                <td>${item.reason || '-'}</td>
+                <td>${item.create_time ? new Date(item.create_time).toLocaleString('zh-CN') : '-'}</td>
+                <td>
+                    <button onclick="deleteItem(${item.blacklist_id})" class="btn btn-sm btn-outline-danger">删除</button>
+                </td>
+            </tr>`).join('');
+    }
+    document.getElementById('loading').style.display = 'none';
+    const totalPages = Math.max(1, Math.ceil((data.total || 0) / pageSize));
+    renderPaginationBar('pagination', currentPage, totalPages, data.total || 0, pageSize, 'loadList');
+}
+
+async function deleteItem(id) {
+    if (!confirm('确定删除该黑名单记录？')) return;
+    await apiRequest(`/api/blacklist/${id}`, { method: 'DELETE' });
+    loadStats();
+    loadList();
+}
+
+function openAddModal() {
+    document.getElementById('add-modal').classList.add('show');
+}
+function closeAddModal() {
+    document.getElementById('add-modal').classList.remove('show');
+    document.getElementById('add-value').value = '';
+    document.getElementById('add-reason').value = '';
+}
+
+async function submitAdd() {
+    const body = {
+        blacklist_type: document.getElementById('add-type').value,
+        blacklist_value: document.getElementById('add-value').value.trim(),
+        reason: document.getElementById('add-reason').value.trim() || null,
+    };
+    if (!body.blacklist_value) { alert('请输入值'); return; }
+    await apiRequest('/api/blacklist', {
+        method: 'POST', body: JSON.stringify(body),
+    });
+    closeAddModal();
+    loadStats();
+    loadList();
+}
+
+document.getElementById('filter-type').addEventListener('change', () => {
+    currentPage = 1;
+    loadList();
+});
+
+loadStats();
+loadList();
+</script>
+{% endblock %}
