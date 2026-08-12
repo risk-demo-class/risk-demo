@@ -1,13 +1,12 @@
 """
-电商风控系统 - XGBoost 训练脚本 (一次性, 跑完即可)
+银行信贷风控系统 - XGBoost 训练脚本 (PD 违约概率, 一次性, 跑完即可)
 数据源: MySQL risk_event + risk_feature + risk_assessment
 步骤:
-  1. 拉历史评估 (decision 不为空的, 排除掉 None)
-  2. 每个 event_id JOIN 出 25 个特征 (宽表: pivot risk_feature)
-  3. 标签二分类: 0=通过/标记, 1=人工审核/拒绝
-  4. 80/20 stratify 拆分 (验证集保持正负比)
-  5. 训练 + 早停 (验证集 logloss 连续 10 轮不降就停) + AUC + F1
-  6. 评估 + 保存到 app/engine/xgb_model.json + 输出特征重要性
+  1. 拉历史评估 (ml_score IS NULL, 训练数据无 ml 痕迹)
+  2. PD 标签: 关联贷款申请, 该客户存在逾期记录 → 1 (违约), 否则 → 0 (履约)
+  3. 每个 event_id JOIN 出 25 个特征 (宽表: pivot risk_feature)
+  4. 80/20 stratify 拆分 + 训练 + 早停 + AUC + F1
+  5. 保存到 app/engine/xgb_model.json + 输出特征重要性
 跑法: python -u scripts/train_xgb_model.py
 """
 
@@ -33,17 +32,21 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-# 数据查询 SQL (2 步: 1 拉评估, 2 拉特征宽表)
-# 【P4-L3 2026-08-08 第二轮】5000 改用配置 settings.XGB_TRAIN_DATA_LIMIT
-# 【P4-L4 2026-08-08 训练数据严格化】显式 WHERE ml_score IS NULL: 训练只取"无 ml 痕迹"数据
-#   原因: gen_train_dataset.py 造训练数据时强制 ml_score=NULL (避免"未训练模型"垃圾值),
-#         backfill_ml_score.py 训完回填 ml_score. 显式过滤保证训练数据 100% 干净.
+# 数据查询 SQL (2 步: 1 拉评估+PD 标签, 2 拉特征宽表)
+# PD 标签 (Q5 决策): 贷款申请对应客户存在逾期记录 → 1 (逾期违约), 否则 0 (正常履约)
 SQL_FETCH_ASSESSMENTS = """
-SELECT assessment_id, event_id, decision
-FROM risk_assessment
-WHERE decision IN ('通过', '标记', '人工审核', '拒绝')
-  AND ml_score IS NULL
-ORDER BY create_time DESC
+SELECT a.assessment_id, a.event_id,
+       CASE WHEN EXISTS (
+           SELECT 1 FROM overdue_record ov
+           JOIN loan_installment ins ON ov.installment_id = ins.installment_id
+           WHERE ins.loan_id = la.loan_id
+       ) THEN 1 ELSE 0 END AS pd_label
+FROM risk_assessment a
+JOIN risk_event e ON a.event_id = e.event_id
+JOIN loan_application la ON e.event_source_id = la.loan_id
+WHERE a.decision IN ('通过', '标记', '人工审核', '拒绝')
+  AND a.ml_score IS NULL
+ORDER BY a.create_time DESC
 LIMIT %s
 """
 
@@ -53,14 +56,16 @@ FROM risk_feature
 WHERE event_id IN ({event_ids})
 """
 
+# PD 标签映射 (Q5 决策): 0=正常履约, 1=逾期违约
+PD_LABEL = {"normal": 0, "overdue": 1}
 
-def _decision_to_label(decision: str) -> int:
+
+def pd_label_for_customer(has_overdue: bool) -> int:
+    """PD 标签: 客户有逾期记录 → 1 (违约), 否则 → 0 (履约).
+
+    与 Q5 对齐: XGBoost 输出 PD 违约概率, 正例来自逾期客户.
     """
-    业务 4 档 → 机器学习 2 分类
-        通过/标记     → 0 (低风险, 模型放行)
-        人工审核/拒绝 → 1 (高风险, 模型拦截)
-    """
-    return 1 if decision in ("人工审核", "拒绝") else 0
+    return PD_LABEL["overdue"] if has_overdue else PD_LABEL["normal"]
 
 
 def _load_data_from_mysql() -> tuple[np.ndarray, np.ndarray]:
@@ -122,10 +127,10 @@ def _load_data_from_mysql() -> tuple[np.ndarray, np.ndarray]:
                 )
             if not rows:
                 raise RuntimeError("没有评估数据, 先跑几次 /api/risk/check")
-            # event_id → label 映射
+            # event_id → PD 标签映射 (SQL 直接返回 pd_label)
             event_to_label: dict[str, int] = {}
-            for _aid, eid, dec in rows:
-                event_to_label[eid] = _decision_to_label(dec)
+            for _aid, eid, pd_label in rows:
+                event_to_label[eid] = int(pd_label)
             # 1.2 拉这些 event 的 25 维特征
             # 拼 IN (...) 列表 (注意: 必须防注入, 这里都是内部 ULID, 放心拼)
             ids = list(event_to_label.keys())
