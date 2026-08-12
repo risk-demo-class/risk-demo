@@ -1,32 +1,33 @@
 """
-电商风控系统 - 训练数据集生成 (P4-L4 2026-08-08)
+物流风控系统 - 训练数据集生成 (物流版)
 
 【目的】
-  造一份**严格标注**的 XGBoost 训练数据集 (1500 条), 满足:
-    1. 数量: 1500 条 (30 RISK 用户 × 25 高风险 + 30 普通用户 × 25 正常)
-    2. 标签: 真实由 30 规则跑出 (decision 字段), 不是随机
-    3. 特征: 25 维真实从 DB 查 (feature.py), 不是捏造
+  造一份**严格标注**的 XGBoost 训练数据集, 满足:
+    1. 数量: 默认 (24 RISK × 25) + (8 普通 × 25) ≈ 800 条
+    2. 标签: 真实由 8 条物流规则跑出 (decision 字段), 不是随机
+    3. 特征: 25 维物流特征真实从 DB 查 (feature.py compute_all_features), 不是捏造
     4. ml_score 字段: 强制 NULL (写库后 UPDATE), 不存"未训练的垃圾模型"推理值
        → 训完基础模型后, 用 scripts/backfill_ml_score.py 回填合理值
 
-【为什么需要这个脚本】
-  之前 gen_risk_data.py 随机挑订单 → 跑规则 → 写到 risk_assessment:
-    - 数据随机, 标签跟用户身份弱相关
-    - 正例比例 < 3% (RISK 用户少), 模型假收敛
-    - ml_score 字段是 XGBoost 推理结果, 但当时模型未训 → 0.00141 这种垃圾值
-  现在严格控制:
-    - 30 RISK 用户 → 25 条高风险事件 (售后申请) → 99% 拒绝/审核
-    - 30 普通用户 → 25 条正常事件 (普通下单) → 99% 通过
-    - 正例比例 ≈ 45-50%
-    - ml_score 字段 = NULL (干净, 训练 SQL 显式 WHERE ml_score IS NULL)
+【跟 gen_risk_data.py 的区别】
+  - gen_risk_data.py: 全局随机挑包裹/申报/COD → 覆盖 4 类事件 + 固定比例正负样本
+  - gen_train_dataset.py: **按用户**造事件. RISK 用户先"探测"候选事件 (哪些实际触发
+    物流规则 → 强正例池), 采样时 60% 从强正例池 + 40% 从全候选 (保留 context 对照包裹
+    当负例), 让正例率稳定在 40%~60%; 普通用户 (U0001-U0008 种子) 只走正常包裹 → 通过.
+
+【RISK 用户事件源】对每个 RISK 用户, 从"该用户"可用事件里探测:
+  - 每个包裹  → parcel_pickup    (R001 未实名 / R012 同地址高频 / R018 改派 / R025 大额低报 / R030 黑地址)
+  - 国际件    → cross_border_ship (R005 跨境违禁品)
+  - 危险品申报 → dangerous_declare (R002 危险品瞒报)
+  - COD 流水  → cod_settlement   (R008 COD 卷款)
 
 【用法】
-  python scripts/gen_train_dataset.py                  # 默认 30 RISK + 30 普通, 每用户 25 条
-  python scripts/gen_train_dataset.py --n-risk 50      # 50 RISK 用户
-  python scripts/gen_train_dataset.py --n-normal 50   # 50 普通用户
-  python scripts/gen_train_dataset.py --per-user 50   # 每个用户 50 条
-  python scripts/gen_train_dataset.py --reset         # 先清空 risk_event/feature/assessment 再造
-  python scripts/gen_train_dataset.py --dry-run       # 只统计不写入 (验证数据够不够)
+  python scripts/gen_train_dataset.py                  # 默认 30 RISK + 30 普通 (不够自动截断)
+  python scripts/gen_train_dataset.py --n-risk 24      # 用全部 24 个 RISK 用户
+  python scripts/gen_train_dataset.py --n-normal 8     # 只用 8 个种子普通用户
+  python scripts/gen_train_dataset.py --per-user 20    # 每个用户 20 条
+  python scripts/gen_train_dataset.py --reset          # 先清空 risk_event/feature/assessment/case 再造
+  python scripts/gen_train_dataset.py --dry-run        # 只统计不写入 (验证数据够不够)
 """
 import argparse
 import asyncio
@@ -49,8 +50,11 @@ from app.database import AsyncSessionLocal
 from app.schemas import RiskCheckRequest
 from app.service.event import process_event
 
-# 用户前缀 (跟 gen_risky_users.py 一致)
+# RISK 高风险用户前缀 (跟 gen_risky_users.py 一致)
 RISKY_USER_PREFIX = "RISK"
+
+# RISK 用户采样时, 从"强正例池"采样的比例 (其余从全候选, 保留对照包裹当负例)
+STRONG_POOL_RATIO = 0.6
 
 
 # ============================================================
@@ -58,59 +62,87 @@ RISKY_USER_PREFIX = "RISK"
 # ============================================================
 
 async def _pick_risk_users(db, n: int) -> list[str]:
-    """从 RISK00X 高风险用户里选 N 个 (按 user_id 排序稳定)."""
+    """从 RISK 高风险用户里选 N 个 (按 user_id 排序稳定)."""
     r = await db.execute(text("""
         SELECT user_id FROM user_info
         WHERE user_id LIKE :prefix
         ORDER BY user_id
         LIMIT :n
     """), {"prefix": f"{RISKY_USER_PREFIX}%", "n": n})
-    users = [row.user_id for row in r.fetchall()]
-    return users
+    return [row.user_id for row in r.fetchall()]
 
 
 async def _pick_normal_users(db, n: int) -> list[str]:
-    """从普通用户里选 N 个 (按订单数 DESC 选最活跃的, 触发 30 规则的概率小)."""
+    """从普通用户里选 N 个 (非 RISK 前缀, 物流版种子用户是 U0001-U0008)."""
     r = await db.execute(text("""
-        SELECT user_id
-        FROM user_info
+        SELECT user_id FROM user_info
         WHERE user_id NOT LIKE :prefix
-        AND user_id REGEXP '^[0-9]+$'
         ORDER BY user_id
         LIMIT :n
     """), {"prefix": f"{RISKY_USER_PREFIX}%", "n": n})
-    users = [row.user_id for row in r.fetchall()]
-    return users
+    return [row.user_id for row in r.fetchall()]
 
 
 # ============================================================
-# 造事件
+# 挑事件 (按用户)
 # ============================================================
 
-async def _pick_postsale_for_user(db, user_id: str) -> tuple | None:
-    """挑该用户的一条售后记录 (postsale_id, user_id)."""
+async def _risk_event_options(db, user_id: str) -> list[tuple]:
+    """返回该用户的所有可用事件选项: [(event_type, source_id), ...].
+
+    把所有可评估的事件源都收集起来:
+      - 每个包裹   → parcel_pickup     (揽收)
+      - 国际件     → cross_border_ship (跨境发运, 专触 R005)
+      - 危险品申报  → dangerous_declare (专触 R002)
+      - COD 流水   → cod_settlement    (专触 R008)
+    """
+    options: list[tuple] = []
+
+    # 包裹 (普通揽收事件源; 含风险包裹 / context 对照包裹 / R012 共享收件包裹)
     r = await db.execute(text("""
-        SELECT p.postsale_id, oi.user_id
-        FROM postsale p
-        JOIN order_detail od ON p.order_detail_id = od.order_detail_id
-        JOIN order_info oi ON od.order_id = oi.order_id
-        WHERE oi.user_id = :uid
-        ORDER BY RAND() LIMIT 1
+        SELECT parcel_id FROM parcel WHERE user_id = :uid
     """), {"uid": user_id})
-    row = r.first()
-    return (row.postsale_id, row.user_id) if row else None
+    for row in r.fetchall():
+        options.append(("parcel_pickup", row.parcel_id))
 
-
-async def _pick_order_for_user(db, user_id: str) -> tuple | None:
-    """挑该用户的一条订单 (order_id, user_id, receive_id)."""
+    # 国际件 (跨境发运事件源)
     r = await db.execute(text("""
-        SELECT order_id, user_id, receive_id
-        FROM order_info
+        SELECT parcel_id FROM parcel
+        WHERE user_id = :uid AND is_international = 1
+    """), {"uid": user_id})
+    for row in r.fetchall():
+        options.append(("cross_border_ship", row.parcel_id))
+
+    # 危险品申报 (dangerous_declare 事件源)
+    r = await db.execute(text("""
+        SELECT d.decl_id FROM dangerous_declaration d
+        JOIN parcel p ON d.parcel_id = p.parcel_id
+        WHERE p.user_id = :uid
+    """), {"uid": user_id})
+    for row in r.fetchall():
+        options.append(("dangerous_declare", row.decl_id))
+
+    # COD 流水 (cod_settlement 事件源)
+    r = await db.execute(text("""
+        SELECT c.cod_id FROM cod_transaction c
+        JOIN parcel p ON c.parcel_id = p.parcel_id
+        WHERE p.user_id = :uid
+    """), {"uid": user_id})
+    for row in r.fetchall():
+        options.append(("cod_settlement", row.cod_id))
+
+    return options
+
+
+async def _pick_normal_event_for_user(db, user_id: str) -> tuple | None:
+    """为普通用户随机挑 1 个正常包裹 (parcel_pickup). 返回 (event_type, source_id) 或 None."""
+    r = await db.execute(text("""
+        SELECT parcel_id FROM parcel
         WHERE user_id = :uid
         ORDER BY RAND() LIMIT 1
     """), {"uid": user_id})
     row = r.first()
-    return (row.order_id, row.user_id, row.receive_id) if row else None
+    return ("parcel_pickup", row.parcel_id) if row else None
 
 
 # ============================================================
@@ -124,22 +156,22 @@ async def gen_train_dataset(
     reset: bool = False,
     dry_run: bool = False,
 ):
-    """造训练数据集: n_risk × per_user 高风险 + n_normal × per_user 正常."""
+    """造训练数据集: n_risk × per_user 高风险 + n_normal × per_user 正常 (物流版)."""
     if dry_run:
         print("=" * 60)
         print("[DRY-RUN] 训练数据集预演 (不写库)")
     else:
         print("=" * 60)
-        print("训练数据集生成 (1500 条强标注, ml_score=NULL)")
+        print("训练数据集生成 (物流版, 强标注, ml_score=NULL)")
 
     total_target = (n_risk + n_normal) * per_user
     print(f"目标: {n_risk} RISK × {per_user} + {n_normal} 普通 × {per_user} = {total_target} 条")
     print("=" * 60)
 
     async with AsyncSessionLocal() as db:
-        # 0. (可选) 清空训练用表
+        # 0. (可选) 清空训练用表 (注意 FK 顺序: case → assessment → feature → event)
         if reset and not dry_run:
-            print("\n[0] 清空训练用表 (risk_event / risk_feature / risk_assessment / risk_case)...")
+            print("\n[0] 清空训练用表 (risk_event / risk_feature / risk_assessment / risk_case / risk_user_profile)...")
             await db.execute(text("DELETE FROM risk_case"))
             await db.execute(text("DELETE FROM risk_assessment"))
             await db.execute(text("DELETE FROM risk_feature"))
@@ -168,7 +200,14 @@ async def gen_train_dataset(
         print(f"  普通: {len(normal_users)} 个 ({normal_users[0]} ~ {normal_users[-1]})")
 
         if dry_run:
-            print(f"\n[DRY-RUN] 预演完成. 真跑去掉 --dry-run")
+            # 预演: 统计每个 RISK 用户可用事件数, 验证事件够不够
+            print("\n[DRY-RUN] 检查 RISK 用户可用事件...")
+            total_opts = 0
+            for uid in risk_users[:5]:
+                opts = await _risk_event_options(db, uid)
+                total_opts += len(opts)
+                print(f"  {uid}: {len(opts)} 个可用事件")
+            print(f"[DRY-RUN] 预演完成 (前 5 个用户共 {total_opts} 个事件). 真跑去掉 --dry-run")
             return
 
         # 2. 造事件
@@ -176,68 +215,71 @@ async def gen_train_dataset(
         pos_count = 0
         neg_count = 0
         failed = 0
-        plan = []
-        # RISK 用户 → 售后申请 (99% 触发 R004 高退款率等)
-        for uid in risk_users:
-            for _ in range(per_user):
-                plan.append((uid, "售后申请"))
-        # 普通用户 → 普通下单 (99% 不触规则)
-        for uid in normal_users:
-            for _ in range(per_user):
-                plan.append((uid, "下单"))
-
-        random.shuffle(plan)  # 乱序, 避免时间戳聚集
-        print(f"\n[2] 造 {len(plan)} 条事件 (乱序)...")
         risk_pos = 0
         normal_pos = 0
-        for idx, (uid, event_type) in enumerate(plan, 1):
-            try:
-                if event_type == "售后申请":
-                    picked = await _pick_postsale_for_user(db, uid)
-                    if not picked:
-                        # 售后不够, fallback 到下单
-                        picked = await _pick_order_for_user(db, uid)
-                        if not picked:
-                            failed += 1
-                            continue
-                        order_id, user_id, receive_id = picked
-                        request = RiskCheckRequest(
-                            event_type="下单", source_id=order_id, user_id=user_id,
-                            order_id=order_id, receive_id=receive_id,
-                        )
-                    else:
-                        ps_id, user_id = picked
-                        request = RiskCheckRequest(
-                            event_type="售后申请", source_id=ps_id, user_id=user_id,
-                        )
-                else:  # 下单
-                    picked = await _pick_order_for_user(db, uid)
-                    if not picked:
-                        failed += 1
-                        continue
-                    order_id, user_id, receive_id = picked
-                    request = RiskCheckRequest(
-                        event_type="下单", source_id=order_id, user_id=user_id,
-                        order_id=order_id, receive_id=receive_id,
-                    )
 
-                result = await process_event(db, request)
-                success += 1
-                if result.decision in ("拒绝", "人工审核"):
-                    pos_count += 1
-                    if uid.startswith(RISKY_USER_PREFIX):
-                        risk_pos += 1
-                    else:
-                        normal_pos += 1
+        async def _run_request(request, is_risk: bool):
+            """跑一次事件并统计 (返回 decision)."""
+            nonlocal success, pos_count, neg_count, risk_pos, normal_pos
+            result = await process_event(db, request)
+            success += 1
+            if result.decision in ("拒绝", "人工审核"):
+                pos_count += 1
+                if is_risk:
+                    risk_pos += 1
                 else:
-                    neg_count += 1
+                    normal_pos += 1
+            else:
+                neg_count += 1
+            return result.decision
 
-                if idx % 100 == 0 or idx == len(plan):
-                    print(f"  进度 {idx}/{len(plan)}: 成功 {success}, 正例 {pos_count} ({100*pos_count/max(success,1):.1f}%)")
-            except Exception as e:
-                failed += 1
-                if failed <= 5:
-                    print(f"  [失败 #{failed}] 用户={uid}, 事件={event_type}: {e}")
+        # 2.1 RISK 用户: 探测候选事件 → 强正例池 → 采样补足到 per_user
+        print(f"\n[2] 造 {n_risk * per_user + n_normal * per_user} 条事件...")
+        print(f"    RISK 用户策略: 探测候选事件找'实际触发规则'的事件源 (强正例池), "
+              f"采样 {STRONG_POOL_RATIO:.0%} 强正例 + {(1-STRONG_POOL_RATIO):.0%} 全候选")
+        for uid in risk_users:
+            options = await _risk_event_options(db, uid)
+            if not options:
+                failed += per_user
+                print(f"  [跳过] {uid} 无任何可用事件")
+                continue
+
+            # 探测: 把该用户所有候选事件跑一遍, 收集实际触发规则的 (强正例池)
+            strong = []
+            for event_type, source_id in options:
+                request = RiskCheckRequest(event_type=event_type, source_id=source_id, user_id=uid)
+                decision = await _run_request(request, is_risk=True)
+                if decision in ("拒绝", "人工审核"):
+                    strong.append((event_type, source_id))
+
+            # 一个都没触发? 兜底: 强正例池 = 全部候选 (至少保证有样本)
+            if not strong:
+                strong = list(options)
+
+            # 补足到 per_user (探测已产出 len(options) 条)
+            produced = len(options)
+            while produced < per_user:
+                # 60% 从强正例池, 40% 从全候选 (保留对照包裹当负例)
+                if random.random() < STRONG_POOL_RATIO:
+                    event_type, source_id = random.choice(strong)
+                else:
+                    event_type, source_id = random.choice(options)
+                request = RiskCheckRequest(event_type=event_type, source_id=source_id, user_id=uid)
+                await _run_request(request, is_risk=True)
+                produced += 1
+
+        # 2.2 普通用户: 只走正常包裹 (通过 = 负例)
+        for uid in normal_users:
+            produced = 0
+            while produced < per_user:
+                picked = await _pick_normal_event_for_user(db, uid)
+                if not picked:
+                    failed += 1
+                    break
+                event_type, source_id = picked
+                request = RiskCheckRequest(event_type=event_type, source_id=source_id, user_id=uid)
+                await _run_request(request, is_risk=False)
+                produced += 1
 
         # 3. 强制 ml_score = NULL (训练数据无 ml 痕迹)
         print(f"\n[3] 强制 ml_score = NULL (训练数据无 ml 痕迹)...")
@@ -277,6 +319,16 @@ async def gen_train_dataset(
 async def _runner():
     """包装函数: 业务跑完后显式 dispose engine, 避免 Event loop is closed 警告"""
     from app.database import async_engine
+
+    # 【关键】训练集标签必须反映"纯规则决策", 不能被旧的/未训练的 ML 模型污染.
+    # 原因: ML_WEIGHT_RULE=0.5 双轨融合, 旧电商模型 predict 兜底 score=0 时,
+    #       规则分被稀释一半 (R001 70 分 → 35 → '标记'), 决策降级, 训练标签失真.
+    #       禁用 ML 后走纯规则: R001(70)→人工审核, R025(80)→拒绝, R012(65)→人工审核.
+    #       等训出物流模型 (train_demo_model.py) 后, 线上决策再启用 ML 融合.
+    from app.engine import ml_model as _ml
+    _ml._LOADED = False
+    _ml._MODEL = None
+
     try:
         await gen_train_dataset(
             n_risk=args.n_risk,
@@ -291,11 +343,11 @@ async def _runner():
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        description="造训练数据集 (1500 条强标注, ml_score=NULL, 训练 SQL 显式 WHERE ml_score IS NULL)"
+        description="造训练数据集 (物流版: RISK 用户触物流规则=正例, 普通用户正常包裹=负例, ml_score=NULL)"
     )
-    parser.add_argument("--n-risk", type=int, default=30, help="RISK 高风险用户数 (默认 30)")
-    parser.add_argument("--n-normal", type=int, default=30, help="普通用户数 (默认 30)")
-    parser.add_argument("--per-user", type=int, default=25, help="每个用户造几条 (默认 25, 总 1500)")
+    parser.add_argument("--n-risk", type=int, default=30, help="RISK 高风险用户数 (默认 30, 不够自动截断)")
+    parser.add_argument("--n-normal", type=int, default=30, help="普通用户数 (默认 30, 种子用户 U0001-U0008, 不够自动截断)")
+    parser.add_argument("--per-user", type=int, default=25, help="每个用户造几条 (默认 25)")
     parser.add_argument("--reset", action="store_true", help="先清空训练用表 (risk_event/feature/assessment/case)")
     parser.add_argument("--dry-run", action="store_true", help="只统计不写入")
     args = parser.parse_args()

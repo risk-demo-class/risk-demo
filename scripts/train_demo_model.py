@@ -1,22 +1,21 @@
 """
-电商风控系统 - 教学场景 XGBoost 演示模型训练 (P4-L4 2026-08-08)
+物流风控系统 - 教学场景 XGBoost 演示模型训练 (物流版)
 
 【目的】
-  不依赖 DB, 纯 numpy 合成 2000 样本, 训练一个针对 30 规则 + 25 特征的合理 XGBoost 模型.
+  不依赖 DB, 纯 numpy 合成 2000 样本, 训练一个针对 8 条物流规则 + 25 维物流特征的合理 XGBoost 模型.
   训完保存到 app/engine/xgb_model.json, run_app.py 启动时直接加载.
 
 【为什么需要这个脚本】
-  用户的真实 DB 数据是教学造数据 (gen_risk_data_with_dates.py), 正例比例 < 3%, 训出 val_auc ≈ 0.5.
-  这个脚本合成"已知能触发 30 规则"的样本 (高退款率/高投诉/大额/多地址/夜间下单 等),
-  训出针对业务场景的合理模型 (val_auc > 0.85).
+  用户的真实 DB 数据是教学造数据 (gen_risk_data_with_dates.py), 正例比例可能偏低,
+  训出 val_auc ≈ 0.5. 这个脚本合成"已知能触发物流规则"的样本, 训出针对业务场景的合理模型.
 
-【6 种高风险模式】
-  1. 高退款率 (refund_rate > 0.3, refund_count > 5)
-  2. 高投诉 (complaint_count > 3)
-  3. 大额订单 (max_order_amount > 15000)
-  4. 多地址 (addr_province_count > 3)
-  5. 夜间高频 (order_is_night=1 + orders_30d 高)
-  6. 混合高风险 (上面多种特征都偏高)
+【6 种物流高风险模式 (对应 8 条物流规则)】
+  1. 未实名寄件   (R001: user_real_name_verified=0)
+  2. 危险品瞒报   (R002: 危险品申报 + 每公斤价值 < 50)
+  3. 跨境违禁品   (R005: 国际件 + 危险品申报, 一票否决)
+  4. COD 卷款     (R008: COD 逾期记录 + 大额代收 ≥1000, 一票否决)
+  5. 大额低报     (R025: 申报 ≥3000 但每公斤价值 < 100)
+  6. 改派异常/黑地址 (R018: 高频换收件人 + 高价值; R030: 地址命中黑名单, 一票否决)
 
 【用法】
   python scripts/train_demo_model.py                    # 默认 2000 样本, 训 200 轮
@@ -43,247 +42,218 @@ import xgboost as xgb
 from sklearn.model_selection import train_test_split
 
 from app.config import settings
-from app.engine.ml_model import FEATURE_COLUMNS, _features_to_array
+from app.engine.ml_model import FEATURE_COLUMNS
 
 
 # ============================================================
-# 6 种高风险模式 + 1 种正常用户模式
-# 跟 feature.py 25 维特征一一对应, 跟 30 条规则的触发条件对得上
+# 6 种物流高风险模式 + 1 种正常模式
+# 跟 feature.py 25 维物流特征一一对应, 跟 8 条物流规则的触发条件对得上
 # ============================================================
 
-# 25 维特征顺序 (跟 FEATURE_COLUMNS 一致)
 FEATURE_NAMES = FEATURE_COLUMNS
 N_FEATURES = len(FEATURE_NAMES)
 assert N_FEATURES == 25, f"必须是 25 维特征, 实际 {N_FEATURES}"
 
-
-def _gen_high_refund_rate(rng: random.Random) -> np.ndarray:
-    """模式 1: 高退款率 (触发 R004 '退款率 > 30%' / R006 '退款次数 > 5')"""
-    return np.array([
-        rng.uniform(5, 30),       # user_total_orders (有退款历史的用户通常订单多)
-        rng.uniform(1, 8),        # user_orders_30d
-        rng.uniform(0, 3),        # user_orders_7d
-        rng.uniform(20000, 100000),  # user_total_amount
-        rng.uniform(500, 3000),   # user_avg_order_amount
-        rng.uniform(2000, 10000), # user_max_order_amount
-        rng.uniform(5, 20),       # user_refund_count  ← 高
-        rng.uniform(8, 25),       # user_postsale_count
-        rng.uniform(0.3, 0.8),    # user_refund_rate   ← 高
-        rng.uniform(0.4, 0.9),    # user_postsale_rate
-        rng.uniform(5000, 50000), # user_refund_amount
-        rng.uniform(0, 5),        # user_cancel_count
-        rng.uniform(0, 2),        # user_complaint_count
-        rng.uniform(2, 5),        # user_address_count
-        rng.uniform(200, 5000),   # order_total_amount
-        rng.uniform(1, 5),        # order_item_count
-        rng.uniform(1, 10),       # order_sku_count
-        rng.uniform(0, 200),      # order_discount_amount
-        rng.uniform(0, 0.1),      # order_discount_rate
-        rng.uniform(60, 3600),    # order_pay_interval_sec
-        0.0 if rng.random() < 0.7 else 1.0,  # order_is_night
-        rng.uniform(1, 4),        # order_category_count
-        rng.uniform(2, 5),        # addr_total_count
-        rng.uniform(1, 3),        # addr_province_count
-        0.0 if rng.random() < 0.5 else 1.0,  # addr_is_new
-    ], dtype=np.float32)
+# 省份编码 (跟 init_business_data.sql 的 region.province_code 对齐, 北京=1...新疆=31)
+def _sender_receiver_province(rng: random.Random, cross: bool = False) -> tuple:
+    """返回 (sender_province_code, receiver_province_code); cross=True 时强制跨省."""
+    s = rng.randint(1, 31)
+    if cross:
+        r = rng.choice([x for x in range(1, 32) if x != s])
+    else:
+        r = rng.choice([s] + [x for x in range(1, 32) if x != s])
+    return s, r
 
 
-def _gen_high_complaint(rng: random.Random) -> np.ndarray:
-    """模式 2: 高投诉 (触发 R013 '投诉次数 > 3' / R014 '投诉率高')"""
-    return np.array([
-        rng.uniform(10, 40),
-        rng.uniform(2, 10),
-        rng.uniform(1, 4),
-        rng.uniform(30000, 150000),
-        rng.uniform(800, 5000),
-        rng.uniform(3000, 15000),
-        rng.uniform(1, 5),
-        rng.uniform(3, 10),
-        rng.uniform(0.05, 0.2),
-        rng.uniform(0.1, 0.3),
-        rng.uniform(500, 5000),
-        rng.uniform(0, 3),
-        rng.uniform(3, 15),       # user_complaint_count  ← 高
-        rng.uniform(2, 6),
-        rng.uniform(300, 8000),
-        rng.uniform(1, 6),
-        rng.uniform(1, 12),
-        rng.uniform(0, 300),
-        rng.uniform(0, 0.1),
-        rng.uniform(120, 7200),
-        0.0 if rng.random() < 0.6 else 1.0,
-        rng.uniform(1, 5),
-        rng.uniform(2, 6),
-        rng.uniform(1, 3),
-        0.0 if rng.random() < 0.6 else 1.0,
-    ], dtype=np.float32)
+def _base_user_fields(rng: random.Random, *, account_age=(30, 800), verified=1.0,
+                     enterprise=0.0, parcel_count=(1, 30), parcel_30d=(0, 8),
+                     parcel_7d=(0, 4), avg_declared=(50, 1500), receivers=(1, 2),
+                     cod_overdue=0.0, black_hit=0.0) -> list:
+    """用户维度 10 个特征 (共用模板, 各模式覆盖关键字段)."""
+    return [
+        rng.uniform(*account_age),       # user_account_age_days
+        verified,                        # user_real_name_verified
+        enterprise,                      # user_is_enterprise
+        rng.randint(*parcel_count),      # user_total_parcel_count
+        rng.randint(*parcel_30d),        # user_total_parcel_count_30d
+        rng.randint(*parcel_7d),         # user_total_parcel_count_7d
+        rng.uniform(*avg_declared),      # user_avg_declared_value
+        rng.randint(*receivers),         # user_distinct_receiver_count
+        cod_overdue,                     # user_cod_overdue_count
+        black_hit,                       # user_blacklist_hit_count
+    ]
 
 
-def _gen_high_amount(rng: random.Random) -> np.ndarray:
-    """模式 3: 大额订单 (触发 R007 '单笔金额 > 10000' / R008 '高金额用户')"""
-    return np.array([
-        rng.uniform(1, 10),
-        rng.uniform(0, 3),
-        rng.uniform(0, 1),
-        rng.uniform(50000, 200000),
-        rng.uniform(2000, 10000),
-        rng.uniform(15000, 50000),  # user_max_order_amount  ← 高
-        rng.uniform(0, 2),
-        rng.uniform(0, 3),
-        rng.uniform(0, 0.1),
-        rng.uniform(0, 0.1),
-        rng.uniform(0, 2000),
-        rng.uniform(0, 2),
-        rng.uniform(0, 1),
-        rng.uniform(1, 3),
-        rng.uniform(10000, 50000),  # order_total_amount  ← 高
-        rng.uniform(1, 4),
-        rng.uniform(1, 8),
-        rng.uniform(0, 500),
-        rng.uniform(0, 0.05),
-        rng.uniform(30, 1800),
-        0.0 if rng.random() < 0.8 else 1.0,
-        rng.uniform(1, 3),
-        rng.uniform(1, 3),
-        rng.uniform(1, 2),
-        0.0 if rng.random() < 0.7 else 1.0,
-    ], dtype=np.float32)
+def _base_order_fields(rng: random.Random, *, weight=(0.5, 10), declared=(20, 1500),
+                      per_kg=(30, 500), pieces=(1, 3), intl=0.0, danger=0.0,
+                      has_cod=0.0, cod_amount=0.0) -> list:
+    """包裹维度 8 个特征 (共用模板, 各模式覆盖关键字段)."""
+    return [
+        rng.uniform(*weight),            # order_weight_kg
+        rng.uniform(*declared),          # order_declared_value
+        rng.uniform(*per_kg),            # order_value_per_kg
+        rng.randint(*pieces),            # order_piece_count
+        intl,                            # order_is_international
+        danger,                          # order_is_dangerous_declared
+        has_cod,                         # order_has_cod
+        cod_amount,                      # order_cod_amount
+    ]
 
 
-def _gen_multi_address(rng: random.Random) -> np.ndarray:
-    """模式 4: 多地址 (触发 R011 '多省份地址 > 3')"""
-    return np.array([
-        rng.uniform(5, 20),
-        rng.uniform(1, 6),
-        rng.uniform(0, 3),
-        rng.uniform(15000, 60000),
-        rng.uniform(500, 3000),
-        rng.uniform(2000, 8000),
-        rng.uniform(0, 3),
-        rng.uniform(1, 5),
-        rng.uniform(0, 0.15),
-        rng.uniform(0.05, 0.2),
-        rng.uniform(0, 3000),
-        rng.uniform(0, 3),
-        rng.uniform(0, 2),
-        rng.uniform(5, 10),       # user_address_count  ← 高
-        rng.uniform(300, 5000),
-        rng.uniform(1, 4),
-        rng.uniform(1, 8),
-        rng.uniform(0, 200),
-        rng.uniform(0, 0.1),
-        rng.uniform(60, 3600),
-        0.0 if rng.random() < 0.5 else 1.0,
-        rng.uniform(2, 5),
-        rng.uniform(5, 10),       # addr_total_count  ← 高
-        rng.uniform(3, 7),        # addr_province_count  ← 高
-        0.0 if rng.random() < 0.4 else 1.0,  # addr_is_new
-    ], dtype=np.float32)
+def _base_addr_fields(rng: random.Random, *, cross=False, same_addr24h=1.0,
+                      black_hit=0.0, proxy=0.0, sender_black=0.0) -> list:
+    """地址维度 7 个特征 (共用模板, 各模式覆盖关键字段)."""
+    s, r = _sender_receiver_province(rng, cross=cross)
+    return [
+        s,                               # addr_sender_province
+        r,                               # addr_receiver_province
+        1.0 if s != r else 0.0,          # addr_is_cross_province
+        same_addr24h,                    # addr_same_address_sender_count_24h
+        black_hit,                       # addr_address_blacklist_hit
+        proxy,                           # addr_is_proxy_received
+        sender_black,                    # addr_sender_is_blacklisted
+    ]
 
 
-def _gen_night_high_freq(rng: random.Random) -> np.ndarray:
-    """模式 5: 夜间高频 (触发 R012 '0-6点下单' / '近期订单激增')"""
-    return np.array([
-        rng.uniform(10, 40),
-        rng.uniform(5, 15),       # user_orders_30d  ← 高
-        rng.uniform(2, 6),        # user_orders_7d
-        rng.uniform(20000, 80000),
-        rng.uniform(300, 2000),
-        rng.uniform(1500, 6000),
-        rng.uniform(0, 3),
-        rng.uniform(0, 4),
-        rng.uniform(0, 0.1),
-        rng.uniform(0, 0.15),
-        rng.uniform(0, 2000),
-        rng.uniform(0, 3),
-        rng.uniform(0, 1),
-        rng.uniform(1, 3),
-        rng.uniform(200, 3000),
-        rng.uniform(1, 4),
-        rng.uniform(1, 6),
-        rng.uniform(0, 150),
-        rng.uniform(0, 0.1),
-        rng.uniform(30, 1200),    # order_pay_interval_sec (快)
-        1.0,                     # order_is_night  ← 必为 1
-        rng.uniform(1, 3),
-        rng.uniform(1, 3),
-        rng.uniform(1, 2),
-        0.0 if rng.random() < 0.5 else 1.0,
-    ], dtype=np.float32)
+def _gen_unverified_user(rng: random.Random) -> np.ndarray:
+    """模式 1: 未实名寄件 (R001: user_real_name_verified=0)."""
+    return np.array(
+        _base_user_fields(rng, verified=0.0, account_age=(1, 30))
+        + _base_order_fields(rng)
+        + _base_addr_fields(rng),
+        dtype=np.float32,
+    )
 
 
-def _gen_mixed_high_risk(rng: random.Random) -> np.ndarray:
-    """模式 6: 混合高风险 (多种特征都偏高, 最难判但学习价值高)"""
-    return np.array([
-        rng.uniform(15, 50),
-        rng.uniform(3, 12),
-        rng.uniform(1, 5),
-        rng.uniform(40000, 150000),
-        rng.uniform(800, 4000),
-        rng.uniform(8000, 30000),  # max_order_amount 高
-        rng.uniform(3, 12),       # refund_count 中高
-        rng.uniform(5, 20),
-        rng.uniform(0.15, 0.5),   # refund_rate 中高
-        rng.uniform(0.2, 0.6),
-        rng.uniform(2000, 30000),
-        rng.uniform(0, 4),
-        rng.uniform(1, 6),        # complaint_count 中
-        rng.uniform(3, 8),        # address_count 高
-        rng.uniform(2000, 20000), # order_total_amount 中高
-        rng.uniform(1, 6),
-        rng.uniform(2, 12),
-        rng.uniform(0, 400),
-        rng.uniform(0, 0.1),
-        rng.uniform(30, 1800),    # 快支付
-        0.4 if rng.random() < 0.6 else 1.0,  # is_night 中高概率
-        rng.uniform(2, 5),
-        rng.uniform(3, 8),        # addr_total 高
-        rng.uniform(2, 5),        # addr_province 中高
-        0.3 if rng.random() < 0.7 else 1.0,  # addr_is_new 中高
-    ], dtype=np.float32)
+def _gen_dangerous_hide(rng: random.Random) -> np.ndarray:
+    """模式 2: 危险品瞒报 (R002: 危险品申报 + 每公斤价值 < 50)."""
+    return np.array(
+        _base_user_fields(rng)
+        + _base_order_fields(
+            rng,
+            weight=(10, 50),      # 大重量
+            declared=(100, 800),  # 申报价值偏低 → 每公斤 2~40 < 50
+            per_kg=(2, 40),       # 价值密度异常低
+            pieces=(1, 4),
+            danger=1.0,           # 危险品申报
+        )
+        + _base_addr_fields(rng),
+        dtype=np.float32,
+    )
+
+
+def _gen_cross_border(rng: random.Random) -> np.ndarray:
+    """模式 3: 跨境违禁品 (R005: 国际件 + 危险品申报, 一票否决)."""
+    return np.array(
+        _base_user_fields(rng)
+        + _base_order_fields(
+            rng,
+            weight=(3, 20),
+            declared=(300, 3000),
+            per_kg=(50, 500),
+            intl=1.0,             # 国际件
+            danger=1.0,           # 危险品申报
+        )
+        + _base_addr_fields(rng, cross=True),
+        dtype=np.float32,
+    )
+
+
+def _gen_cod_runaway(rng: random.Random) -> np.ndarray:
+    """模式 4: COD 卷款 (R008: COD 逾期 + 大额代收 ≥1000, 一票否决)."""
+    return np.array(
+        _base_user_fields(
+            rng,
+            cod_overdue=rng.randint(1, 5),   # 历史 COD 逾期
+            black_hit=rng.uniform(1, 4),     # 黑名单命中 (卷款惯犯特征)
+        )
+        + _base_order_fields(
+            rng,
+            weight=(1, 10),
+            declared=(500, 5000),
+            per_kg=(50, 500),
+            has_cod=1.0,                      # 本次 COD
+            cod_amount=rng.uniform(1000, 8000),  # 大额代收 ≥1000
+        )
+        + _base_addr_fields(rng),
+        dtype=np.float32,
+    )
+
+
+def _gen_underdeclare(rng: random.Random) -> np.ndarray:
+    """模式 5: 大额低报 (R025: 申报 ≥3000 但每公斤价值 < 100)."""
+    return np.array(
+        _base_user_fields(
+            rng,
+            avg_declared=(2000, 6000),  # 用户平均申报价值偏高
+        )
+        + _base_order_fields(
+            rng,
+            weight=(30, 100),     # 大重量
+            declared=(3000, 8000),  # 高申报价值 ≥3000
+            per_kg=(30, 99),      # 每公斤价值 < 100
+            pieces=(1, 6),
+        )
+        + _base_addr_fields(rng),
+        dtype=np.float32,
+    )
+
+
+def _gen_change_dispatch(rng: random.Random) -> np.ndarray:
+    """模式 6: 改派异常 + 黑地址 (R018: 高频换收件人+高价值; 部分 R030: 黑地址)."""
+    use_black_addr = rng.random() < 0.4  # 40% 走黑地址 (R030), 60% 走改派 (R018)
+    return np.array(
+        _base_user_fields(
+            rng,
+            receivers=(3, 6),  # 高频更换收件人 ≥3
+        )
+        + _base_order_fields(
+            rng,
+            weight=(2, 30),
+            declared=(2000, 6000),        # 高申报价值 ≥2000
+            per_kg=(50, 500),
+            pieces=(1, 5),
+        )
+        + _base_addr_fields(
+            rng,
+            black_hit=1.0 if use_black_addr else 0.0,  # 黑地址拦截
+        ),
+        dtype=np.float32,
+    )
 
 
 def _gen_normal_user(rng: random.Random) -> np.ndarray:
     """正常用户 (低风险, 通过/标记)."""
-    return np.array([
-        rng.uniform(0, 5),        # user_total_orders 少
-        rng.uniform(0, 2),        # user_orders_30d
-        rng.uniform(0, 1),        # user_orders_7d
-        rng.uniform(0, 10000),    # user_total_amount 少
-        rng.uniform(0, 1000),     # user_avg_order_amount
-        rng.uniform(0, 3000),     # user_max_order_amount  ← 低
-        rng.uniform(0, 1),        # user_refund_count  ← 低
-        rng.uniform(0, 2),        # user_postsale_count
-        rng.uniform(0, 0.05),     # user_refund_rate  ← 低
-        rng.uniform(0, 0.1),      # user_postsale_rate
-        rng.uniform(0, 500),      # user_refund_amount
-        rng.uniform(0, 1),        # user_cancel_count
-        rng.uniform(0, 1),        # user_complaint_count  ← 低
-        rng.uniform(1, 2),        # user_address_count
-        rng.uniform(0, 1500),     # order_total_amount
-        rng.uniform(1, 3),        # order_item_count
-        rng.uniform(1, 5),        # order_sku_count
-        rng.uniform(0, 100),      # order_discount_amount
-        rng.uniform(0, 0.1),      # order_discount_rate
-        rng.uniform(120, 7200),   # order_pay_interval_sec (正常)
-        0.0 if rng.random() < 0.85 else 1.0,  # order_is_night  ← 大概率白天
-        rng.uniform(1, 3),        # order_category_count
-        rng.uniform(1, 2),        # addr_total_count
-        1.0,                     # addr_province_count  ← 1 个省
-        0.0 if rng.random() < 0.8 else 1.0,  # addr_is_new  ← 大概率老地址
-    ], dtype=np.float32)
+    return np.array(
+        _base_user_fields(
+            rng,
+            verified=1.0,
+            account_age=(60, 800),
+            parcel_count=(1, 15),
+            receivers=(1, 2),
+        )
+        + _base_order_fields(
+            rng,
+            weight=(0.5, 8),
+            declared=(30, 1200),
+            per_kg=(40, 500),
+            pieces=(1, 3),
+        )
+        + _base_addr_fields(rng),
+        dtype=np.float32,
+    )
 
 
 # 6 种正例模式 + 1 种负例
 POSITIVE_PATTERNS = [
-    _gen_high_refund_rate, _gen_high_complaint, _gen_high_amount,
-    _gen_multi_address, _gen_night_high_freq, _gen_mixed_high_risk,
+    _gen_unverified_user, _gen_dangerous_hide, _gen_cross_border,
+    _gen_cod_runaway, _gen_underdeclare, _gen_change_dispatch,
 ]
 NEGATIVE_PATTERN = _gen_normal_user
 
 
 def gen_synthetic_dataset(n: int = 2000, pos_ratio: float = 0.5, seed: int = 42):
-    """生成合成训练数据集.
+    """生成合成训练数据集 (物流版).
 
     Args:
         n: 总样本数
@@ -300,13 +270,13 @@ def gen_synthetic_dataset(n: int = 2000, pos_ratio: float = 0.5, seed: int = 42)
     n_pos = int(n * pos_ratio)
     n_neg = n - n_pos
 
-    # 正例: 6 种模式轮换
+    # 正例: 6 种物流高风险模式轮换
     X_pos = np.zeros((n_pos, N_FEATURES), dtype=np.float32)
     for i in range(n_pos):
         pattern = POSITIVE_PATTERNS[i % len(POSITIVE_PATTERNS)]
         X_pos[i] = pattern(rng)
 
-    # 负例: 1 种模式
+    # 负例: 1 种正常模式
     X_neg = np.zeros((n_neg, N_FEATURES), dtype=np.float32)
     for i in range(n_neg):
         X_neg[i] = NEGATIVE_PATTERN(rng)
@@ -358,7 +328,7 @@ def train_xgboost(X: np.ndarray, y: np.ndarray, num_boost_round: int = 200):
     )
 
     # 评估
-    y_pred_prob = booster.predict(xval_dmatrix := xgb.DMatrix(X_val, feature_names=FEATURE_NAMES))
+    y_pred_prob = booster.predict(xgb.DMatrix(X_val, feature_names=FEATURE_NAMES))
     y_pred = (y_pred_prob >= 0.5).astype(int)
 
     tp = int(np.sum((y_pred == 1) & (y_val == 1)))
@@ -383,7 +353,7 @@ def train_xgboost(X: np.ndarray, y: np.ndarray, num_boost_round: int = 200):
 
 def main():
     parser = argparse.ArgumentParser(
-        description="教学场景 XGBoost 演示模型训练 (不依赖 DB, 纯合成数据)"
+        description="教学场景 XGBoost 演示模型训练 (物流版, 不依赖 DB, 纯合成数据)"
     )
     parser.add_argument("--n", type=int, default=2000, help="合成样本数 (默认 2000)")
     parser.add_argument("--pos-ratio", type=float, default=0.5, help="正例比例 (默认 0.5)")
@@ -395,14 +365,14 @@ def main():
     args = parser.parse_args()
 
     print("=" * 70)
-    print("教学场景 XGBoost 演示模型训练")
+    print("教学场景 XGBoost 演示模型训练 (物流版)")
     print("=" * 70)
     print(f"样本数: {args.n} (正例 {args.pos_ratio*100:.0f}% / 负例 {(1-args.pos_ratio)*100:.0f}%)")
     print(f"模型保存: {args.model_path}")
     print("=" * 70)
 
     # 1. 生成合成数据
-    print(f"\n[1/3] 生成 {args.n} 合成样本 (6 种高风险模式 + 1 种正常模式)...")
+    print(f"\n[1/3] 生成 {args.n} 合成样本 (6 种物流高风险模式 + 1 种正常模式)...")
     X, y = gen_synthetic_dataset(n=args.n, pos_ratio=args.pos_ratio, seed=args.seed)
     print(f"  X.shape={X.shape}, 正例={int(y.sum())} ({y.mean():.2%})")
 

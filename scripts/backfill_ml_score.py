@@ -1,15 +1,22 @@
 """
-电商风控系统 - XGBoost ml_score 字段回填脚本 (P4-L4 2026-08-08)
+物流风控系统 - XGBoost ml_score 字段回填脚本 (物流版)
 
 【目的】
   gen_train_dataset.py 造训练数据时强制 ml_score=NULL (避免"未训练模型"推理垃圾值).
   训完基础模型后, 用本脚本回填 ml_score 字段:
-    - 用训好的 XGBoost 推理 1500 条 risk_assessment
+    - 用训好的 XGBoost 推理 risk_assessment
     - 写回 ml_score (P(拒绝) ∈ [0,1]) + ml_decision (4 档决策)
   这样:
     1. 训练数据 ml_score 字段**真实合理** (来自训好的模型, 不是垃圾)
     2. 前端评估历史/详情能看到合理 ml_score
     3. 未来可作为 meta-feature (stacking) 二次训练
+
+【物流版适配】
+  原电商版查 risk_event 的 order_id/receive_id 列 → 已移除, 改为按 event_type 从
+  event_source_id 反推 parcel_id (复用 event.py _enrich_request 的已验证逻辑):
+    - parcel_pickup / cross_border_ship: source_id 就是 parcel_id
+    - dangerous_declare: source_id = decl_id → 反查 parcel_id
+    - cod_settlement:    source_id = cod_id  → 反查 parcel_id
 
 【注意】
   - 必须在 train_xgb_model.py 跑完后, xgb_model.json 存在
@@ -38,7 +45,9 @@ import pymysql
 
 from app.config import settings
 from app.engine.feature import compute_all_features
-from app.engine.ml_model import FEATURE_COLUMNS, is_model_loaded, load_model, predict
+from app.engine.ml_model import is_model_loaded, load_model, predict
+from app.schemas import RiskCheckRequest
+from app.service.event import _enrich_request
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy.ext.asyncio import async_sessionmaker
 from app.models import RiskAssessment
@@ -82,7 +91,7 @@ async def backfill_ml_score(limit: int | None = None, dry_run: bool = False):
 
     # 3. 逐条推理回填
     print(f"\n[3] 推理 + 回填...")
-    engine = create_async_engine(settings.DB_URL, echo=False)
+    engine = create_async_engine(settings.get_database_url_async(), echo=False)
     SessionLocal = async_sessionmaker(engine, expire_on_commit=False)
     try:
         updated = 0
@@ -93,10 +102,11 @@ async def backfill_ml_score(limit: int | None = None, dry_run: bool = False):
         for i, (aid, eid, uid, dec) in enumerate(rows, 1):
             try:
                 async with SessionLocal() as db:
-                    # 找该 event 的 order_id 和 receive_id
+                    # 查该 event 的 event_type + event_source_id (物流版: source_id 语义按事件类型)
+                    from sqlalchemy import text as _text
                     ev_row = (await db.execute(
-                        __import__("sqlalchemy").text("""
-                            SELECT order_id, receive_id, source_id, event_type
+                        _text("""
+                            SELECT event_type, event_source_id
                             FROM risk_event
                             WHERE event_id = :eid
                         """),
@@ -104,9 +114,16 @@ async def backfill_ml_score(limit: int | None = None, dry_run: bool = False):
                     )).first()
                     if not ev_row:
                         continue
-                    # 算 25 维特征
+                    # 按 event_type 从 event_source_id 反推 parcel_id (复用 event.py 已验证逻辑)
+                    request = RiskCheckRequest(
+                        event_type=ev_row.event_type,
+                        source_id=ev_row.event_source_id,
+                        user_id=uid,
+                    )
+                    request = await _enrich_request(db, request)
+                    # 算 25 维特征 (parcel_id 为空时 order 特征为 0, 仍可推理)
                     features = await compute_all_features(
-                        db, uid, order_id=ev_row.order_id, receive_id=ev_row.receive_id,
+                        db, uid, parcel_id=request.parcel_id,
                     )
                     # 推理
                     ml = predict(features)
