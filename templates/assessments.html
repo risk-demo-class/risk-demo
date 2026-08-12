@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}评估历史 - 电商风控系统{% endblock %}
+{% block title %}评估历史 - 医疗风控系统{% endblock %}
 {% block content %}
 <h4 class="mb-4">评估历史 <small class="text-muted fs-6">全量评估, 含已结案 + 通过/标记 (案件工作台只看待办)</small></h4>
 
@@ -124,8 +124,8 @@ async function loadAssessments(page) {
         tbody.innerHTML = data.items.map(a => `
             <tr>
                 <td><code>${a.assessment_id.substring(0,16)}...</code></td>
-                <td>${a.user_id}</td>
-                <td><span class="badge bg-light text-dark">${a.event_type}</span></td>
+                <td>${escapeHtml(a.user_id)}</td>
+                <td><span class="badge bg-light text-dark">${escapeHtml(a.event_type)}</span></td>
                 <td><strong>${a.final_score}</strong></td>
                 <td>${levelBadge(a.risk_level)}</td>
                 <td>${decisionBadge(a.decision)}</td>
@@ -151,9 +151,9 @@ async function viewAssessment(id) {
     let eventDataPretty = '';
     if (a.event_data) {
         try {
-            eventDataPretty = `<pre class="bg-light p-2 small">${JSON.stringify(JSON.parse(a.event_data), null, 2)}</pre>`;
+            eventDataPretty = `<pre class="bg-light p-2 small">${escapeHtml(JSON.stringify(JSON.parse(a.event_data), null, 2))}</pre>`;
         } catch {
-            eventDataPretty = `<pre class="bg-light p-2 small">${a.event_data}</pre>`;
+            eventDataPretty = `<pre class="bg-light p-2 small">${escapeHtml(a.event_data)}</pre>`;
         }
     }
     document.getElementById('assessDetailBody').innerHTML = `
@@ -162,9 +162,9 @@ async function viewAssessment(id) {
                 <h6>基本信息</h6>
                 <table class="table table-sm">
                     <tr><td class="text-muted">评估ID</td><td>${a.assessment_id}</td></tr>
-                    <tr><td class="text-muted">用户ID</td><td>${a.user_id}</td></tr>
-                    <tr><td class="text-muted">事件类型</td><td>${a.event_type}</td></tr>
-                    <tr><td class="text-muted">业务ID</td><td><code>${a.event_source_id || '-'}</code></td></tr>
+                    <tr><td class="text-muted">用户ID</td><td>${escapeHtml(a.user_id)}</td></tr>
+                    <tr><td class="text-muted">事件类型</td><td>${escapeHtml(a.event_type)}</td></tr>
+                    <tr><td class="text-muted">业务ID</td><td><code>${escapeHtml(a.event_source_id || '-')}</code></td></tr>
                     <tr><td class="text-muted">最终评分</td><td><strong>${a.final_score}</strong></td></tr>
                     <tr><td class="text-muted">风险等级</td><td>${levelBadge(a.risk_level)}</td></tr>
                     <tr><td class="text-muted">决策</td><td>${decisionBadge(a.decision)}</td></tr>

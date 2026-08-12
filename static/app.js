@@ -37,6 +37,19 @@ if (_originalFetch) {
     };
 }
 
+/* ============================================================
+ * HTML 转义 (2026-08-12 P0): 所有 innerHTML 拼接的后端/LLM 字段必须先转义
+ * 防存储型 XSS (规则名/黑名单值/LLM 回复等)
+ * ============================================================ */
+function escapeHtml(value) {
+    return String(value == null ? '' : value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
 // 风险等级对应的Badge类名
 function getRiskBadgeClass(level) {
     const map = {

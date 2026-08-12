@@ -18,6 +18,20 @@
   - `scripts/init_db.py`、`scripts/one_command.py`、`pyproject.toml`
 - 备注: 画像表医疗化按用户要求未做; pyproject name 保留 ai-risk (避免动 uv.lock), 只改 description
 
+### 附加任务: 前端审查建议落地 (P0 XSS + P1 一致性)
+
+- **Status:** complete
+- **Started:** 2026-08-12
+- Actions taken:
+  - P0-1: chat.html `addMessage` 先 `escapeHtml` 再套 markdown 替换 (LLM 输出不可信, 防 innerHTML XSS)
+  - P0-2: app.js 新增全局 `escapeHtml()`, blacklist/cases/assessments/risk_check 的 innerHTML 字段统一转义
+  - P0-3: 黑名单移除按钮 / 案件重做检查按钮从 onclick 内联 JS 字符串改为 data-* 属性 + 包装函数 (防属性注入)
+  - P1-1: 8 个页面 title + base 默认标题 "电商风控系统" → "医疗风控系统"
+  - P1-2: chat 欢迎语 "用户/订单"→"用户/事件", "管理黑名单"→"查询黑名单 (只读)"
+  - 验证: 全量 pytest 450 passed; 8 个页面 TestClient 渲染 200; chat 文案/转义断言通过
+- Files created/modified:
+  - `static/app.js`、`templates/{base,chat,rules,risk_check,cases,assessments,blacklist,dashboard}.html`
+
 ### 附加任务: 生成人工审核事件 (审核工作台测试数据)
 
 - **Status:** complete

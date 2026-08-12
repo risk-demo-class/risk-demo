@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}AI 助手 - 电商风控系统{% endblock %}
+{% block title %}AI 助手 - 医疗风控系统{% endblock %}
 {% block content %}
 <h4 class="mb-4">AI 风控助手</h4>
 
@@ -10,11 +10,11 @@
             <div class="d-flex">
                 <div class="chat-bubble ai">
                     你好! 我是风控AI助手，可以帮你完成以下任务:<br>
-                    - 对用户/订单进行风险检查<br>
+                    - 对用户/事件进行风险检查<br>
                     - 查询和分析风控案件<br>
                     - 查看用户风险画像<br>
                     - 查看仪表盘统计和趋势<br>
-                    - 管理黑名单<br>
+                    - 查询黑名单 (只读)<br>
                     请问有什么需要帮助的?
                 </div>
             </div>
@@ -54,8 +54,8 @@ function addMessage(content, role) {
     const container = document.getElementById('chatMessages');
     const div = document.createElement('div');
     div.className = 'd-flex' + (role === 'user' ? ' justify-content-end' : '');
-    // 处理markdown格式（简单替换）
-    let html = content
+    // 【2026-08-12 P0】先转义再替换: LLM 输出不可信, 防 XSS (innerHTML 注入)
+    let html = escapeHtml(content)
         .replace(/\n/g, '<br>')
         .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
         .replace(/`(.*?)`/g, '<code>$1</code>');

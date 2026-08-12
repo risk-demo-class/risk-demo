@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}黑名单管理 - 电商风控系统{% endblock %}
+{% block title %}黑名单管理 - 医疗风控系统{% endblock %}
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h4 class="mb-0">黑名单管理</h4>
@@ -137,7 +137,7 @@ function onPageSizeChange() {
 // 类型徽章颜色: 用户=蓝 / 地址=黄 / 手机号=红
 function typeBadge(t) {
     const cls = {'用户':'bg-primary','地址':'bg-warning text-dark','手机号':'bg-danger'}[t] || 'bg-secondary';
-    return `<span class="badge ${cls}">${t}</span>`;
+    return `<span class="badge ${cls}">${escapeHtml(t)}</span>`;
 }
 
 // 加载统计 (拉 page_size=100 汇总; 100 条封顶, 教学项目先求简单)
@@ -172,12 +172,15 @@ async function loadList(page) {
             <tr>
                 <td>${it.blacklist_id}</td>
                 <td>${typeBadge(it.blacklist_type)}</td>
-                <td><code>${it.blacklist_value}</code></td>
-                <td>${it.reason || '<span class="text-muted small">-</span>'}</td>
+                <td><code>${escapeHtml(it.blacklist_value)}</code></td>
+                <td>${escapeHtml(it.reason) || '<span class="text-muted small">-</span>'}</td>
                 <td>${it.expire_time ? new Date(it.expire_time).toLocaleString('zh-CN') : '<span class="text-muted small">永久</span>'}</td>
                 <td>${it.create_time ? new Date(it.create_time).toLocaleString('zh-CN') : '-'}</td>
                 <td>
-                    <button class="btn btn-outline-danger btn-sm" onclick="removeBl(${it.blacklist_id}, '${it.blacklist_value}')">
+                    <button class="btn btn-outline-danger btn-sm"
+                        data-bl-id="${it.blacklist_id}"
+                        data-bl-value="${escapeHtml(it.blacklist_value)}"
+                        onclick="removeBlFromRow(this)">
                         <i class="bi bi-trash"></i> 移除
                     </button>
                 </td>
@@ -244,6 +247,11 @@ async function removeBl(blacklistId, value) {
         const err = await res.json().catch(() => ({detail: '请求失败'}));
         alert('移除失败: ' + (err.detail || res.status));
     }
+}
+
+// 【2026-08-12 P0】从 data-* 属性取值再调 removeBl, 避免把黑名单值拼进 onclick JS 字符串
+function removeBlFromRow(btn) {
+    removeBl(btn.dataset.blId, btn.dataset.blValue);
 }
 
 loadStats();
