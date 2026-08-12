@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EduRisk · 教育行业 AI 风控系统</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="app">
+
+  <!-- ==================== 侧边栏 ==================== -->
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-logo">ER</div>
+      <div class="brand-text">
+        <div class="brand-name">EduRisk</div>
+        <div class="brand-sub">教育行业 AI 风控</div>
+      </div>
+    </div>
+    <nav class="menu" id="menu">
+      <a class="menu-item active" data-page="dashboard"><span class="mi-ico">📊</span>运营仪表盘</a>
+      <a class="menu-item" data-page="check"><span class="mi-ico">🔍</span>风控检查</a>
+      <a class="menu-item" data-page="cases"><span class="mi-ico">📋</span>案件工作台</a>
+      <a class="menu-item" data-page="rules"><span class="mi-ico">📜</span>规则管理</a>
+      <a class="menu-item" data-page="users"><span class="mi-ico">👤</span>学员画像</a>
+      <a class="menu-item" data-page="blacklist"><span class="mi-ico">🚫</span>黑名单管理</a>
+      <a class="menu-item" data-page="events"><span class="mi-ico">📡</span>风控事件</a>
+      <a class="menu-item" data-page="business"><span class="mi-ico">🏫</span>业务数据</a>
+      <a class="menu-item" data-page="settings"><span class="mi-ico">⚙️</span>系统设置</a>
+      <a class="menu-item" data-page="agent"><span class="mi-ico">🤖</span>AI 助手</a>
+    </nav>
+    <div class="sidebar-foot">
+      <button class="btn btn-ghost-dark" id="btn-api-config">🔌 API 配置</button>
+    </div>
+  </aside>
+
+  <!-- ==================== 主区域 ==================== -->
+  <main class="main">
+    <header class="topbar">
+      <div class="page-title" id="page-title">运营仪表盘</div>
+      <div class="topbar-right">
+        <span class="health">
+          <span class="health-dot" id="health-dot"></span>
+          <span id="health-text">未连接</span>
+        </span>
+        <button class="btn btn-light" id="btn-refresh">🔄 刷新</button>
+      </div>
+    </header>
+
+    <div class="content">
+
+      <!-- ============ 1. 运营仪表盘 ============ -->
+      <section id="page-dashboard" class="page active">
+        <div class="toolbar">
+          <div class="toolbar-left">
+            <label class="lbl">统计窗口</label>
+            <select id="dash-days" class="input sel">
+              <option value="7">近 7 天</option>
+              <option value="14">近 14 天</option>
+              <option value="30">近 30 天</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="stat-cards">
+          <div class="stat-card">
+            <div class="sc-label">风控检查量</div>
+            <div class="sc-value" id="stat-checks">—</div>
+            <div class="sc-sub" id="stat-checks-sub">近 7 天</div>
+          </div>
+          <div class="stat-card warn">
+            <div class="sc-label">待审核案件</div>
+            <div class="sc-value" id="stat-pending">—</div>
+            <div class="sc-sub">需要人工处理</div>
+          </div>
+          <div class="stat-card">
+            <div class="sc-label">报名单</div>
+            <div class="sc-value" id="stat-enroll">—</div>
+            <div class="sc-sub" id="stat-enroll-sub">近 7 天</div>
+          </div>
+          <div class="stat-card">
+            <div class="sc-label">缴费笔数</div>
+            <div class="sc-value" id="stat-pay">—</div>
+            <div class="sc-sub" id="stat-pay-sub">近 7 天</div>
+          </div>
+          <div class="stat-card danger">
+            <div class="sc-label">退费申请</div>
+            <div class="sc-value" id="stat-refund">—</div>
+            <div class="sc-sub" id="stat-refund-sub">近 7 天</div>
+          </div>
+        </div>
+
+        <div class="chart-row">
+          <div class="card">
+            <div class="card-head"><h3>风控检查趋势</h3><span class="card-tip" id="trend-tip">按天统计</span></div>
+            <div id="chart-trend" class="chart-box"><div class="empty">暂无数据</div></div>
+          </div>
+          <div class="card">
+            <div class="card-head"><h3>决策分布</h3><span class="card-tip">通过 / 标记 / 人工审核 / 拒绝</span></div>
+            <div id="chart-decision" class="chart-box"><div class="empty">暂无数据</div></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-head"><h3>规则命中分析</h3><span class="card-tip" id="rule-eff-tip">最近 1000 次评估</span></div>
+          <div id="chart-rules" class="chart-box chart-box-wide"><div class="empty">暂无数据</div></div>
+        </div>
+      </section>
+
+      <!-- ============ 2. 风控检查 ============ -->
+      <section id="page-check" class="page">
+        <div class="card">
+          <div class="card-head"><h3>触发一次风控检查</h3><span class="card-tip">7 步流水线：校验 → 建事件 → 25 维特征 → 规则 → ML 融合 → 一票否决 → 落库</span></div>
+          <form id="check-form" class="form-grid">
+            <div class="form-item">
+              <label class="lbl">事件类型</label>
+              <select name="event_type" class="input sel">
+                <option value="报名">报名</option>
+                <option value="缴费">缴费</option>
+                <option value="退费">退费</option>
+                <option value="考试">考试</option>
+                <option value="作业">作业</option>
+              </select>
+            </div>
+            <div class="form-item">
+              <label class="lbl">业务单据号 source_id</label>
+              <input name="source_id" class="input" placeholder="如 ENR_DEMO_001" required>
+            </div>
+            <div class="form-item">
+              <label class="lbl">学员 ID</label>
+              <input name="user_id" class="input" placeholder="如 1001 / U00001" required>
+            </div>
+            <div class="form-item form-item-wide">
+              <label class="lbl">附加信息 extra（JSON，可选）</label>
+              <textarea name="extra" class="input area" rows="2" placeholder='{"note":"示例", "scene":"promotion"}'></textarea>
+            </div>
+            <div class="form-item form-item-wide">
+              <button type="submit" class="btn btn-primary btn-lg" id="btn-check">🚀 开始风控检查</button>
+            </div>
+          </form>
+        </div>
+
+        <div id="check-result" class="hidden"></div>
+      </section>
+
+      <!-- ============ 3. 案件工作台 ============ -->
+      <section id="page-cases" class="page">
+        <div class="toolbar">
+          <div class="toolbar-left">
+            <select id="case-status" class="input sel">
+              <option value="active">进行中（待审核/审核中）</option>
+              <option value="待审核">待审核</option>
+              <option value="审核中">审核中</option>
+              <option value="已通过">已通过</option>
+              <option value="已拒绝">已拒绝</option>
+              <option value="已关闭">已关闭</option>
+            </select>
+            <input id="case-user" class="input" placeholder="按学员 ID 筛选">
+            <button class="btn btn-primary" id="btn-case-search">查询</button>
+          </div>
+          <div class="toolbar-right">
+            <button class="btn btn-light" id="btn-auto-close">⏰ 超时自动关闭</button>
+          </div>
+        </div>
+        <div class="card">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>案件 ID</th><th>学员</th><th>单据号</th><th>事件类型</th>
+                <th>状态</th><th>审核人</th><th>创建时间</th><th class="th-actions">操作</th>
+              </tr>
+            </thead>
+            <tbody id="case-tbody"></tbody>
+          </table>
+          <div class="pagination" id="case-pagination"></div>
+        </div>
+      </section>
+
+      <!-- ============ 4. 规则管理 ============ -->
+      <section id="page-rules" class="page">
+        <div class="toolbar">
+          <div class="toolbar-left">
+            <select id="rule-filter" class="input sel">
+              <option value="">全部事件类型</option>
+              <option value="通用">通用</option>
+              <option value="报名">报名</option>
+              <option value="缴费">缴费</option>
+              <option value="退费">退费</option>
+              <option value="考试">考试</option>
+              <option value="作业">作业</option>
+            </select>
+          </div>
+          <div class="toolbar-right">
+            <button class="btn btn-light" id="btn-test-rule">🧪 规则测试</button>
+            <button class="btn btn-primary" id="btn-new-rule">＋ 新建规则</button>
+          </div>
+        </div>
+        <div class="card">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>规则 ID</th><th>规则名称</th><th>类别</th><th>事件类型</th>
+                <th>风险等级</th><th>分值</th><th>动作</th><th>优先级</th><th>启用</th><th>说明</th>
+              </tr>
+            </thead>
+            <tbody id="rule-tbody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ============ 5. 学员画像 ============ -->
+      <section id="page-users" class="page">
+        <div class="card">
+          <div class="card-head"><h3>学员风险画像查询</h3><span class="card-tip">累计检查次数 / 案件数 / 最高分 / 风险标签 / 黑名单状态</span></div>
+          <div class="search-bar">
+            <input id="user-id-input" class="input input-lg" placeholder="输入学员 ID，如 1001 或 U00001">
+            <button class="btn btn-primary btn-lg" id="btn-query-user">查询画像</button>
+          </div>
+        </div>
+        <div id="user-profile" class="hidden"></div>
+      </section>
+
+      <!-- ============ 6. 黑名单管理 ============ -->
+      <section id="page-blacklist" class="page">
+        <div class="card">
+          <div class="card-head"><h3>加入黑名单</h3><span class="card-tip">学员须先存在于学员表</span></div>
+          <form id="bl-form" class="form-grid form-grid-4">
+            <div class="form-item">
+              <label class="lbl">学员 ID</label>
+              <input id="bl-user" class="input" placeholder="如 1001" required>
+            </div>
+            <div class="form-item">
+              <label class="lbl">拉黑原因</label>
+              <input id="bl-reason" class="input" placeholder="默认：人工拉黑">
+            </div>
+            <div class="form-item">
+              <label class="lbl">来源</label>
+              <select id="bl-source" class="input sel">
+                <option value="人工">人工</option>
+                <option value="AI">AI</option>
+                <option value="规则">规则</option>
+              </select>
+            </div>
+            <div class="form-item form-item-btn">
+              <button type="submit" class="btn btn-danger">加入黑名单</button>
+            </div>
+          </form>
+        </div>
+        <div class="card">
+          <div class="card-head"><h3>黑名单列表</h3><span class="card-tip" id="bl-count"></span></div>
+          <table class="table">
+            <thead>
+              <tr><th>黑名单 ID</th><th>学员 ID</th><th>原因</th><th>来源</th><th>状态</th><th>加入时间</th><th class="th-actions">操作</th></tr>
+            </thead>
+            <tbody id="bl-tbody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ============ 7. 风控事件 ============ -->
+      <section id="page-events" class="page">
+        <div class="toolbar">
+          <div class="toolbar-left">
+            <select id="event-filter" class="input sel">
+              <option value="">全部事件</option>
+              <option value="报名">报名</option>
+              <option value="缴费">缴费</option>
+              <option value="退费">退费</option>
+              <option value="考试">考试</option>
+              <option value="作业">作业</option>
+            </select>
+            <input id="event-user" class="input" placeholder="按学员 ID 筛选">
+            <button class="btn btn-primary" id="btn-event-search">查询</button>
+          </div>
+        </div>
+        <div class="card">
+          <table class="table">
+            <thead>
+              <tr><th>事件 ID</th><th>事件类型</th><th>学员 ID</th><th>单据号</th><th>时间</th><th class="th-actions">操作</th></tr>
+            </thead>
+            <tbody id="event-tbody"></tbody>
+          </table>
+          <div class="pagination" id="event-pagination"></div>
+        </div>
+      </section>
+
+      <!-- ============ 8. 业务数据 ============ -->
+      <section id="page-business" class="page">
+        <div class="toolbar">
+          <div class="tabs" id="biz-tabs">
+            <button class="tab active" data-biz="courses">课程</button>
+            <button class="tab" data-biz="enrollments">报名</button>
+            <button class="tab" data-biz="payments">缴费</button>
+            <button class="tab" data-biz="refunds">退费</button>
+            <button class="tab" data-biz="exams">考试</button>
+          </div>
+          <div class="toolbar-right">
+            <input id="biz-user" class="input" placeholder="按学员 ID 筛选（课程除外）">
+            <button class="btn btn-primary" id="btn-biz-search">查询</button>
+          </div>
+        </div>
+        <div class="card">
+          <table class="table">
+            <thead id="biz-thead"></thead>
+            <tbody id="biz-tbody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ============ 9. 系统设置 ============ -->
+      <section id="page-settings" class="page">
+        <div class="card">
+          <div class="card-head"><h3>系统配置</h3><span class="card-tip">只读展示，修改 .env 后重启生效</span></div>
+          <div id="settings-body"><div class="empty">加载中…</div></div>
+        </div>
+      </section>
+
+      <!-- ============ 10. AI 助手 ============ -->
+      <section id="page-agent" class="page page-agent">
+        <div class="agent-chat">
+          <div class="agent-msgs" id="agent-messages">
+            <div class="msg msg-ai">
+              <div class="msg-bubble">
+                <div class="msg-name">🤖 AI 风控助手</div>
+                <div>你好，我是 EduRisk 风控助手。可以问我：<br>
+                  · 查看运营大盘 / 风险趋势 / 规则命中率<br>
+                  · 查询学员画像、案件、黑名单<br>
+                  · 对某笔报名/缴费执行风控检查<br>
+                  · 查询课程、报名、缴费、退费、考试数据<br><br>
+                  <span class="msg-tip">提示：未配置 LLM_API_KEY 时助手会提示不可用（后端自动降级）。</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="agent-input-bar">
+            <input id="agent-input" class="input" placeholder="例如：查询近 7 天风控检查趋势">
+            <button class="btn btn-primary" id="btn-agent-send">发送</button>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </main>
+</div>
+
+<!-- ==================== 通用弹窗 ==================== -->
+<div class="modal-mask hidden" id="modal-mask">
+  <div class="modal">
+    <div class="modal-head">
+      <span id="modal-title">标题</span>
+      <button class="modal-close" id="modal-close">✕</button>
+    </div>
+    <div class="modal-body" id="modal-body"></div>
+    <div class="modal-foot" id="modal-foot"></div>
+  </div>
+</div>
+
+<!-- ==================== Toast ==================== -->
+<div id="toast" class="toast hidden"></div>
+
+<script src="js/core.js"></script>
+<script src="js/pages.js"></script>
+</body>
+</html>
