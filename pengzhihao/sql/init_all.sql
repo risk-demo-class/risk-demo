@@ -1,0 +1,9 @@
+-- 物流风控系统初始化指南
+-- 推荐：python scripts/init_db.py --db logistics_risk --reset --yes
+-- 执行顺序：
+--   1. init_business_tables.sql  -- 5 张物流业务表
+--   2. init_business_data.sql    -- 确定性物流演示数据
+--   3. init_risk_tables.sql      -- 9 张原样复用的风控核心表
+--   4. init_risk_data.sql        -- 10 条物流风控规则
+--
+-- 警告：--reset 只应指向独立的 logistics_risk 演示库。

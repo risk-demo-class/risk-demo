@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% block title %}物流黑名单 - 物流风控系统{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h4 class="mb-1">物流黑名单</h4>
+        <div class="text-muted small">核心名单用于寄件人、收件地址和联系电话；扩展名单覆盖实名证件、设备、IP 与海关主体。</div>
+    </div>
+    <button class="btn btn-primary btn-sm" onclick="showAddModal()"><i class="bi bi-plus-circle"></i> 新增</button>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-3"><div class="card stat-card p-3 text-center"><div class="text-muted small">寄件人</div><div class="stat-value text-primary" id="bl-stat-user">0</div></div></div>
+    <div class="col-md-3"><div class="card stat-card p-3 text-center"><div class="text-muted small">收件地址</div><div class="stat-value text-warning" id="bl-stat-address">0</div></div></div>
+    <div class="col-md-3"><div class="card stat-card p-3 text-center"><div class="text-muted small">联系电话</div><div class="stat-value text-danger" id="bl-stat-phone">0</div></div></div>
+    <div class="col-md-3"><div class="card stat-card p-3 text-center"><div class="text-muted small">扩展名单</div><div class="stat-value text-dark" id="bl-stat-extra">0</div></div></div>
+</div>
+
+<h6>核心黑名单</h6>
+<div class="card stat-card mb-4"><div class="table-responsive"><table class="table table-hover mb-0">
+    <thead class="table-light"><tr><th>ID</th><th>类型</th><th>值</th><th>原因</th><th>过期时间</th><th>操作</th></tr></thead>
+    <tbody id="bl-table"></tbody>
+</table></div></div>
+<nav class="pagination-bottom"><ul class="pagination justify-content-center mb-0" id="pagination"></ul></nav>
+
+<h6 class="mt-4">物流扩展黑名单</h6>
+<div class="card stat-card"><div class="table-responsive"><table class="table table-hover mb-0">
+    <thead class="table-light"><tr><th>ID</th><th>类型</th><th>值</th><th>来源</th><th>原因</th><th>操作</th></tr></thead>
+    <tbody id="extra-table"></tbody>
+</table></div></div>
+
+<div class="modal fade" id="addModal" tabindex="-1"><div class="modal-dialog"><div class="modal-content">
+    <div class="modal-header"><h5 class="modal-title">新增物流黑名单</h5><button type="button" class="btn-close-risk" data-bs-dismiss="modal"><i class="bi bi-x-lg"></i></button></div>
+    <div class="modal-body">
+        <div class="mb-3"><label class="form-label">类型</label><select class="form-select" id="addType">
+            <optgroup label="核心名单"><option value="寄件人">寄件人</option><option value="收件地址">收件地址ID</option><option value="联系电话">联系电话</option></optgroup>
+            <optgroup label="扩展名单"><option value="实名证件">实名证件哈希</option><option value="设备指纹">设备指纹</option><option value="IP地址">IP地址</option><option value="海关主体">海关主体</option></optgroup>
+        </select></div>
+        <div class="mb-3"><label class="form-label">值</label><input class="form-control" id="addValue" placeholder="证件类型只接受 SHA-256 哈希"></div>
+        <div class="mb-3"><label class="form-label">原因</label><input class="form-control" id="addReason" placeholder="例如：关联危险品瞒报"></div>
+        <div class="mb-3"><label class="form-label">过期时间（留空为永久）</label><input type="datetime-local" class="form-control" id="addExpire"></div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-secondary" data-bs-dismiss="modal">取消</button><button class="btn btn-primary" onclick="submitAdd()">保存</button></div>
+</div></div></div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let currentPage = 1;
+const coreTypes = new Set(['寄件人','收件地址','联系电话']);
+function typeBadge(t) { return `<span class="badge bg-${t === '寄件人' ? 'primary' : t === '收件地址' ? 'warning text-dark' : 'danger'}">${t}</span>`; }
+function showAddModal() {
+    ['addValue','addReason','addExpire'].forEach(id => document.getElementById(id).value = '');
+    new bootstrap.Modal(document.getElementById('addModal')).show();
+}
+async function loadList(page=1) {
+    currentPage = page;
+    const res = await fetch(`/api/blacklist?page=${page}&page_size=20`);
+    const data = await res.json();
+    const counts = {寄件人:0, 收件地址:0, 联系电话:0};
+    data.items.forEach(x => counts[x.blacklist_type] = (counts[x.blacklist_type] || 0) + 1);
+    document.getElementById('bl-stat-user').textContent = counts.寄件人;
+    document.getElementById('bl-stat-address').textContent = counts.收件地址;
+    document.getElementById('bl-stat-phone').textContent = counts.联系电话;
+    document.getElementById('bl-table').innerHTML = data.items.length ? data.items.map(x => `<tr>
+      <td>${x.blacklist_id}</td><td>${typeBadge(x.blacklist_type)}</td><td><code>${x.blacklist_value}</code></td>
+      <td>${x.reason || '-'}</td><td>${x.expire_time ? new Date(x.expire_time).toLocaleString('zh-CN') : '永久'}</td>
+      <td><button class="btn btn-outline-danger btn-sm" onclick="removeCore(${x.blacklist_id})">移除</button></td></tr>`).join('') : '<tr><td colspan="6" class="text-center text-muted">暂无核心黑名单</td></tr>';
+    document.getElementById('pagination').innerHTML = buildPaginationHtml(page, Math.ceil(data.total / 20), 20, 'loadList');
+}
+async function loadExtra() {
+    const rows = await (await fetch('/api/blacklist/extra')).json();
+    document.getElementById('bl-stat-extra').textContent = rows.length;
+    document.getElementById('extra-table').innerHTML = rows.length ? rows.map(x => `<tr>
+      <td>${x.extra_id}</td><td><span class="badge bg-secondary">${x.entity_type}</span></td><td><code>${x.entity_value}</code></td>
+      <td>${x.source}</td><td>${x.reason || '-'}</td><td><button class="btn btn-outline-danger btn-sm" onclick="removeExtra(${x.extra_id})">停用</button></td></tr>`).join('') : '<tr><td colspan="6" class="text-center text-muted">暂无扩展黑名单</td></tr>';
+}
+async function submitAdd() {
+    const type = document.getElementById('addType').value;
+    const value = document.getElementById('addValue').value.trim();
+    if (!value) return alert('请填写值');
+    const reason = document.getElementById('addReason').value.trim() || null;
+    const raw = document.getElementById('addExpire').value;
+    const expire_time = raw ? raw + ':00' : null;
+    const isCore = coreTypes.has(type);
+    const body = isCore ? {blacklist_type:type, blacklist_value:value, reason, expire_time}
+                        : {entity_type:type, entity_value:value, reason, expire_time};
+    const res = await fetch(isCore ? '/api/blacklist' : '/api/blacklist/extra', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
+    if (!res.ok) return alert('保存失败: ' + JSON.stringify(await res.json()));
+    bootstrap.Modal.getInstance(document.getElementById('addModal')).hide();
+    await Promise.all([loadList(currentPage), loadExtra()]);
+}
+async function removeCore(id) { if (confirm('确认移除？')) { await fetch(`/api/blacklist/${id}`, {method:'DELETE'}); loadList(currentPage); } }
+async function removeExtra(id) { if (confirm('确认停用？')) { await fetch(`/api/blacklist/extra/${id}`, {method:'DELETE'}); loadExtra(); } }
+loadList(); loadExtra();
+</script>
+{% endblock %}
