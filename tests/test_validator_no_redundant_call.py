@@ -38,9 +38,11 @@ class TestDeadCodeRemoved:
             "ensure_user_exists 是 validate_risk_check_request 的依赖, 必须保留"
         )
 
-    def test_ensure_order_belongs_to_user_kept(self):
-        """防越权的核心函数, 保留."""
-        assert hasattr(validator_module, "ensure_order_belongs_to_user")
+    def test_ensure_parcel_belongs_to_user_kept(self):
+        """防越权的核心函数 (物流版: 订单→包裹), 保留."""
+        assert hasattr(validator_module, "ensure_parcel_belongs_to_user")
+        # 旧电商版 ensure_order_belongs_to_user 已改名 (订单→包裹), 不应再导出
+        assert not hasattr(validator_module, "ensure_order_belongs_to_user")
 
     def test_ensure_source_matches_event_type_kept(self):
         """event_type 派发表, 保留."""

@@ -1,54 +1,79 @@
 """
-P4-L4 2026-08-08 回归测试: force 模式 3 个 picker 的 source_id 跟 validator 校验对得上
+阶段3 回归测试: 物流版 _EVENT_SOURCE_VALIDATORS 的 source_id 校验规则一致性
 
-之前 bug: _pick_forced_logistics_complaint 拼 source_id=f"COMP_{rec_id}",
-          record_id 是 bigint AUTO_INCREMENT, validator 强转 int("COMP_xxx") ValueError,
-          每天固定 ~20 次失败 (200 条/天 * 30% force * 1/3 picker).
+背景 (旧电商版 bug): 物流投诉 picker 拼 source_id=f"COMP_{rec_id}", 但 validator 强转
+int("COMP_xxx") 抛 ValueError, 每天固定 ~20 次失败.
+物流版修复: 4 类物流事件的 source_id 都是业务表字符串主键 (parcel_id/decl_id/cod_id),
+校验器只做字符串存在性检查, 不设 int caster → 不存在"拼前缀再强转"这类 bug.
+
+阶段5 重写 gen_risk_data_with_dates.py 时, picker 只要保证 source_id 对应
+_validators 里的 (model, field), 就能通过校验.
 """
-import re
-from pathlib import Path
+import inspect
 
-ROOT = Path(__file__).resolve().parent.parent
-SCRIPT_PATH = ROOT / "scripts" / "gen_risk_data_with_dates.py"
-SQL_PATH = ROOT / "sql" / "init_business_tables.sql"
+from sqlalchemy import String
+
+from app.service import validator as validator_module
 
 
 class TestForcePickerSourceId:
-    """force 模式 3 个 picker 的 source_id 必须跟 validator 校验对得上"""
+    """force 模式 picker 的 source_id 必须跟 validator 校验规则对得上 (物流版)"""
 
-    def test_logistics_complaint_source_id_no_prefix(self):
-        """物流投诉 picker 不能拼 COMP_ 前缀, 必须用原始 record_id (整数转字符串)."""
-        src = SCRIPT_PATH.read_text(encoding="utf-8")
-        assert 'source_id=f"COMP_' not in src, (
-            "物流投诉 picker 不能再用 f\"COMP_{rec_id}\" 拼字符串, "
-            "validator 强转 int() 会 ValueError"
-        )
-        assert 'source_id=str(rec_id)' in src, (
-            "物流投诉 picker 应直接用 record_id, 写 source_id=str(rec_id)"
-        )
+    def test_no_int_caster_in_validators(self):
+        """物流 4 类事件的 source_id 都是字符串主键, 不应设 int caster (旧 bug 根因)."""
+        for evt_types, (model, field, caster, _label, _status) in validator_module._EVENT_SOURCE_VALIDATORS.items():
+            if model is None:
+                continue  # 电商旧事件兼容: 无表, 跳过
+            assert caster is None, (
+                f"event_type={evt_types} 的 source_id 是字符串主键 {model.__name__}.{field}, "
+                f"不该设 int caster (旧版 int('COMP_123') ValueError 的根因)"
+            )
 
-    def test_all_three_force_pickers_in_script(self):
-        """3 个 force picker 都应在脚本中定义."""
-        src = SCRIPT_PATH.read_text(encoding="utf-8")
-        assert '"售后申请", _pick_forced_postsale' in src, "应有售后 picker"
-        assert '"物流投诉", _pick_forced_logistics_complaint' in src, "应有物流投诉 picker"
-        assert '"下单", _pick_forced_order_for_high_amount' in src, "应有高额订单 picker"
-        assert src.count("RiskCheckRequest(") >= 3, "3 个 picker 都应构造 RiskCheckRequest"
+    def test_field_is_primary_key_of_model(self):
+        """每个物流事件的校验字段必须是对应业务表的字符串主键 (PK)."""
+        # 业务表主键 (与 app/models_business.py 定义一致)
+        expected_pk = {
+            "Parcel": "parcel_id",
+            "DangerousDeclaration": "decl_id",
+            "CodTransaction": "cod_id",
+        }
+        for evt_types, (model, field, _caster, _label, _status) in validator_module._EVENT_SOURCE_VALIDATORS.items():
+            if model is None:
+                continue
+            assert field == expected_pk[model.__name__], (
+                f"event_type={evt_types} 应校验 {model.__name__}.{expected_pk[model.__name__]}, "
+                f"实际配了 {field}"
+            )
+            # 主键是字符串类型 → source_id 直接用字符串拼即可, 无需前缀
+            pk_col = getattr(model, field)
+            assert isinstance(pk_col.type, String), (
+                f"{model.__name__}.{field} 应是字符串主键, 实际类型: {pk_col.type}"
+            )
 
-    def test_logistics_complaint_record_id_is_bigint(self):
-        """logistics_complaints_record.record_id 必须是整数 (跟 validator 强转 int 对应)."""
-        sql = SQL_PATH.read_text(encoding="utf-8")
-        m = re.search(r"`record_id`\s+(\w+)[^,]*AUTO_INCREMENT", sql)
-        assert m, "logistics_complaints_record.record_id 必须是 AUTO_INCREMENT 整数"
-        col_type = m.group(1).lower()
-        assert "int" in col_type or "bigint" in col_type, (
-            f"record_id 必须是整数类型, 实际: {col_type}"
-        )
+    def test_each_event_maps_to_expected_model(self):
+        """4 类物流事件 → 4 个正确模型 (事件↔来源表 一一对应)."""
+        mapping = {
+            "parcel_pickup": "Parcel",
+            "cross_border_ship": "Parcel",
+            "dangerous_declare": "DangerousDeclaration",
+            "cod_settlement": "CodTransaction",
+        }
+        table = {evt: model.__name__ if model else None
+                 for evt_types, (model, _f, _c, _l, _s) in validator_module._EVENT_SOURCE_VALIDATORS.items()
+                 for evt in evt_types}
+        for evt, expected_model in mapping.items():
+            assert table.get(evt) == expected_model, (
+                f"{evt} 应映射到 {expected_model}, 实际 {table.get(evt)}"
+            )
 
-    def test_validator_caster_matches_record_id_type(self):
-        """validator 强转 int() 必须跟 record_id 类型 (整数) 对得上."""
-        # validator.py: ("物流投诉",): (LogisticsComplaintsRecord, "record_id", int, ...)
-        # source_id=str(rec_id) → "123" → int("123") = 123 OK
-        # source_id=f"COMP_{rec_id}" → "COMP_123" → int("COMP_123") ValueError
-        src = SCRIPT_PATH.read_text(encoding="utf-8")
-        assert 'source_id=str(rec_id)' in src, "source_id 必须是整数字符串, 不带前缀"
+    def test_source_id_can_be_plain_string_no_prefix(self):
+        """source_id 直接用业务主键字符串 (如 P000001), 不带任何前缀 → 能通过校验."""
+        # 静态断言: validator 对 logistics 事件只做存在性检查, 不拼前缀 (verify 在 ensure_exists)
+        src = inspect.getsource(validator_module)
+        assert "f\"COMP_" not in src, "不应再有 COMP_ 前缀拼接逻辑"
+        # 4 个 logistics 事件都列在派发表里, 校验走 ensure_exists (字符串精确匹配)
+        logistics_events = ["parcel_pickup", "dangerous_declare", "cross_border_ship", "cod_settlement"]
+        for evt in logistics_events:
+            assert any(evt in evt_types for evt_types, *_ in validator_module._EVENT_SOURCE_VALIDATORS.items()), (
+                f"{evt} 必须配置在 _EVENT_SOURCE_VALIDATORS 里"
+            )

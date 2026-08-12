@@ -1,6 +1,10 @@
 """
-测试 - 黑名单 3 种类型 (用户/地址/手机号) 拦截
-【P1-S9 修复 2026-08-07】原代码只查"用户"黑名单, 地址/手机号黑名单加进 DB 也用不上.
+测试 - 黑名单 3 种类型 (用户/地址/手机号) 拦截 (物流版)
+【物流版改造】黑名单预检覆盖寄收双端:
+  1. 寄件用户黑名单: 必查 (任何事件)
+  2. 收件地址黑名单: 有 receiver_id 时反查 ReceiverInfo.address
+  3. 寄件手机号黑名单: sender_id=user_id 约定, 必查
+  4. 收件手机号黑名单: 有 receiver_id 时反查 ReceiverInfo.phone
 """
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -12,13 +16,13 @@ from app.service import event as event_module
 
 
 def _make_request(**overrides) -> RiskCheckRequest:
-    """构造一个 RiskCheckRequest, 默认值是"下单/1001/order_001/receive_001"."""
+    """构造一个 RiskCheckRequest, 默认值是"揽收/1001/P000001/R0001"."""
     base = dict(
-        event_type="下单",
-        source_id="order_001",
+        event_type="parcel_pickup",
+        source_id="P000001",
         user_id="1001",
-        order_id="order_001",
-        receive_id="receive_001",
+        parcel_id="P000001",
+        receiver_id="R0001",
     )
     base.update(overrides)
     return RiskCheckRequest(**base)
@@ -37,12 +41,20 @@ def _row(**kwargs):
     return SimpleNamespace(**kwargs)
 
 
+def _mock_db_with_lookups(address="上海测试路1号", phone="13800000000"):
+    """mock DB: 地址/手机号查询都返回带 address/phone 属性的行 (2 种属性都带, 通用)."""
+    db = _mock_db()
+    row = _row(address=address, phone=phone) if address else None
+    db.execute = AsyncMock(return_value=MagicMock(first=MagicMock(return_value=row)))
+    return db
+
+
 class TestCheckAllBlacklists:
-    """测试 _check_all_blacklists: 3 种类型按顺序查, 短路返回."""
+    """测试 _check_all_blacklists: 寄件用户 → 收件地址 → 寄件手机号 → 收件手机号, 短路返回."""
 
     @pytest.mark.asyncio
     async def test_user_blacklist_hit(self):
-        """用户撞黑 → 返回 '用户' (短路, 不查地址/手机号)"""
+        """寄件用户撞黑 → 返回 '用户' (短路, 不查地址/手机号)"""
         request = _make_request()
         call_count = {"n": 0}
 
@@ -57,7 +69,7 @@ class TestCheckAllBlacklists:
 
     @pytest.mark.asyncio
     async def test_addr_blacklist_hit(self):
-        """用户不撞, 地址撞 → 返回 '地址' (不查手机号)"""
+        """用户不撞, 收件地址撞 → 返回 '地址' (不查手机号)"""
         request = _make_request()
         call_count = {"n": 0}
 
@@ -66,26 +78,27 @@ class TestCheckAllBlacklists:
             return btype == "地址"
 
         with patch.object(event_module, "check_blacklist", side_effect=fake_check):
-            result = await event_module._check_all_blacklists(db=_mock_db(), request=request)
+            result = await event_module._check_all_blacklists(db=_mock_db_with_lookups(), request=request)
         assert result == "地址"
-        # 用户查了 + 地址查了 + 手机号没查 (因为地址已经撞了短路)
+        # 用户查了 + 地址查了 + 手机号没查 (地址撞了短路)
         assert call_count["n"] == 2, f"用户+地址应共查 2 次, 实际 {call_count['n']}"
 
     @pytest.mark.asyncio
-    async def test_phone_blacklist_hit(self):
-        """用户/地址不撞, 手机号撞 → 返回 '手机号' (1 次 SQL 查 receive_info)"""
+    async def test_sender_phone_blacklist_hit(self):
+        """用户/地址不撞, 寄件手机号撞 → 返回 '手机号' (收件手机号不查, 已短路)"""
         request = _make_request()
+        call_count = {"n": 0}
 
         async def fake_check(_db, btype, _value):
+            call_count["n"] += 1
             return btype == "手机号"
 
-        # mock receive_info 查手机号
-        db = _mock_db()
-        db.execute = AsyncMock(return_value=MagicMock(first=MagicMock(return_value=_row(receiver_phone="13800000000"))))
-
+        # 地址/手机号查询都返回有值的行
         with patch.object(event_module, "check_blacklist", side_effect=fake_check):
-            result = await event_module._check_all_blacklists(db, request)
+            result = await event_module._check_all_blacklists(db=_mock_db_with_lookups(), request=request)
         assert result == "手机号"
+        # 用户 + 地址 + 寄件手机号 = 3 次, 收件手机号不查 (寄件已撞短路)
+        assert call_count["n"] == 3, f"应共查 3 次, 实际 {call_count['n']}"
 
     @pytest.mark.asyncio
     async def test_no_blacklist_hit(self):
@@ -95,33 +108,33 @@ class TestCheckAllBlacklists:
         async def fake_check(_db, btype, _value):
             return False
 
-        # mock receive_info 查手机号, 但手机号也不撞
-        db = _mock_db()
-        db.execute = AsyncMock(return_value=MagicMock(first=MagicMock(return_value=_row(receiver_phone="13800000000"))))
-
         with patch.object(event_module, "check_blacklist", side_effect=fake_check):
-            result = await event_module._check_all_blacklists(db, request)
+            result = await event_module._check_all_blacklists(db=_mock_db_with_lookups(), request=request)
         assert result is None
 
     @pytest.mark.asyncio
-    async def test_no_receive_id_skips_addr_and_phone(self):
-        """receive_id=None → 跳过地址+手机号, 只查用户"""
-        request = _make_request(receive_id=None)
+    async def test_no_receiver_id_skips_receiver_addr_and_phone(self):
+        """receiver_id=None → 跳过收件地址+收件手机号, 但寄件手机号仍查 (寄件人必查)"""
+        request = _make_request(receiver_id=None)
         call_log = []
 
         async def fake_check(_db, btype, _value):
             call_log.append(btype)
             return False
 
+        # 只有寄件手机号查询 (SenderInfo.phone), 地址/收件查询因为 receiver_id=None 都不走
+        db = _mock_db()
+        db.execute = AsyncMock(return_value=MagicMock(first=MagicMock(return_value=_row(phone="13800000000"))))
+
         with patch.object(event_module, "check_blacklist", side_effect=fake_check):
-            result = await event_module._check_all_blacklists(db=_mock_db(), request=request)
+            result = await event_module._check_all_blacklists(db=db, request=request)
         assert result is None
-        # 只查了用户, 没查地址/手机号
-        assert call_log == ["用户"], f"应只查用户, 实际查了 {call_log}"
+        # 查了寄件用户 + 寄件手机号, 没查收件地址/收件手机号
+        assert call_log == ["用户", "手机号"], f"应查 [用户, 手机号], 实际查了 {call_log}"
 
     @pytest.mark.asyncio
-    async def test_receive_id_no_phone_skips_phone(self):
-        """receive_id 有但没手机号 → 不查手机号黑名单 (避免空查)"""
+    async def test_no_lookup_data_skips_addr_and_phone(self):
+        """地址/手机号都查不到 → 只查寄件用户, 地址/手机号黑名单都不查 (避免空查)"""
         request = _make_request()
         call_log = []
 
@@ -129,15 +142,15 @@ class TestCheckAllBlacklists:
             call_log.append(btype)
             return False
 
-        # mock receive_info 返回 None (没手机号)
+        # 地址/手机号查询都返回 None (没数据)
         db = _mock_db()
         db.execute = AsyncMock(return_value=MagicMock(first=MagicMock(return_value=None)))
 
         with patch.object(event_module, "check_blacklist", side_effect=fake_check):
-            result = await event_module._check_all_blacklists(db, request)
+            result = await event_module._check_all_blacklists(db=db, request=request)
         assert result is None
-        # 查了用户+地址, 没查手机号
-        assert "手机号" not in call_log
+        # 只查了寄件用户, 没查地址/手机号
+        assert call_log == ["用户"], f"应只查用户, 实际查了 {call_log}"
 
 
 class TestBlacklistReject:
