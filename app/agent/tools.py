@@ -20,14 +20,18 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import AsyncSessionLocal
 from app.engine.feature import compute_user_features
 from app.models import (
-    OrderDetail,
-    OrderInfo,
-    Postsale,
-    ReceiveInfo,
     RiskAssessment,
     RiskBlacklist,
     RiskCase,
     RiskRule,
+)
+from app.models_business import (
+    ComplaintRecord,
+    ContactInfo,
+    LoanApplication,
+    LoanInstallment,
+    OverdueRecord,
+    RepaymentRecord,
 )
 from app.schemas import BlacklistCreate, RiskCheckRequest
 from app.service.case import (
@@ -82,7 +86,7 @@ def _row_to_dict(row) -> dict:
 async def _risk_check_impl(
     *, db: AsyncSession, user_id: str, event_type: str, source_id: str,
 ) -> str:
-    """对用户和事件执行实时风控检查 (走 process_event 7 步)."""
+    """对客户和事件执行实时风控检查 (走 process_event 7 步)."""
     request = RiskCheckRequest(event_type=event_type, source_id=source_id, user_id=user_id)
     result = await process_event(db, request)
     return json.dumps({
@@ -111,7 +115,7 @@ async def _query_cases_impl(
 
 
 async def _query_user_profile_impl(*, db: AsyncSession, user_id: str) -> str:
-    """查询用户风险画像. 没画像时实时算 14 个 user 特征 (不写库)."""
+    """查询客户风险画像. 没画像时实时算 14 个 cust 特征 (不写库)."""
     profile = await get_user_profile(db, user_id)
     if not profile:
         features = await compute_user_features(db, user_id)
@@ -375,134 +379,104 @@ async def _analyze_rule_effectiveness_impl(*, db: AsyncSession) -> str:
 # ============================================================
 
 async def _biz_user_orders(db: AsyncSession, user_id: str, order_id: str, limit: int) -> list[Any]:
-    """用户的所有订单 (含聚合总金额). LEFT JOIN 保没明细的订单 total_amount 显 0."""
-    order_total_subq = (
-        select(
-            OrderDetail.order_id,
-            func.coalesce(func.sum(OrderDetail.final_amount), 0).label("total_amount"),
-        )
-        .group_by(OrderDetail.order_id)
-        .subquery()
-    )
+    """客户的所有贷款申请 (order_id 语义 = loan_id, D5 契约)."""
     stmt = (
         select(
-            OrderInfo.order_id,
-            OrderInfo.create_time,
-            OrderInfo.order_status,
-            func.coalesce(order_total_subq.c.total_amount, 0).label("total_amount"),
+            LoanApplication.loan_id,
+            LoanApplication.apply_time,
+            LoanApplication.loan_status,
+            LoanApplication.loan_amount,
         )
-        .select_from(OrderInfo)
-        .outerjoin(order_total_subq, OrderInfo.order_id == order_total_subq.c.order_id)
-        .where(OrderInfo.user_id == user_id)
-        .order_by(OrderInfo.create_time.desc())
+        .where(LoanApplication.customer_id == user_id)
+        .order_by(LoanApplication.apply_time.desc())
         .limit(limit)
     )
     return list((await db.execute(stmt)).all())
 
 
 async def _biz_user_postsales(db: AsyncSession, user_id: str, order_id: str, limit: int) -> list[Any]:
-    """用户的售后记录 (3 表 JOIN: postsale → order_detail → order_info)."""
+    """客户的逾期记录 (逾期→分期→申请)."""
     stmt = (
         select(
-            Postsale.postsale_id,
-            Postsale.create_time,
-            Postsale.postsale_type,
-            Postsale.postsale_reason,
-            Postsale.postsale_status,
-            Postsale.refund_amount,
+            OverdueRecord.overdue_id,
+            OverdueRecord.create_time,
+            OverdueRecord.overdue_days,
+            OverdueRecord.overdue_amount,
+            OverdueRecord.overdue_reason,
+            OverdueRecord.overdue_status,
         )
-        .select_from(Postsale)
-        .join(OrderDetail, Postsale.order_detail_id == OrderDetail.order_detail_id)
-        .join(OrderInfo, OrderDetail.order_id == OrderInfo.order_id)
-        .where(OrderInfo.user_id == user_id)
-        .order_by(Postsale.create_time.desc())
+        .select_from(OverdueRecord)
+        .join(LoanInstallment, OverdueRecord.installment_id == LoanInstallment.installment_id)
+        .join(LoanApplication, LoanInstallment.loan_id == LoanApplication.loan_id)
+        .where(LoanApplication.customer_id == user_id)
+        .order_by(OverdueRecord.create_time.desc())
         .limit(limit)
     )
     return list((await db.execute(stmt)).all())
 
 
 async def _biz_user_addresses(db: AsyncSession, user_id: str, order_id: str, limit: int) -> list[Any]:
-    """用户的收货地址."""
+    """客户的联系信息."""
     stmt = (
         select(
-            ReceiveInfo.receive_id,
-            ReceiveInfo.receiver_name,
-            ReceiveInfo.receiver_phone,
-            ReceiveInfo.receive_province,
-            ReceiveInfo.receive_city,
-            ReceiveInfo.receive_district,
+            ContactInfo.contact_id,
+            ContactInfo.contact_person,
+            ContactInfo.contact_phone,
+            ContactInfo.contact_province,
+            ContactInfo.contact_city,
+            ContactInfo.contact_district,
         )
-        .where(ReceiveInfo.user_id == user_id)
+        .where(ContactInfo.customer_id == user_id)
         .limit(limit)
     )
     return list((await db.execute(stmt)).all())
 
 
 async def _biz_order_detail(db: AsyncSession, user_id: str, order_id: str, limit: int) -> list[Any]:
-    """订单的明细行."""
+    """贷款申请的分期明细."""
     stmt = (
         select(
-            OrderDetail.order_detail_id,
-            OrderDetail.sku_id,
-            OrderDetail.sku_name,
-            OrderDetail.sku_count,
-            OrderDetail.total_amount,
-            OrderDetail.discount_amount,
-            OrderDetail.final_amount,
+            LoanInstallment.installment_id,
+            LoanInstallment.installment_no,
+            LoanInstallment.due_amount,
+            LoanInstallment.paid_amount,
+            LoanInstallment.due_date,
+            LoanInstallment.paid_date,
         )
-        .where(OrderDetail.order_id == order_id)
+        .where(LoanInstallment.loan_id == order_id)
+        .order_by(LoanInstallment.installment_no)
         .limit(limit)
     )
     return list((await db.execute(stmt)).all())
 
 
 async def _biz_recent_orders(db: AsyncSession, user_id: str, order_id: str, limit: int) -> list[Any]:
-    """系统最近的订单 (不限 user, 管理员视角)."""
-    order_total_subq = (
-        select(
-            OrderDetail.order_id,
-            func.coalesce(func.sum(OrderDetail.final_amount), 0).label("total_amount"),
-        )
-        .group_by(OrderDetail.order_id)
-        .subquery()
-    )
+    """系统最近的贷款申请 (管理员视角)."""
     stmt = (
         select(
-            OrderInfo.order_id,
-            OrderInfo.user_id,
-            OrderInfo.create_time,
-            OrderInfo.order_status,
-            func.coalesce(order_total_subq.c.total_amount, 0).label("total_amount"),
+            LoanApplication.loan_id,
+            LoanApplication.customer_id,
+            LoanApplication.apply_time,
+            LoanApplication.loan_status,
+            LoanApplication.loan_amount,
         )
-        .select_from(OrderInfo)
-        .outerjoin(order_total_subq, OrderInfo.order_id == order_total_subq.c.order_id)
-        .order_by(OrderInfo.create_time.desc())
+        .order_by(LoanApplication.apply_time.desc())
         .limit(limit)
     )
     return list((await db.execute(stmt)).all())
 
 
 async def _biz_high_value_orders(db: AsyncSession, user_id: str, order_id: str, limit: int) -> list[Any]:
-    """高价值订单 (单笔总价 >= 1000, GROUP BY + HAVING 筛选).
-
-    HAVING 在 GROUP BY 之后筛选聚合结果, 区别于 WHERE (筛行).
-    """
+    """大额贷款申请 (单笔 >= 10 万, 反洗钱关注)."""
     stmt = (
         select(
-            OrderInfo.order_id,
-            OrderInfo.user_id,
-            OrderInfo.create_time,
-            func.sum(OrderDetail.final_amount).label("total_amount"),
+            LoanApplication.loan_id,
+            LoanApplication.customer_id,
+            LoanApplication.apply_time,
+            LoanApplication.loan_amount,
         )
-        .select_from(OrderInfo)
-        .join(OrderDetail, OrderInfo.order_id == OrderDetail.order_id)
-        .group_by(
-            OrderInfo.order_id,
-            OrderInfo.user_id,
-            OrderInfo.create_time,
-        )
-        .having(func.sum(OrderDetail.final_amount) >= 1000)
-        .order_by(func.sum(OrderDetail.final_amount).desc())
+        .where(LoanApplication.loan_amount >= 100000)
+        .order_by(LoanApplication.loan_amount.desc())
         .limit(limit)
     )
     return list((await db.execute(stmt)).all())
@@ -540,7 +514,7 @@ async def _query_business_data_impl(
 @tool(
     description=(
         "对指定用户和事件执行实时风险检查。"
-        "参数: user_id (用户ID, 如 '1001')、event_type (事件类型, 可选值: 下单/支付/售后申请/物流投诉)、source_id (关联业务ID, 如订单号)。"
+        "参数: user_id (客户ID, 如 'C00001')、event_type (事件类型, 可选值: 贷款申请/放款/还款/客户投诉)、source_id (关联业务ID, 如贷款申请ID)。"
         "返回: 风控评估结果字符串, 含评分、风险等级、决策和命中规则。"
         "内部: 走 process_event 7 步流水线 (校验→黑名单→补全→决策)。"
     )
@@ -565,22 +539,22 @@ async def query_cases(status: str = "", page: int = 1) -> str:
     description=(
         "查询用户的风险画像信息。"
         "参数: user_id (用户ID, 如 '1001')。"
-        "返回: 用户的风险评分、订单统计、退款率、地址数等画像数据; 没画像时实时算 14 个 user 特征。"
+        "返回: 客户的风险评分、申请总数、逾期次数、逾期率、联系信息数等画像数据; 没画像时实时算 14 个 cust 特征。"
     )
 )
 async def query_user_profile(user_id: str) -> str:
-    return await _safe_call("用户画像查询", _query_user_profile_impl, user_id=user_id)
+    return await _safe_call("客户画像查询", _query_user_profile_impl, user_id=user_id)
 
 
 @tool(
     description=(
         "管理风控黑名单。"
-        "参数: action (操作类型: add/remove/check/list)、blacklist_type (黑名单类型: 用户/地址/手机号)、value (黑名单值, 添加/检查/移除时需要)、reason (加黑原因, 添加时需要)。"
+        "参数: action (操作类型: add/remove/check/list)、blacklist_type (黑名单类型: 客户/手机号/地址/设备)、value (黑名单值, 添加/检查/移除时需要)、reason (加黑原因, 添加时需要)。"
         "返回: 操作结果 (文本或 JSON)。"
     )
 )
 async def manage_blacklist(
-    action: str, blacklist_type: str = "用户", value: str = "", reason: str = "",
+    action: str, blacklist_type: str = "客户", value: str = "", reason: str = "",
 ) -> str:
     return await _safe_call("黑名单操作", _manage_blacklist_impl,
                             action=action, blacklist_type=blacklist_type, value=value, reason=reason)
@@ -691,9 +665,9 @@ if __name__ == "__main__":
     # 3. 8 个 @tool 列表
     print("\n[3] 8 个 @tool (LangChain 工具):")
     tools_list = [
-        ("risk_check",            "对用户和事件执行实时风控检查"),
+        ("risk_check",            "对客户和事件执行实时风控检查"),
         ("query_cases",           "查询案件列表 (按 status)"),
-        ("query_user_profile",    "查询用户风险画像"),
+        ("query_user_profile",    "查询客户风险画像"),
         ("manage_blacklist",      "黑名单管理 (4 action: add/check/list/remove)"),
         ("query_dashboard_stats", "仪表盘统计 (今日+待审+7天趋势+TOP5 规则)"),
         ("analyze_risk_trend",    "指定天数内风险趋势分析"),
