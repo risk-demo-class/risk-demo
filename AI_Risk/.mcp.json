@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "obsidian-vault": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-filesystem",
+        "E:/11-project_sgg/obs/knowledge_base"
+      ]
+    }
+  }
+}

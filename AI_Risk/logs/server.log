@@ -1,0 +1,337 @@
+2026-08-06 20:52:54,548 [INFO] uvicorn.error: Started server process [4648]
+2026-08-06 20:52:54,548 [INFO] uvicorn.error: Waiting for application startup.
+2026-08-06 20:52:54,549 [INFO] uvicorn.error: Application startup complete.
+2026-08-06 20:52:54,549 [INFO] uvicorn.error: Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+2026-08-06 20:53:11,546 [INFO] uvicorn.access: 127.0.0.1:62669 - "GET /api/cases?page=1&page_size=5 HTTP/1.1" 200
+2026-08-06 20:53:11,554 [INFO] uvicorn.access: 127.0.0.1:62669 - "POST /api/blacklist HTTP/1.1" 201
+2026-08-06 20:53:11,557 [INFO] uvicorn.access: 127.0.0.1:62669 - "POST /api/blacklist HTTP/1.1" 201
+2026-08-06 20:53:12,125 [INFO] uvicorn.access: 127.0.0.1:62669 - "GET /api/cases?page=1&page_size=50 HTTP/1.1" 200
+2026-08-06 20:53:12,140 [INFO] uvicorn.access: 127.0.0.1:62669 - "GET /api/blacklist?page=1&page_size=100 HTTP/1.1" 200
+2026-08-06 20:53:12,168 [INFO] uvicorn.access: 127.0.0.1:62669 - "POST /api/cases/cas01kz7t2hv8f8hkja1qx6kf1r21/review HTTP/1.1" 500
+2026-08-06 20:53:12,168 [ERROR] uvicorn.error: Exception in ASGI application
+Traceback (most recent call last):
+  File "D:\software\anaconda\Lib\site-packages\sqlalchemy\engine\base.py", line 1815, in _execute_context
+    context = constructor(
+              ^^^^^^^^^^^^
+  File "D:\software\anaconda\Lib\site-packages\sqlalchemy\engine\default.py", line 1418, in _init_compiled
+    self.cursor = self.create_cursor()
+                  ^^^^^^^^^^^^^^^^^^^^
+  File "D:\software\anaconda\Lib\site-packages\sqlalchemy\engine\default.py", line 1752, in create_cursor
+    return self.create_default_cursor()
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\software\anaconda\Lib\site-packages\sqlalchemy\engine\default.py", line 1758, in create_default_cursor
+    return self._dbapi_connection.cursor()
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\software\anaconda\Lib\site-packages\sqlalchemy\pool\base.py", line 1485, in cursor
+    return self.dbapi_connection.cursor(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\software\anaconda\Lib\site-packages\sqlalchemy\dialects\mysql\aiomysql.py", line 198, in cursor
+    return AsyncAdapt_aiomysql_cursor(self)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\software\anaconda\Lib\site-packages\sqlalchemy\dialects\mysql\aiomysql.py", line 61, in __init__
+    self._cursor = self.await_(cursor.__aenter__())
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\software\anaconda\Lib\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 123, in await_only
+    raise exc.MissingGreenlet(
+sqlalchemy.exc.MissingGreenlet: greenlet_spawn has not been called; can't call await_only() here. Was IO attempted in an unexpected place? (Background on this error at: https://sqlalche.me/e/20/xd2s)
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "D:\software\anaconda\Lib\site-packages\uvicorn\protocols\http\httptools_impl.py", line 409, in run_asgi
+    result = await app(  # type: ignore[func-returns-value]
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\software\anaconda\Lib\site-packages\uvicorn\middleware\proxy_headers.py", line 60, in __call__
+    return await self.app(scope, receive, send)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\software\anaconda\Lib\site-packages\fastapi\applications.py", line 1054, in __call__
+    await super().__call__(scope, receive, send)
+  File "D:\software\anaconda\Lib\site-packages\starlette\applications.py", line 113, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "D:\software\anaconda\Lib\site-packages\starlette\middleware\errors.py", line 187, in __call__
+    raise exc
+  File "D:\software\anaconda\Lib\site-packages\starlette\middleware\errors.py", line 165, in __call__
+    await self.app(scope, receive, _send)
+  File "D:\software\anaconda\Lib\site-packages\starlette\middleware\exceptions.py", line 62, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "D:\software\anaconda\Lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "D:\software\anaconda\Lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "D:\software\anaconda\Lib\site-packages\starlette\routing.py", line 715, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "D:\software\anaconda\Lib\site-packages\starlette\routing.py", line 735, in app
+    await route.handle(scope, receive, send)
+  File "D:\software\anaconda\Lib\site-packages\starlette\routing.py", line 288, in handle
+    await self.app(scope, receive, send)
+  File "D:\software\anaconda\Lib\site-packages\starlette\routing.py", line 76, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "D:\software\anaconda\Lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "D:\software\anaconda\Lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "D:\software\anaconda\Lib\site-packages\starlette\routing.py", line 73, in app
+    response = await f(request)
+               ^^^^^^^^^^^^^^^^
+  File "D:\software\anaconda\Lib\site-packages\fastapi\routing.py", line 301, in app
+    raw_response = await run_endpoint_function(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\software\anaconda\Lib\site-packages\fastapi\routing.py", line 212, in run_endpoint_function
+    return await dependant.call(**values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\workroom\尚硅谷大模型项目之风控系统\3.代码\AI_Risk\app\routers\case.py", line 70, in api_review_case
+    result = await review_case(db, case_id, data)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\workroom\尚硅谷大模型项目之风控系统\3.代码\AI_Risk\app\service\case.py", line 364, in review_case
+    await add_blacklist(db, BlacklistCreate(
+  File "D:\workroom\尚硅谷大模型项目之风控系统\3.代码\AI_Risk\app\service\case.py", line 91, in add_blacklist
+    create_time=bl.create_time,
+                ^^^^^^^^^^^^^^
+  File "D:\software\anaconda\Lib\site-packages\sqlalchemy\orm\attributes.py", line 566, in __get__
+    return self.impl.get(state, dict_)  # type: ignore[no-any-return]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\software\anaconda\Lib\site-packages\sqlalchemy\orm\attributes.py", line 1086, in get
+    value = self._fire_loader_callables(state, key, passive)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\software\anaconda\Lib\site-packages\sqlalchemy\orm\attributes.py", line 1116, in _fire_loader_callables
+    return state._load_expired(state, passive)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\software\anaconda\Lib\site-packages\sqlalchemy\orm\state.py", line 803, in _load_expired
+    self.manager.expired_attribute_loader(self, toload, passive)
+  File "D:\software\anaconda\Lib\site-packages\sqlalchemy\orm\loading.py", line 1670, in load_scalar_attributes
+    result = load_on_ident(
+             ^^^^^^^^^^^^^^
+  File "D:\software\anaconda\Lib\site-packages\sqlalchemy\orm\loading.py", line 509, in load_on_ident
+    return load_on_pk_identity(
+           ^^^^^^^^^^^^^^^^^^^^
+  File "D:\software\anaconda\Lib\site-packages\sqlalchemy\orm\loading.py", line 694, in load_on_pk_identity
+    session.execute(
+  File "D:\software\anaconda\Lib\site-packages\sqlalchemy\orm\session.py", line 2362, in execute
+    return self._execute_internal(
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\software\anaconda\Lib\site-packages\sqlalchemy\orm\session.py", line 2247, in _execute_internal
+    result: Result[Any] = compile_state_cls.orm_execute_statement(
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\software\anaconda\Lib\site-packages\sqlalchemy\orm\context.py", line 305, in orm_execute_statement
+    result = conn.execute(
+             ^^^^^^^^^^^^^
+  File "D:\software\anaconda\Lib\site-packages\sqlalchemy\engine\base.py", line 1418, in execute
+    return meth(
+           ^^^^^
+  File "D:\software\anaconda\Lib\site-packages\sqlalchemy\sql\elements.py", line 515, in _execute_on_connection
+    return connection._execute_clauseelement(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\software\anaconda\Lib\site-packages\sqlalchemy\engine\base.py", line 1640, in _execute_clauseelement
+    ret = self._execute_context(
+          ^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\software\anaconda\Lib\site-packages\sqlalchemy\engine\base.py", line 1821, in _execute_context
+    self._handle_dbapi_exception(
+  File "D:\software\anaconda\Lib\site-packages\sqlalchemy\engine\base.py", line 2355, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "D:\software\anaconda\Lib\site-packages\sqlalchemy\engine\base.py", line 1815, in _execute_context
+    context = constructor(
+              ^^^^^^^^^^^^
+  File "D:\software\anaconda\Lib\site-packages\sqlalchemy\engine\default.py", line 1418, in _init_compiled
+    self.cursor = self.create_cursor()
+                  ^^^^^^^^^^^^^^^^^^^^
+  File "D:\software\anaconda\Lib\site-packages\sqlalchemy\engine\default.py", line 1752, in create_cursor
+    return self.create_default_cursor()
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\software\anaconda\Lib\site-packages\sqlalchemy\engine\default.py", line 1758, in create_default_cursor
+    return self._dbapi_connection.cursor()
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\software\anaconda\Lib\site-packages\sqlalchemy\pool\base.py", line 1485, in cursor
+    return self.dbapi_connection.cursor(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\software\anaconda\Lib\site-packages\sqlalchemy\dialects\mysql\aiomysql.py", line 198, in cursor
+    return AsyncAdapt_aiomysql_cursor(self)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\software\anaconda\Lib\site-packages\sqlalchemy\dialects\mysql\aiomysql.py", line 61, in __init__
+    self._cursor = self.await_(cursor.__aenter__())
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\software\anaconda\Lib\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 123, in await_only
+    raise exc.MissingGreenlet(
+sqlalchemy.exc.StatementError: (sqlalchemy.exc.MissingGreenlet) greenlet_spawn has not been called; can't call await_only() here. Was IO attempted in an unexpected place?
+[SQL: SELECT risk_blacklist.create_time AS risk_blacklist_create_time 
+FROM risk_blacklist 
+WHERE risk_blacklist.blacklist_id = %s]
+[parameters: [{'pk_1': 29}]]
+(Background on this error at: https://sqlalche.me/e/20/xd2s)
+2026-08-06 20:53:12,715 [INFO] uvicorn.access: 127.0.0.1:62676 - "POST /api/cases/cas01kz7t2hv8f8hkja1qx6kf1r21/review HTTP/1.1" 500
+2026-08-06 20:53:12,716 [ERROR] uvicorn.error: Exception in ASGI application
+Traceback (most recent call last):
+  File "D:\software\anaconda\Lib\site-packages\sqlalchemy\engine\base.py", line 1815, in _execute_context
+    context = constructor(
+              ^^^^^^^^^^^^
+  File "D:\software\anaconda\Lib\site-packages\sqlalchemy\engine\default.py", line 1418, in _init_compiled
+    self.cursor = self.create_cursor()
+                  ^^^^^^^^^^^^^^^^^^^^
+  File "D:\software\anaconda\Lib\site-packages\sqlalchemy\engine\default.py", line 1752, in create_cursor
+    return self.create_default_cursor()
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\software\anaconda\Lib\site-packages\sqlalchemy\engine\default.py", line 1758, in create_default_cursor
+    return self._dbapi_connection.cursor()
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\software\anaconda\Lib\site-packages\sqlalchemy\pool\base.py", line 1485, in cursor
+    return self.dbapi_connection.cursor(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\software\anaconda\Lib\site-packages\sqlalchemy\dialects\mysql\aiomysql.py", line 198, in cursor
+    return AsyncAdapt_aiomysql_cursor(self)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\software\anaconda\Lib\site-packages\sqlalchemy\dialects\mysql\aiomysql.py", line 61, in __init__
+    self._cursor = self.await_(cursor.__aenter__())
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\software\anaconda\Lib\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 123, in await_only
+    raise exc.MissingGreenlet(
+sqlalchemy.exc.MissingGreenlet: greenlet_spawn has not been called; can't call await_only() here. Was IO attempted in an unexpected place? (Background on this error at: https://sqlalche.me/e/20/xd2s)
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "D:\software\anaconda\Lib\site-packages\uvicorn\protocols\http\httptools_impl.py", line 409, in run_asgi
+    result = await app(  # type: ignore[func-returns-value]
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\software\anaconda\Lib\site-packages\uvicorn\middleware\proxy_headers.py", line 60, in __call__
+    return await self.app(scope, receive, send)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\software\anaconda\Lib\site-packages\fastapi\applications.py", line 1054, in __call__
+    await super().__call__(scope, receive, send)
+  File "D:\software\anaconda\Lib\site-packages\starlette\applications.py", line 113, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "D:\software\anaconda\Lib\site-packages\starlette\middleware\errors.py", line 187, in __call__
+    raise exc
+  File "D:\software\anaconda\Lib\site-packages\starlette\middleware\errors.py", line 165, in __call__
+    await self.app(scope, receive, _send)
+  File "D:\software\anaconda\Lib\site-packages\starlette\middleware\exceptions.py", line 62, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "D:\software\anaconda\Lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "D:\software\anaconda\Lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "D:\software\anaconda\Lib\site-packages\starlette\routing.py", line 715, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "D:\software\anaconda\Lib\site-packages\starlette\routing.py", line 735, in app
+    await route.handle(scope, receive, send)
+  File "D:\software\anaconda\Lib\site-packages\starlette\routing.py", line 288, in handle
+    await self.app(scope, receive, send)
+  File "D:\software\anaconda\Lib\site-packages\starlette\routing.py", line 76, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "D:\software\anaconda\Lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "D:\software\anaconda\Lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "D:\software\anaconda\Lib\site-packages\starlette\routing.py", line 73, in app
+    response = await f(request)
+               ^^^^^^^^^^^^^^^^
+  File "D:\software\anaconda\Lib\site-packages\fastapi\routing.py", line 301, in app
+    raw_response = await run_endpoint_function(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\software\anaconda\Lib\site-packages\fastapi\routing.py", line 212, in run_endpoint_function
+    return await dependant.call(**values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\workroom\尚硅谷大模型项目之风控系统\3.代码\AI_Risk\app\routers\case.py", line 70, in api_review_case
+    result = await review_case(db, case_id, data)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\workroom\尚硅谷大模型项目之风控系统\3.代码\AI_Risk\app\service\case.py", line 364, in review_case
+    await add_blacklist(db, BlacklistCreate(
+  File "D:\workroom\尚硅谷大模型项目之风控系统\3.代码\AI_Risk\app\service\case.py", line 91, in add_blacklist
+    create_time=bl.create_time,
+                ^^^^^^^^^^^^^^
+  File "D:\software\anaconda\Lib\site-packages\sqlalchemy\orm\attributes.py", line 566, in __get__
+    return self.impl.get(state, dict_)  # type: ignore[no-any-return]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\software\anaconda\Lib\site-packages\sqlalchemy\orm\attributes.py", line 1086, in get
+    value = self._fire_loader_callables(state, key, passive)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\software\anaconda\Lib\site-packages\sqlalchemy\orm\attributes.py", line 1116, in _fire_loader_callables
+    return state._load_expired(state, passive)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\software\anaconda\Lib\site-packages\sqlalchemy\orm\state.py", line 803, in _load_expired
+    self.manager.expired_attribute_loader(self, toload, passive)
+  File "D:\software\anaconda\Lib\site-packages\sqlalchemy\orm\loading.py", line 1670, in load_scalar_attributes
+    result = load_on_ident(
+             ^^^^^^^^^^^^^^
+  File "D:\software\anaconda\Lib\site-packages\sqlalchemy\orm\loading.py", line 509, in load_on_ident
+    return load_on_pk_identity(
+           ^^^^^^^^^^^^^^^^^^^^
+  File "D:\software\anaconda\Lib\site-packages\sqlalchemy\orm\loading.py", line 694, in load_on_pk_identity
+    session.execute(
+  File "D:\software\anaconda\Lib\site-packages\sqlalchemy\orm\session.py", line 2362, in execute
+    return self._execute_internal(
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\software\anaconda\Lib\site-packages\sqlalchemy\orm\session.py", line 2247, in _execute_internal
+    result: Result[Any] = compile_state_cls.orm_execute_statement(
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\software\anaconda\Lib\site-packages\sqlalchemy\orm\context.py", line 305, in orm_execute_statement
+    result = conn.execute(
+             ^^^^^^^^^^^^^
+  File "D:\software\anaconda\Lib\site-packages\sqlalchemy\engine\base.py", line 1418, in execute
+    return meth(
+           ^^^^^
+  File "D:\software\anaconda\Lib\site-packages\sqlalchemy\sql\elements.py", line 515, in _execute_on_connection
+    return connection._execute_clauseelement(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\software\anaconda\Lib\site-packages\sqlalchemy\engine\base.py", line 1640, in _execute_clauseelement
+    ret = self._execute_context(
+          ^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\software\anaconda\Lib\site-packages\sqlalchemy\engine\base.py", line 1821, in _execute_context
+    self._handle_dbapi_exception(
+  File "D:\software\anaconda\Lib\site-packages\sqlalchemy\engine\base.py", line 2355, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "D:\software\anaconda\Lib\site-packages\sqlalchemy\engine\base.py", line 1815, in _execute_context
+    context = constructor(
+              ^^^^^^^^^^^^
+  File "D:\software\anaconda\Lib\site-packages\sqlalchemy\engine\default.py", line 1418, in _init_compiled
+    self.cursor = self.create_cursor()
+                  ^^^^^^^^^^^^^^^^^^^^
+  File "D:\software\anaconda\Lib\site-packages\sqlalchemy\engine\default.py", line 1752, in create_cursor
+    return self.create_default_cursor()
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\software\anaconda\Lib\site-packages\sqlalchemy\engine\default.py", line 1758, in create_default_cursor
+    return self._dbapi_connection.cursor()
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\software\anaconda\Lib\site-packages\sqlalchemy\pool\base.py", line 1485, in cursor
+    return self.dbapi_connection.cursor(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\software\anaconda\Lib\site-packages\sqlalchemy\dialects\mysql\aiomysql.py", line 198, in cursor
+    return AsyncAdapt_aiomysql_cursor(self)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\software\anaconda\Lib\site-packages\sqlalchemy\dialects\mysql\aiomysql.py", line 61, in __init__
+    self._cursor = self.await_(cursor.__aenter__())
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\software\anaconda\Lib\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 123, in await_only
+    raise exc.MissingGreenlet(
+sqlalchemy.exc.StatementError: (sqlalchemy.exc.MissingGreenlet) greenlet_spawn has not been called; can't call await_only() here. Was IO attempted in an unexpected place?
+[SQL: SELECT risk_blacklist.create_time AS risk_blacklist_create_time 
+FROM risk_blacklist 
+WHERE risk_blacklist.blacklist_id = %s]
+[parameters: [{'pk_1': 30}]]
+(Background on this error at: https://sqlalche.me/e/20/xd2s)
+2026-08-06 20:55:57,370 [INFO] uvicorn.error: Started server process [17000]
+2026-08-06 20:55:57,370 [INFO] uvicorn.error: Waiting for application startup.
+2026-08-06 20:55:57,370 [INFO] uvicorn.error: Application startup complete.
+2026-08-06 20:55:57,370 [INFO] uvicorn.error: Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+2026-08-06 20:56:14,044 [INFO] uvicorn.access: 127.0.0.1:62914 - "GET /api/cases?page=1&page_size=5 HTTP/1.1" 200
+2026-08-06 20:56:14,051 [INFO] uvicorn.access: 127.0.0.1:62914 - "POST /api/blacklist HTTP/1.1" 201
+2026-08-06 20:56:14,056 [INFO] uvicorn.access: 127.0.0.1:62914 - "POST /api/blacklist HTTP/1.1" 201
+2026-08-06 20:56:14,614 [INFO] uvicorn.access: 127.0.0.1:62914 - "GET /api/cases?page=1&page_size=50 HTTP/1.1" 200
+2026-08-06 20:56:14,619 [INFO] uvicorn.access: 127.0.0.1:62914 - "GET /api/blacklist?page=1&page_size=100 HTTP/1.1" 200
+2026-08-06 20:56:14,690 [INFO] uvicorn.access: 127.0.0.1:62914 - "POST /api/cases/cas01kz7t2hv8f8hkja1qx6kf1r21/review HTTP/1.1" 200
+2026-08-06 20:56:15,235 [INFO] uvicorn.access: 127.0.0.1:62914 - "POST /api/cases/cas01kz7t2hv8f8hkja1qx6kf1r21/review HTTP/1.1" 200
+2026-08-06 20:56:29,640 [INFO] uvicorn.access: 127.0.0.1:62936 - "GET /api/blacklist?page=1&page_size=100 HTTP/1.1" 200
+2026-08-06 21:01:50,878 [INFO] uvicorn.error: Started server process [10076]
+2026-08-06 21:01:50,878 [INFO] uvicorn.error: Waiting for application startup.
+2026-08-06 21:01:50,878 [INFO] uvicorn.error: Application startup complete.
+2026-08-06 21:01:50,878 [INFO] uvicorn.error: Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+2026-08-06 21:02:17,876 [INFO] uvicorn.access: 127.0.0.1:63401 - "POST /api/rules HTTP/1.1" 422
+2026-08-06 21:02:39,854 [INFO] uvicorn.access: 127.0.0.1:63442 - "POST /api/rules HTTP/1.1" 201
+2026-08-06 21:02:41,921 [INFO] uvicorn.access: 127.0.0.1:63442 - "PUT /api/rules/R_TEST_001 HTTP/1.1" 200
+2026-08-06 21:05:29,204 [INFO] uvicorn.error: Started server process [14012]
+2026-08-06 21:05:29,204 [INFO] uvicorn.error: Waiting for application startup.
+2026-08-06 21:05:29,204 [INFO] uvicorn.error: Application startup complete.
+2026-08-06 21:05:29,204 [INFO] uvicorn.error: Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+2026-08-06 21:06:04,167 [INFO] uvicorn.access: 127.0.0.1:63700 - "GET /api/cases?page=1&page_size=3 HTTP/1.1" 200
+2026-08-06 21:06:04,227 [INFO] uvicorn.access: 127.0.0.1:63700 - "POST /api/cases/cas01kz8evqbeesxka32ppvhj3j1j/review HTTP/1.1" 200
+2026-08-06 21:06:04,270 [INFO] uvicorn.access: 127.0.0.1:63700 - "POST /api/blacklist HTTP/1.1" 201
+2026-08-06 21:06:04,318 [INFO] uvicorn.access: 127.0.0.1:63700 - "DELETE /api/blacklist/36 HTTP/1.1" 200
+2026-08-06 21:06:04,324 [INFO] uvicorn.access: 127.0.0.1:63700 - "GET /api/rules?limit=3 HTTP/1.1" 200
