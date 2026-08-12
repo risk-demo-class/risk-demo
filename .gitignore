@@ -1,0 +1,5 @@
+/logs/app.log
+/logs/gen_risk_fail.log
+/logs/pip_install.log
+/logs/server.log
+/logs/startup.log

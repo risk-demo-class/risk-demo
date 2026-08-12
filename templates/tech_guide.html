@@ -1,0 +1,1125 @@
+{% extends "base.html" %}
+{% block title %}技术架构手册 · 面试要点 - 物流风控系统{% endblock %}
+
+{% block extra_css %}
+<!--
+  highlight.js (GitHub 浅色主题) - 代码语法高亮, 护眼不刺眼
+  CDN 镜像选择 jsdelivr 国内访问稳定, 版本 11.8.0 是社区稳定版
+-->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.8.0/build/styles/github.min.css"
+      onerror="this.onerror=null;this.dataset.fallback='1';">
+<style>
+  /* 与 user_guide 同布局, 配色换成工程师友好的深色主题 Hero + 代码高亮框 */
+  .tech-layout { display: grid; grid-template-columns: 280px 1fr; gap: 24px; align-items: start; }
+  .tech-toc {
+    position: sticky; top: 12px;
+    background: #0f172a; border-radius: 12px; padding: 16px;
+    max-height: calc(100vh - 48px); overflow-y: auto;
+    font-size: 13px; color: #cbd5e1;
+  }
+  .tech-toc h6 { color: #94a3b8; font-size: 11px; text-transform: uppercase; letter-spacing: .7px; margin-bottom: 6px; }
+  .tech-toc ul { list-style: none; padding: 0; margin: 0; }
+  .tech-toc li { margin: 3px 0; }
+  .tech-toc a { color: #cbd5e1; text-decoration: none; padding: 5px 8px; border-radius: 6px; display: block; transition: .15s; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12.5px; }
+  .tech-toc a:hover { background: #1e293b; color: #60a5fa; }
+  .tech-toc a.active { background: #1e3a8a; color: #93c5fd; font-weight: 600; box-shadow: inset 3px 0 0 #3b82f6; }
+  .tech-toc .level-2 > a { padding-left: 22px; font-size: 12px; color: #94a3b8; }
+
+  .tech-body {
+    background: #fff; border-radius: 12px; padding: 32px 40px;
+    box-shadow: 0 1px 3px rgba(0,0,0,.08);
+    line-height: 1.8; color: #0f172a;
+    /* 关键: Grid 1fr 列默认 min-width:auto, 内部如果有 26000px 宽的 SVG 会撑破整个布局.
+       显式设 min-width:0 强制按 1fr 真实宽度计算, 让 SVG 的 width:100% 正确缩放到父容器 */
+    min-width: 0;
+    overflow-x: hidden;
+  }
+  .tech-body h2 { border-bottom: 2px solid #1e3a8a; padding-bottom: 8px; margin-top: 44px; margin-bottom: 18px; color: #0f172a; scroll-margin-top: 20px; }
+  .tech-body h3 { margin-top: 26px; margin-bottom: 12px; color: #1e3a8a; scroll-margin-top: 20px; }
+  .tech-body h4 { margin-top: 18px; margin-bottom: 8px; color: #334155; }
+  .tech-body h2:first-child { margin-top: 8px; }
+
+  .tech-hero {
+    background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 55%, #334155 100%);
+    color: white; border-radius: 12px; padding: 28px 32px; margin-bottom: 24px;
+  }
+  .tech-hero h1 { color: #fff !important; border: none !important; padding: 0 !important; margin: 0 0 6px 0 !important; font-size: 28px !important; font-family: ui-monospace, monospace; }
+  .tech-hero .sub { opacity: .9; font-size: 14px; }
+  .tech-hero .meta { display: flex; gap: 20px; flex-wrap: wrap; margin-top: 14px; font-size: 12.5px; opacity: .92; }
+  .tech-hero .chip { background: rgba(59,130,246,.18); border: 1px solid rgba(96,165,250,.4); padding: 2px 10px; border-radius: 999px; font-family: ui-monospace, monospace; }
+
+  /* ============ highlight.js 代码块美化 (和 GitHub 浅色主题对齐, 护眼不刺眼) ============ */
+  .hljs {
+    background: #f6f8fa;
+    padding: 18px 20px;
+    border-radius: 10px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 13px;
+    line-height: 1.65;
+    overflow-x: auto;
+    margin: 12px 0 18px 0;
+    border-left: 4px solid #3b82f6;
+    position: relative;
+    white-space: pre;
+    color: #24292f;
+  }
+  .hljs + .lang-tag {
+    display: inline-block;
+    position: relative;
+    top: -12px;
+    margin-left: auto;
+    background: #eaeef2;
+    color: #0969da;
+    font-size: 10.5px;
+    padding: 1px 8px;
+    border-radius: 4px;
+    font-family: ui-monospace, monospace;
+    letter-spacing: .5px;
+    text-transform: uppercase;
+    border: 1px solid #d0d7de;
+  }
+  .code-block-wrap { margin: 12px 0 20px 0; }
+  .code-block-wrap .code-header {
+    display: flex; justify-content: space-between; align-items: center;
+    background: #eaeef2;
+    padding: 6px 12px;
+    border-radius: 8px 8px 0 0;
+    font-size: 11.5px;
+    color: #57606a;
+    font-family: ui-monospace, monospace;
+    border-left: 4px solid #3b82f6;
+    border-bottom: 1px solid #d0d7de;
+  }
+  .code-block-wrap .hljs {
+    border-radius: 0 0 10px 10px;
+    margin: 0;
+  }
+  .code-block-wrap.copyable .copy-btn {
+    cursor: pointer;
+    background: #ffffff;
+    border: 1px solid #d0d7de;
+    color: #57606a;
+    padding: 2px 10px;
+    border-radius: 4px;
+    font-size: 11px;
+    transition: .15s;
+  }
+  .code-block-wrap.copyable .copy-btn:hover { background: #0969da; color: white; border-color: #0969da; }
+
+  /* 行号 (hljs-line-numbers 插件风格, 自己实现) */
+  .tech-body pre code { display: block; counter-reset: ln; }
+  .tech-body pre code > .ln { display: block; counter-increment: ln; }
+  .tech-body pre code > .ln::before {
+    content: counter(ln);
+    display: inline-block;
+    width: 3em;
+    text-align: right;
+    color: #8c959f;  /* GitHub 浅色注释色 */
+    margin-right: 1.2em;
+    user-select: none;
+    border-right: 1px solid #d0d7de;
+    padding-right: 0.8em;
+  }
+
+  /* Mermaid 图居中, 白底 + 阴影, 强制约束宽度防止跑出屏幕 */
+  .mermaid {
+    background: white;
+    padding: 16px;
+    border-radius: 10px;
+    border: 1px solid #e2e8f0;
+    margin: 14px 0 20px 0;
+    text-align: center;
+    overflow-x: auto;
+    overflow-y: hidden;
+    box-shadow: inset 0 0 0 1px rgba(15,23,42,.04);
+    max-width: 100%;
+    width: 100%;
+    box-sizing: border-box;
+  }
+  /* 关键: Mermaid 生成的 SVG 天生没有 max-width, 容易出现 26000px 宽度跑到屏幕外 */
+  .mermaid svg {
+    max-width: 100% !important;
+    width: 100% !important;
+    height: auto !important;
+    display: block !important;
+  }
+  .mermaid-fallback { font-size: 12.5px; color: #64748b; text-align: center; margin-top: 6px; }
+
+  .tech-body code.inline {
+    background: #eef2ff; color: #3730a3; padding: 1px 6px; border-radius: 4px;
+    font-family: ui-monospace, monospace; font-size: 12.5px; border: 1px solid #e0e7ff;
+  }
+  .tech-body table { font-size: 13.5px; }
+  .tech-body table th { background: #eff6ff; color: #1e3a8a; }
+  .callout {
+    border-left: 4px solid; padding: 12px 16px; border-radius: 0 8px 8px 0; margin: 14px 0;
+    background: #f8fafc;
+  }
+  .callout.danger  { border-left-color: #dc2626; background: #fef2f2; }
+  .callout.info    { border-left-color: #0d6efd; background: #eff6ff; }
+  .callout.success { border-left-color: #16a34a; background: #f0fdf4; }
+  .callout.warn    { border-left-color: #f59e0b; background: #fffbeb; }
+  .callout b:first-child { display: inline-block; margin-bottom: 4px; }
+
+  .example-card {
+    background: linear-gradient(135deg, #fefce8, #fef3c7);
+    border-left: 4px solid #f59e0b;
+    border-radius: 0 10px 10px 0;
+    padding: 14px 18px;
+    margin: 14px 0 20px 0;
+  }
+  .example-card h6 { color: #92400e; margin: 0 0 6px 0; font-size: 13.5px; }
+  .example-card .body { color: #78350f; font-size: 13.5px; line-height: 1.8; }
+
+  .analogy-card {
+    background: linear-gradient(135deg, #ede9fe, #ddd6fe);
+    border-left: 4px solid #8b5cf6;
+    border-radius: 0 10px 10px 0;
+    padding: 14px 18px;
+    margin: 14px 0 20px 0;
+  }
+  .analogy-card h6 { color: #4c1d95; margin: 0 0 6px 0; font-size: 13.5px; }
+  .analogy-card .body { color: #5b21b6; font-size: 13.5px; line-height: 1.8; }
+
+  .stack-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
+  .stack-card {
+    background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 14px 16px;
+  }
+  .stack-card h6 { color: #1e3a8a; margin-bottom: 6px; font-size: 13.5px; }
+  .stack-card .tag { display: inline-block; background: #fff; border: 1px solid #cbd5e1; color: #334155; padding: 1px 8px; border-radius: 4px; font-size: 11.5px; margin: 2px 4px 2px 0; font-family: ui-monospace, monospace; }
+  .kbd { background: #e2e8f0; border: 1px solid #cbd5e1; border-bottom-width: 2px; padding: 1px 6px; border-radius: 4px; font-size: 11.5px; font-family: ui-monospace, monospace; }
+
+  .interview-q {
+    counter-reset: q;
+  }
+  .interview-q .q {
+    padding: 12px 14px; margin: 8px 0; border-left: 3px solid #1e3a8a; background: #f8fafc; border-radius: 0 8px 8px 0;
+  }
+  .interview-q .q::before {
+    counter-increment: q; content: "Q" counter(q) ". "; color: #1e3a8a; font-weight: 700; margin-right: 4px;
+  }
+  .interview-q .q .a { display: block; margin-top: 4px; color: #334155; font-size: 13.2px; padding-left: 24px; }
+
+  @media (max-width: 991.98px) {
+    .tech-layout { grid-template-columns: 1fr; }
+    .tech-toc { position: relative; max-height: none; }
+    .tech-body { padding: 18px; }
+    .stack-grid { grid-template-columns: 1fr; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="tech-hero">
+  <h1>⚙️ AI_Risk 物流风控 · 技术架构手册</h1>
+  <div class="sub">新人 1 小时掌握代码全流程 &nbsp;·&nbsp; 面试项目亮点速查 &nbsp;·&nbsp; 物流场景 E 版</div>
+  <div class="meta">
+    <span class="chip">v2026.08.12</span>
+    <span class="chip">Python 3.11-3.12</span>
+    <span class="chip">FastAPI + SQLAlchemy 2.0 Async</span>
+    <span class="chip">XGBoost + LangChain Agent</span>
+    <span class="chip">Jinja2 SSR + Bootstrap 5</span>
+  </div>
+</div>
+
+<div class="tech-layout">
+  <!-- ====== 左侧 TOC ====== -->
+  <nav class="tech-toc" id="techToc">
+    <h6>📂 章节导航</h6>
+    <ul>
+      <li class="level-1"><a href="#ch00">0. 先读：5 分钟核心骨架</a></li>
+      <li class="level-1"><a href="#ch01">1. 技术栈全景图</a>
+        <ul class="level-2">
+          <li><a href="#ch01-1">1.1 分层架构</a></li>
+          <li><a href="#ch01-2">1.2 12 项核心技术</a></li>
+        </ul>
+      </li>
+      <li class="level-1"><a href="#ch02">2. 目录树 + 单文件职责</a></li>
+      <li class="level-1"><a href="#ch03">3. 启动流程 6 步自检</a>
+        <ul class="level-2">
+          <li><a href="#ch03-1">3.1 run_app.py → uvicorn lifespan</a></li>
+          <li><a href="#ch03-2">3.2 scheduler 后台调度</a></li>
+        </ul>
+      </li>
+      <li class="level-1"><a href="#ch04">4. 风险评估一次调用链（最核心）</a>
+        <ul class="level-2">
+          <li><a href="#ch04-1">4.1 时序图 9 步</a></li>
+          <li><a href="#ch04-2">4.2 双轨融合算法</a></li>
+        </ul>
+      </li>
+      <li class="level-1"><a href="#ch05">5. 17 张数据表 ER（9 通用 + 8 物流）</a></li>
+      <li class="level-1"><a href="#ch06">6. 规则引擎（60% 权重）</a>
+        <ul class="level-2">
+          <li><a href="#ch06-1">6.1 条件 JSON 9 种 op 实现</a></li>
+          <li><a href="#ch06-2">6.2 L001~L030 30 条物流规则</a></li>
+        </ul>
+      </li>
+      <li class="level-1"><a href="#ch07">7. 25 维特征工程（契约）</a>
+        <ul class="level-2">
+          <li><a href="#ch07-1">7.1 新增特征 3 步同步点</a></li>
+          <li><a href="#ch07-2">7.2 对齐测试挂了怎么办</a></li>
+        </ul>
+      </li>
+      <li class="level-1"><a href="#ch08">8. XGBoost ML 模型（40% 权重）</a>
+        <ul class="level-2">
+          <li><a href="#ch08-1">8.1 自动降级（模型缺失时）</a></li>
+          <li><a href="#ch08-2">8.2 训练脚本一条龙</a></li>
+        </ul>
+      </li>
+      <li class="level-1"><a href="#ch09">9. LangChain Agent（AI 助手）</a>
+        <ul class="level-2">
+          <li><a href="#ch09-1">9.1 6 个业务工具封装</a></li>
+          <li><a href="#ch09-2">9.2 只读安全限制</a></li>
+        </ul>
+      </li>
+      <li class="level-1"><a href="#ch10">10. 前端：Jinja2 SSR + Bootstrap 5</a>
+        <ul class="level-2">
+          <li><a href="#ch10-1">10.1 全局 JS 工具 3 件套</a></li>
+          <li><a href="#ch10-2">10.2 静态文件强缓存破缓存法</a></li>
+        </ul>
+      </li>
+      <li class="level-1"><a href="#ch11">11. 异常处理 · 日志 · 软删</a>
+        <ul class="level-2">
+          <li><a href="#ch11-1">11.1 Pydantic 422 中文翻译</a></li>
+          <li><a href="#ch11-2">11.2 软删约定 & 状态机</a></li>
+        </ul>
+      </li>
+      <li class="level-1"><a href="#ch12">12. 测试体系（330+ 用例基线）</a>
+        <ul class="level-2">
+          <li><a href="#ch12-1">12.1 必跑的 8 个 test_*.py</a></li>
+          <li><a href="#ch12-2">12.2 已知 1 挂 1 skip（环境相关）</a></li>
+        </ul>
+      </li>
+      <li class="level-1"><a href="#ch13">13. 面试高频 30 题（附标答要点）</a></li>
+    </ul>
+  </nav>
+
+  <!-- ====== 右侧正文 ====== -->
+  <article class="tech-body">
+
+    <!-- 0. 5 分钟骨架 -->
+    <h2 id="ch00">0. 先读：5 分钟掌握核心骨架</h2>
+<div class="analogy-card">
+  <h6>🧠 生活化类比（一图看懂双轨风控）</h6>
+  <div class="body">
+    做风控就像 <b>去医院看病</b>：<br>
+    ① <b>规则引擎 (60% 权重)</b> = 老中医「望闻问切」：发烧 38.5℃ → 规则命中 30 分；咳嗽喉咙痛 → 35 分；武汉旅行史 → +100 VETO，优点 100% 可解释。<br>
+    ② <b>XGBoost (40% 权重)</b> = CT 影像 / 验血报告：看过 10 万病例能发现隐性模式，优点查隐性风险，缺点黑盒。<br>
+    ③ <b>fuse_score 融合</b> = 主任医生签字：0.6×中医 + 0.4×CT → 40 以下回家（通过）/ 40-60 观察（标记）/ 60-90 专家会诊（人工审核）/ 90 以上立刻住院（拒绝）。<br>
+    ④ <b>VETO=90 一票否决</b> = 心脏骤停直接进抢救室，不用等 CT，省资源 + 不放过高危。
+  </div>
+</div>
+<div class="example-card">
+  <h6>💼 业务小例子：VETO 90 分怎么触发？</h6>
+  <div class="body">
+    USER_007 同时满足 3 条：L020 拒收率 30%（30）+ L007 实名失败（30）+ L012 刀具词（35）= 95 ≥ 90 →
+    <b style="color:#dc2626;">直接 VETO，不再跑 XGBoost 模型，立刻返回「拒绝」</b>。<br>
+    道理：心脏骤停病人不等 CT；而且坏人可以伪装 100 单正常历史（骗 ML），但 3 条高危规则同时命中，信号比 ML 可靠得多。
+  </div>
+</div>
+    <p>新人先理解这 <b>5 条</b>，后面看代码就不迷路：</p>
+    <ol class="mb-0">
+      <li><b>双轨风控 = 0.6 × 规则分 + 0.4 × ML 分</b>，≥90 分触发 <b>VETO 一票否决</b>（直接拒绝，不再融合），代码在 <code class="inline">app/engine/decision.py</code></li>
+      <li><b>规则引擎</b>：<code class="inline">app/engine/rule.py</code> 实现 9 种 JSON op；<code class="inline">app/engine/feature.py</code> 输出 <b>固定 25 维特征 dict</b>（任何改动都要同步 3 处，测试卡住就看第 7 章）</li>
+      <li><b>XGBoost</b>：<code class="inline">app/engine/ml_model.py</code> import 时自动加载 <code class="inline">app/engine/xgb_model.json</code>；缺失时自动降级纯规则，不影响业务</li>
+      <li><b>数据库</b>：<b>9 张通用风控表</b>（Rule/Event/Feature/Assessment/Case/Alert/Blacklist/ActionLog/Validator）+ <b>8 张物流业务表</b>（Shipment/ShipmentItem/Address/Complaint/Declaration/Customs/Delivery/实人实名）严格分离，不跨域加 FK</li>
+      <li><b>调用入口</b>：前端 <code class="inline">/risk-check</code> → <code class="inline">POST /api/risk/evaluate</code> → <code class="inline">RiskService.evaluate()</code> → 依次经过：<b>黑名单 5 级短路 → 规则引擎加权 → XGBoost 预测 → decision 融合 → 写 Case/Alert/Assessment</b></li>
+    </ol>
+
+    <!-- 1. 技术栈全景 -->
+    <h2 id="ch01">1. 技术栈全景图</h2>
+    <h3 id="ch01-1">1.1 分层架构（由上往下调用，绝不反向）</h3>
+<div class="code-block-wrap copyable"><div class="code-header"><span>📄 文本 · 23 行</span><span><code class="inline" style="background:#0f172a;color:#a78bfa;border:none;">plaintext</code> &nbsp;<button type="button" class="copy-btn" onclick="__copyCode(this)">📋 复制</button></span></div><pre><code class="language-plaintext hljs"><span class="ln">┌──────────────────────────────────────────────────────┐</span>
+<span class="ln">│ 7. Presentation  前端 Jinja2 SSR + Bootstrap5       │  templates/* , static/app.js</span>
+<span class="ln">│     (Jinja2 + Bootstrap 5 + 原生 JS)                 │</span>
+<span class="ln">├──────────────────────────────────────────────────────┤</span>
+<span class="ln">│ 6. API Routing   FastAPI HTTP 路由                  │  app/routers/{pages,rules,cases,auth,...}.py</span>
+<span class="ln">│     (APIRouter + Depends 注入 Session)              │  app/api.py 汇总注册</span>
+<span class="ln">├──────────────────────────────────────────────────────┤</span>
+<span class="ln">│ 5. Business      Service 业务编排层                 │  app/service/{event,case,alert,blacklist,validator,action_log}.py</span>
+<span class="ln">│     (业务用例组装 + FK 归属防越权校验)              │</span>
+<span class="ln">├──────────────────────────────────────────────────────┤</span>
+<span class="ln">│ 4. Engine        风控核心 (双轨融合)                │  app/engine/{rule,feature,decision,ml_model}.py</span>
+<span class="ln">│     (规则引擎 / 25维特征 / 决策融合 / XGBoost)      │</span>
+<span class="ln">├──────────────────────────────────────────────────────┤</span>
+<span class="ln">│ 3. Agent         LangChain 工具 + 推理             │  app/agent/{tools,agent,prompts}.py</span>
+<span class="ln">│     (LLM + 6 个只读工具)                            │</span>
+<span class="ln">├──────────────────────────────────────────────────────┤</span>
+<span class="ln">│ 2. Persistence   SQLAlchemy 2.0 Async ORM          │  app/models_risk.py 风控9表</span>
+<span class="ln">│     (aiomysql + AsyncSessionLocal)                  │  app/models_*.py   物流8表</span>
+<span class="ln">│                                                     │  app/database.py   DB 连接池</span>
+<span class="ln">├──────────────────────────────────────────────────────┤</span>
+<span class="ln">│ 1. Data          MySQL 8.0 InnoDB                  │  17 张表 (9风控 + 8物流)</span>
+<span class="ln">│     (DDL: sql/create_tables.sql + migrations)      │  种子数据: sql/seed_rules.sql</span>
+<span class="ln">└──────────────────────────────────────────────────────┘</span>
+</code></pre></div>
+
+<p>👇 同一张架构图的 <b>Mermaid 可视化版</b>（浏览器能上网就看它，弱网看上面 ASCII 版）：</p>
+<div class="mermaid">flowchart TB
+    subgraph L7["🌐 7. Presentation 前端呈现 (Jinja2 SSR + app.js)"]
+        direction LR
+        T["templates/*.html 服务端渲染"]
+        S["static/app.js 前端交互"]
+    end
+    subgraph L6["🛰 6. Route/Controller HTTP 路由层 (app/routers/*.py)"]
+        direction LR
+        R1["pages.py 页面路由"]
+        R2["risk.py / rule.py / case.py / agent.py"]
+    end
+    subgraph L5["💼 5. Service 业务编排层 (app/service/*.py)"]
+        direction LR
+        SV1["event.py 事件"]
+        SV2["case.py 案件"]
+        SV3["alert.py 告警"]
+        SV4["validator.py 校验"]
+    end
+    subgraph L4["⚙️ 4. Engine 风控核心层 (app/engine)"]
+        direction LR
+        E1["rule.py 规则引擎"]
+        E2["feature.py 25 维特征"]
+        E3["decision.py 加权融合"]
+        E4["ml_model.py XGBoost"]
+    end
+    subgraph L3["🧠 3. Agent AI 代理层 (app/agent)"]
+        AG["LangChain Agent"]
+    end
+    subgraph L2["📦 2. ORM / Schema 层"]
+        M["models_risk.py SQLAlchemy 模型"]
+        P["schemas_*.py Pydantic DTO"]
+    end
+    subgraph L1["💾 1. Data 数据层"]
+        direction LR
+        DB["MySQL 8.0"]
+        JSON["xgb_model.json"]
+    end
+    classDef layer fill:#f8fafc,stroke:#334155,stroke-width:1px
+    class L1,L2,L3,L4,L5,L6,L7 layer
+    L7 --- L6 --- L5 --- L4 --- L3 --- L2 --- L1
+    L5 --- L3
+</div>
+<p class="mermaid-fallback">🔌 离线兜底请参考上方 ASCII 分层图</p>
+
+    <div class="callout warn"><b>🔴 严格禁止：</b>第 3 层（engine）绝不直接 import routers/service 任何模块；第 2 层 ORM 绝不 import 第 4+ 层，避免循环 import。</div>
+
+    <h3 id="ch01-2">1.2 12 项核心技术（面试 5 分钟能讲完）</h3>
+    <div class="stack-grid">
+      <div class="stack-card">
+        <h6>🐍 语言 & 运行时</h6>
+        <div><span class="tag">Python 3.11~3.12</span><span class="tag">uv 包管理</span><span class="tag">asyncio</span></div>
+      </div>
+      <div class="stack-card">
+        <h6>🌐 Web 框架</h6>
+        <div><span class="tag">FastAPI 0.110+</span><span class="tag">Pydantic v2 schemas</span><span class="tag">lifespan events</span></div>
+      </div>
+      <div class="stack-card">
+        <h6>💾 数据库层</h6>
+        <div><span class="tag">MySQL 8.0</span><span class="tag">SQLAlchemy 2.0 async</span><span class="tag">aiomysql driver</span><span class="tag">ENUM 类型</span></div>
+      </div>
+      <div class="stack-card">
+        <h6>🤖 风控引擎</h6>
+        <div><span class="tag">规则引擎(自研)</span><span class="tag">XGBoost 1.7+</span><span class="tag">加权融合 0.6/0.4</span><span class="tag">VETO 90 一票否决</span></div>
+      </div>
+      <div class="stack-card">
+        <h6>🧠 Agent</h6>
+        <div><span class="tag">LangChain</span><span class="tag">OpenAI GPT / 可替换</span><span class="tag">@tool 装饰器</span><span class="tag">SQL 只读保护</span></div>
+      </div>
+      <div class="stack-card">
+        <h6>🎨 前端</h6>
+        <div><span class="tag">Jinja2 SSR</span><span class="tag">Bootstrap 5</span><span class="tag">原生 JS (0 构建)</span><span class="tag">Font Icons</span></div>
+      </div>
+      <div class="stack-card">
+        <h6>🧪 测试</h6>
+        <div><span class="tag">pytest 8+</span><span class="tag">pytest-asyncio strict</span><span class="tag">testcontainers</span><span class="tag">330+ baseline</span></div>
+      </div>
+      <div class="stack-card">
+        <h6>🛠 工程</h6>
+        <div><span class="tag">APScheduler 后台</span><span class="tag">RotatingFile 5×50MB</span><span class="tag">软删 deleted_at</span><span class="tag">状态机白名单</span></div>
+      </div>
+      <div class="stack-card">
+        <h6>🔐 配置</h6>
+        <div><span class="tag">pydantic-settings</span><span class="tag">.env 加载</span><span class="tag">DB URL async</span></div>
+      </div>
+      <div class="stack-card">
+        <h6>🐳 部署</h6>
+        <div><span class="tag">docker compose</span><span class="tag">nginx 反代</span><span class="tag">uvicorn workers</span></div>
+      </div>
+      <div class="stack-card">
+        <h6>📊 训练</h6>
+        <div><span class="tag">pandas + numpy</span><span class="tag">scikit-learn split</span><span class="tag">GridSearchCV</span></div>
+      </div>
+      <div class="stack-card">
+        <h6>🗃 CLI</h6>
+        <div><span class="tag">init_db / train / backfill</span><span class="tag">one_command 一条龙</span><span class="tag">argparse</span></div>
+      </div>
+    </div>
+
+    <!-- 2. 目录树 -->
+    <h2 id="ch02">2. 目录树 + 单文件职责（新人找代码第一站）</h2>
+<div class="code-block-wrap copyable"><div class="code-header"><span>📄 SQL 语句</span><span><code class="inline" style="background:#0f172a;color:#a78bfa;border:none;">sql</code> &nbsp;<button type="button" class="copy-btn" onclick="__copyCode(this)">📋 复制</button></span></div><pre><code class="language-sql hljs"><span class="ln">ai_risk/├── run_app.py                      # 主入口: 6 步自检 → 起 uvicorn (禁用 reload=True!)├── scripts/│   ├── main.py                   # FastAPI 实例化 + lifespan + 422 中文翻译 + 路由注册│   ├── init_db.py                # --drop/--reset/--yes 初始化 DB + 种子规则│   ├── train_xgb_model.py        # 训练 → 写 app/engine/xgb_model.json│   ├── one_command.py            # 🔥 一条龙 6 步: init→造数→训练→回填│   └── gen_*.py                  # 造训练/风险数据│├── app/│   ├── config.py                 # pydantic-settings 加载 .env (DB/LLM/端口)│   ├── database.py               # AsyncEngine + AsyncSessionLocal + get_db_async Depends│   ├── schemas.py                # 所有 Pydantic 请求/响应 DTO (RuleCreate/CaseReviewRequest/...)│   ├── logging_config.py         # stdout + logs/app.log 5×50MB 轮转│   ├── models_risk.py            # ⭐ 9 张通用风控表 ORM│   ├── models_*.py               # 8 张物流业务表 ORM (Shipment/Declaration/...)│   ├── api.py                    # 汇总注册所有 APIRouter (include_router)│   ├── scheduler.py              # ⏰ APScheduler 双任务: 案件超时 + 告警检查 (lifespan 启停)│   ││   ├── routers/                  # HTTP 路由层 (第 6 层)│   │   ├── pages.py              # 8 个 SSR 页面 (/,/rules,...,/user-guide,/tech-guide)│   │   ├── risk.py               # POST /api/risk/evaluate 核心评估│   │   ├── rule.py               # 规则 CRUD + toggle + 软删 (get/list/create/update/delete/toggle)│   │   ├── cases.py              # 案件分页 + 详情 + 审核 (带状态机白名单)│   │   ├── assessments.py        # 评估历史分页 + 详情│   │   ├── blacklist.py          # 6 类黑名单增删 + 按类型统计│   │   ├── agent.py              # LangChain Agent chat + tool descriptions│   │   └── dashboard.py          # 仪表盘 4 张卡片 + 趋势图数据│   ││   ├── service/                  # ⭐ 业务编排层 (第 5 层) 任何写操作必须过这里│   │   ├── case.py               # 案件审核 + _ALLOWED_CASE_TRANSITIONS 状态机白名单│   │   ├── event.py              # RiskService.evaluate() ⭐ 评估总入口│   │   ├── alert.py              # 高危规则命中 → 生成告警│   │   ├── validator.py          # ⚠️ FK 归属防越权链 (ensure_shipment_belongs_to_sender)│   │   ├── blacklist.py          # 5 级短路匹配 (用户→身份证→手机→地址→运单→设备)│   │   └── action_log.py         # 所有写操作留痕 (operator/target_type/.../before/after_value)│   ││   ├── engine/                   # ⭐⭐⭐ 风控核心 (第 4 层)│   │   ├── rule.py               #  evaluate_condition() 9 种 op: == != > < >= <= in contains between│   │   ├── feature.py            #  build_feature_vector()  ⭐ 固定输出 25 维特征 dict│   │   ├── decision.py           #  fuse_score(VETO=90) + 4 决策阈值│   │   ├── ml_model.py           #  FEATURE_COLUMNS 常量 (25 项!) + load + predict + 降级│   │   └── xgb_model.json        # XGBoost 模型 (缺失 → 降级纯规则)│   ││   └── agent/│       ├── agent.py              # create_agent() LangChain Zero-Shot-React-Description│       ├── tools.py              # 6 个业务 @tool: 查询用户/规则/案件/黑名单/跑风控/只读SQL│       └── prompts.py            # Chinese 系统 Prompt + 场景 E 物流背景说明│├── templates/                    # 7 个业务页面 + 用户手册 + 本技术手册 (10 SSR)├── static/│   └── app.js                    # 公共 JS: formatHttpDetail / showToast / openGuideModal├── tests/                        # 330+ 用例├── sql/                          # DDL + 种子规则 L001~L030 + 迁移└── docker/                       # compose: MySQL + app + nginx</span>
+</code></pre></div>
+
+    <!-- 3. 启动流程 -->
+    <h2 id="ch03">3. 启动流程（6 步自检 + lifespan）</h2>
+    <h3 id="ch03-1">3.1 run_app.py → uvicorn</h3>
+<div class="code-block-wrap copyable"><div class="code-header"><span>📄 Python 代码</span><span><code class="inline" style="background:#0f172a;color:#a78bfa;border:none;">python</code> &nbsp;<button type="button" class="copy-btn" onclick="__copyCode(this)">📋 复制</button></span></div><pre><code class="language-python hljs"><span class="ln"># python run_app.py   (生产/开发唯一入口, 直接 python scripts/main.py 跳过自检)Step 1. 检查 Python 版本 >= 3.11 and < 3.13       ❌ Python 3.13 直接报错Step 2. .env 必须存在 (AGENTS.md: .env 已被 git 跟踪!) ❌ 缺失直接挂Step 3. pip import 关键模块: fastapi/sqlalchemy/xgboost/langchainStep 4. 数据库连通性: 127.0.0.1:3306 (5 次重试, 2s 间隔)Step 5. 检查 9 张核心风控表是否存在 (DESCRIBE)Step 6. 静态文件 + 模板目录是否存在✅ 全部通过 → 调 uvicorn.run("scripts.main:app", host="0.0.0.0", port=8000, reload=False, lifespan="on")⚠️ 绝对禁止 reload=True! (lifespan 的 APScheduler 会起两遍)</span>
+</code></pre></div>
+    <h3 id="ch03-2">3.2 FastAPI lifespan</h3>
+    <p>在 <code class="inline">scripts/main.py</code> 注册 <code class="inline">@asynccontextmanager</code>，两件事：</p>
+    <ol>
+      <li><b>startup：</b>创建 <code class="inline">app.scheduler = APScheduler(AsyncIOScheduler)</code> → 加 2 个 cron（案件超时检查每分钟；告警轮询每 30s）→ <code class="inline">scheduler.start()</code></li>
+      <li><b>shutdown：</b><code class="inline">scheduler.shutdown(wait=False)</code>，防进程泄漏</li>
+    </ol>
+    <div class="callout danger"><b>🔴 陷阱：</b>如果 6 步自检里 DB 端口写成 <code class="inline">127.0.0.1</code> 而 .env 里 DB_HOST 是远程主机，会出现「6 步自检挂但其实服务能起来」的假象——所有 host 都走 <code class="inline">settings.DB_HOST</code>。</div>
+
+    <!-- 4. 风险评估调用链 -->
+    <h2 id="ch04">4. 风险评估一次调用链 ⭐⭐⭐（面试必考）</h2>
+<div class="example-card">
+  <h6>💼 业务小例子：黑名单短路 = 性能 30× 提速</h6>
+  <div class="body">
+    手机号 <code>13800138000</code> 被运营同事加进 <b>黑名单_5 级（手机号）</b> →<br>
+    <b>未短路前</b>：查特征（10 次 JOIN=100ms）+ 30 条规则（700ms）+ XGB 前向（400ms）= 1200ms<br>
+    <b>有短路后</b>：blacklist_service.match 查 6 张表任意命中 = <b style="color:#059669;">40ms 直接 return「拒绝+命中原因=黑名单命中」</b><br>
+    设计原则：最便宜、最准的校验放最前，越贵的（ML/大 JOIN）越靠后。
+  </div>
+</div>
+    <h3 id="ch04-1">4.1 时序图 9 步（任何一次风险检查必经）</h3>
+
+<p>👇 Mermaid 可视化时序版（含 3 个 alt 分支 = 真实短路路径）：</p>
+<div class="mermaid">sequenceDiagram
+    participant FE as 前端 risk_check
+    participant RT as routers/risk.py (Pydantic校验)
+    participant SV as service/event.RiskService
+    participant BL as blacklist_service
+    participant FT as engine/feature.py
+    participant RL as engine/rule.py
+    participant ML as engine/ml_model.py
+    participant DC as engine/decision.py
+    participant DB as 异步写库+agent
+
+    FE->>RT: POST /api/risk/evaluate
+    RT->>SV: RiskService.evaluate(req)
+    SV->>BL: ① match(user/id/phone/addr/waybill/device)
+    alt 黑名单命中 (短路)
+        BL-->>FE: 直接返回(拒绝,100分,命中原因) ⚡不跑后面
+    else 未命中
+        SV->>FT: ② build_feature_vector()
+        FT-->>SV: features dict (25 keys)
+        SV->>RL: ③ evaluate_rules(features)
+        RL-->>SV: (rule_score, hit_rules)
+        alt VETO (rule_score>=90)
+            SV-->>FE: 跳 ML, 直接拒绝 (心脏骤停进抢救室)
+        else 非VETO
+            SV->>ML: ⑤ predict_proba(features)
+            alt 模型加载失败 (降级)
+                ML-->>SV: ml_score = rule_score (纯规则画像分兜底)
+            else 正常加载
+                ML-->>SV: ml_score (0-100)
+            end
+            SV->>DC: ⑥ fuse_score(rule, ml)
+            DC-->>SV: final_score + 4级decision
+            SV->>DB: ⑦ 副作用: event/features/assessment/case/alert/action_log
+            SV-->>FE: ⑧ Pydantic Response(final/rule/ml/decision/命中规则/case_id)
+        end
+    end
+</div>
+<p class="mermaid-fallback">🔌 离线兜底请看上面 ASCII 文字版调用链</p>
+
+<div class="code-block-wrap copyable"><div class="code-header"><span>📄 文本</span><span><code class="inline" style="background:#0f172a;color:#a78bfa;border:none;">plaintext</code> &nbsp;<button type="button" class="copy-btn" onclick="__copyCode(this)">📋 复制</button></span></div><pre><code class="language-plaintext hljs"><span class="ln">前端 risk_check.html           [用户点"执行检查"]     │     │  POST /api/risk/evaluate     ▼   body: {event_type, source_id, user_id, ...}routers/risk.py     │  Pydantic: RiskEvaluateRequest 校验 (422 时触发中文翻译)     │     ▼  service.event.RiskService(db).evaluate(request) ← 业务总入口service/event.py     │     ├─▶ ① 【短路层】 blacklist_service.match(user, id, phone, addr, waybill, device)     │        ⇒ 任一命中 → 直接 return (decision="拒绝", score=100, blacklist_hit=xxx) ⚡⚡⚡ 后面 7 步不跑!     │     ├─▶ ② 【特征层】 engine.feature.build_feature_vector(user_id, source_id, event_type)     │        ⇒ dict, 固定 25 keys (feature.py 定义, 与 ml_model.FEATURE_COLUMNS 一一对应)     │     ├─▶ ③ 【规则层】 engine.rule.evaluate_rules(features)     │        循环所有 enabled 规则: for rule in list_rules_enabled_ordered_by_priority_DESC:     │           if evaluate_condition(rule.condition_dict, features):     │               hit_rules.append(rule); rule_score += rule.risk_score     │        ⇒ (rule_score, hit_rules: [Rule])     │     ├─▶ ④ 【VETO 检查】 rule_score >= 90 ? ⇒ 跳第 7 步 (不再算 ML, 直接拒绝)     │     ├─▶ ⑤ 【ML 层】 engine.ml_model.predict_proba(features)     │        ⇒ ml_score (0-100 概率分 * 100)     │        ⚠️ xgb_model.json 不存在 / model = None ⇒ ml_score = rule_score (降级纯规则)     │     ├─▶ ⑥ 【决策融合】 engine.decision.fuse_score(rule_score, ml_score)     │        ⇒ final_score = 0.6 * rule_score + 0.4 * ml_score     │        ⇒ decision = thresholds(final_score):     │             final < 40 → "通过" ; 40-60 → "标记"; 60-90 → "人工审核"; ≥90 → "拒绝"     │     ├─▶ ⑦ 【副作用】 全异步写库 (create_event / create_feature_row / create_assessment)     │          if decision == "人工审核" or (拒绝且配置建案): service.case.create_case()     │          if rule_score >= 70:                            service.alert.create_alert()     │          所有写操作都过: action_log.record("RISK_EVAL", before={}, after={assessment_id})     │     └─▶ ⑧ 【响应】 Pydantic RiskEvaluateResponse(final_score, rule_score, ml_score,                decision, hit_rules, blacklist_hit, case_id?, assessment_id)     ▼前端 → showToast(决策) + 渲染结果面板 (含 4 决策徽章)</span>
+</code></pre></div>
+    <h3 id="ch04-2">4.2 双轨融合算法代码（记不住的面试时就写这一段）</h3>
+
+<p>👇 双轨打分 4 分支决策流图（颜色对应前端徽章样式）：</p>
+<div class="mermaid">flowchart LR
+    A[开始 evaluate] --> B[rule_score 计算]
+    B --> C{rule >= 90?}
+    C -->|✅ YES| D[🔴 VETO: 拒绝 100 分]
+    C -->|NO| E[ml_score = XGBoost / 降级=rule]
+    E --> F["fuse = 0.6*rule + 0.4*ml"]
+    F --> G{final 阈值分段}
+    G -->|final < 40| H[🟢 通过]
+    G -->|40 ≤ final < 60| I[🟡 标记]
+    G -->|60 ≤ final < 90| J[🟠 人工审核 → 生成案件]
+    G -->|final ≥ 90| K[🔴 拒绝]
+    style D fill:#fee2e2,stroke:#dc2626,stroke-width:2px
+    style J fill:#ffedd5,stroke:#ea580c,stroke-width:2px
+    style I fill:#fef9c3,stroke:#ca8a04,stroke-width:2px
+    style H fill:#dcfce7,stroke:#16a34a,stroke-width:2px
+    style K fill:#fee2e2,stroke:#dc2626,stroke-width:2px
+</div>
+<p class="mermaid-fallback">🔌 离线兜底看上面 THRESHOLDS [(40通过),(60标记),(90人工),(101拒绝)] 分段表</p>
+
+<div class="code-block-wrap copyable"><div class="code-header"><span>📄 Python 代码 · 18 行</span><span><code class="inline" style="background:#0f172a;color:#a78bfa;border:none;">python</code> &nbsp;<button type="button" class="copy-btn" onclick="__copyCode(this)">📋 复制</button></span></div><pre><code class="language-python hljs"><span class="ln"># app/engine/decision.py</span>
+<span class="ln">VETO_MIN_SCORE = 90               # 一票否决阈值 (规则分)</span>
+<span class="ln">RULE_WEIGHT     = 0.6</span>
+<span class="ln">ML_WEIGHT       = 0.4</span>
+<span class="ln">THRESHOLDS = [</span>
+<span class="ln">    (40,  "通过"),</span>
+<span class="ln">    (60,  "标记"),</span>
+<span class="ln">    (90,  "人工审核"),</span>
+<span class="ln">    (101, "拒绝"),  # ≥90 会被 VETO 提前拦截, 这里兜底</span>
+<span class="ln">]</span>
+<span class="ln"></span>
+<span class="ln">def fuse_score(rule_score: int, ml_score: int) -> tuple[int, str]:</span>
+<span class="ln">    if rule_score >= VETO_MIN_SCORE:              # ① 一票否决: 规则 ≥ 90 直接拒绝, 不融合</span>
+<span class="ln">        return 100, "拒绝"</span>
+<span class="ln">    final = int(round(RULE_WEIGHT * rule_score + ML_WEIGHT * ml_score))  # ② 加权融合 (0-100)</span>
+<span class="ln">    for threshold, decision in THRESHOLDS:        # ③ 分段匹配决策</span>
+<span class="ln">        if final < threshold: return final, decision</span>
+<span class="ln">    return 100, "拒绝"</span>
+</code></pre></div>
+
+    <!-- 5. 17 张 ER -->
+    <h2 id="ch05">5. 17 张数据表 ER（9 风控通用 + 8 物流业务，严格分离）</h2>
+<div class="analogy-card">
+  <h6>🧠 生活化类比：17 表严格分离 = 插排 + 适配器</h6>
+  <div class="body">
+    设计目标是「这套系统明天给电商/支付/物流/外卖都能用」——所以把 <b>9 张风控通用表</b> 做成 <b>国标 10A 插排</b>：规则/黑名单/案件/告警/特征/画像……任何行业只要对接进来，就能用。
+    然后 <b>8 张物流业务表</b>（waybill/logistics_line/shipping_order …）做成 <b>Type-C 适配器</b>：今天接物流用物流适配器，明天做支付换支付适配器；<b style="color:#8b5cf6;">通用插排永远不用改代码</b>。
+    面试时直接说：<i>「17 表采用 9 + 8 跨场景拆分，风控层和业务层物理隔离，支持换行业 0 侵入迁移」</i>。
+  </div>
+</div>
+    <h4>9 张通用风控表（<code class="inline">models_risk.py</code>）</h4>
+    <table class="table table-sm table-bordered">
+      <thead><tr><th style="width:20%">表名</th><th>主键</th><th>核心用途</th><th>软删/状态机</th></tr></thead>
+      <tbody>
+        <tr><td><code class="inline">risk_rule</code></td><td>rule_id VARCHAR(50)</td><td>30 条规则配置 (条件 JSON/分值/动作/优先级)</td><td>✅ deleted_at 软删</td></tr>
+        <tr><td><code class="inline">risk_event</code></td><td>event_id</td><td>每次风控评估的事件快照 (JSON event_data)</td><td>Index: user_id, create_time</td></tr>
+        <tr><td><code class="inline">risk_feature</code></td><td>feature_id BIGINT auto</td><td>25 维特征的行级落库 (每评估一行, 用于训练回灌)</td><td>FK → event_id</td></tr>
+        <tr><td><code class="inline">risk_assessment</code></td><td>assessment_id</td><td>最终评估结果 (分 / 决策 / 命中规则列表 JSON)</td><td>FK → event_id, user_id</td></tr>
+        <tr><td><code class="inline">risk_case</code></td><td>case_id</td><td>人工审核案件</td><td>✅ 状态机: 待审核/审核中/已通过/已拒绝/已关闭 (白名单见 service.case)</td></tr>
+        <tr><td><code class="inline">risk_alert</code></td><td>alert_id</td><td>高危规则命中生成的告警</td><td>status: 未处理/处理中/已关闭</td></tr>
+        <tr><td><code class="inline">risk_blacklist</code></td><td>blacklist_id</td><td>6 类黑名单 (用户/身份证/手机/地址/运单/设备)</td><td>✅ deleted_at 软删; UNIQUE(type, value)</td></tr>
+        <tr><td><code class="inline">risk_action_log</code></td><td>log_id BIGINT</td><td>所有写操作审计留痕 (合规要求)</td><td>operator/target_type/target_id/before_value/after_value JSON</td></tr>
+        <tr><td><code class="inline">risk_validator_rule</code></td><td>vr_id</td><td>FK 归属越权校验规则 (自定义业务约束)</td><td>-</td></tr>
+      </tbody>
+    </table>
+    <h4>8 张物流业务表（<code class="inline">models_*.py</code>，严格隔离，<b>没有 FK 连到 risk_ 表</b>）</h4>
+    <table class="table table-sm table-bordered mb-0">
+      <thead><tr><th style="width:22%">表名</th><th>主键</th><th>用途</th><th>被特征工程用到的字段</th></tr></thead>
+      <tbody>
+        <tr><td>logistics_shipment</td><td>shipment_id SHIPxxx</td><td>运单主表 (寄件下单 → 到付签收 全过程)</td><td>cod_amount, waybill_weight_kg, item_count, is_cross_border, is_cod, total_amount → order_total_amount</td></tr>
+        <tr><td>logistics_shipment_item</td><td>item_id</td><td>运单明细 (报关品名关键字段)</td><td>JOIN 检测违禁词 → dangerous_goods_keywords</td></tr>
+        <tr><td>logistics_address</td><td>address_id</td><td>收/寄件地址</td><td>address_risk, same_address_users, high_risk_region</td></tr>
+        <tr><td>logistics_complaint</td><td>complaint_id</td><td>投诉申诉单</td><td>count(user_id) 近 30 天 → complaint_count</td></tr>
+        <tr><td>logistics_declaration</td><td>decl_id DECLxxx</td><td>跨境申报</td><td>declared_value vs 实际 → declaration_value_mismatch; 国别 → sanctioned_country</td></tr>
+        <tr><td>logistics_customs</td><td>customs_id</td><td>海关查验记录</td><td>查验次数计入高风险分</td></tr>
+        <tr><td>logistics_delivery</td><td>deliv_id</td><td>末端签收/拒收记录</td><td>拒收率 → sender_recent_refund_rate, sender_total_refunds</td></tr>
+        <tr><td>logistics_real_name</td><td>real_id</td><td>实名信息 (SHA256 身份证)</td><td>real_name_verified, id_card_risk, phone_risk</td></tr>
+      </tbody>
+    </table>
+    <div class="callout info"><b>💡 设计亮点（面试加分项）：</b>通用风控 9 表完全独立于业务场景（换电商、金融、出行任何行业只要替换这 8 张业务表 + 25 维特征 SQL 语义，其他代码不变）—— 这是本项目"场景 E 物流版"可替换为 A/B/C/D 的核心架构决策。</div>
+
+    <!-- 6. 规则引擎 -->
+    <h2 id="ch06">6. 规则引擎（权重 0.6）</h2>
+    <h3 id="ch06-1">6.1 9 种 op 实现（无第三方依赖，自研 evaluate_condition）</h3>
+<div class="code-block-wrap copyable"><div class="code-header"><span>📄 Python 代码 · 19 行</span><span><code class="inline" style="background:#0f172a;color:#a78bfa;border:none;">python</code> &nbsp;<button type="button" class="copy-btn" onclick="__copyCode(this)">📋 复制</button></span></div><pre><code class="language-python hljs"><span class="ln"># app/engine/rule.py 核心 100 行, 支持 9 种 JSON op</span>
+<span class="ln">SUPPORTED_OPS = {</span>
+<span class="ln">    "==": lambda v,r: v == r,</span>
+<span class="ln">    "!=": lambda v,r: v != r,</span>
+<span class="ln">    ">":  lambda v,r: v is not None and v >  r,</span>
+<span class="ln">    "<":  lambda v,r: v is not None and v <  r,</span>
+<span class="ln">    ">=": lambda v,r: v is not None and v >= r,</span>
+<span class="ln">    "<=": lambda v,r: v is not None and v <= r,</span>
+<span class="ln">    "in":       lambda v,r: v in r,                                # r = list</span>
+<span class="ln">    "contains": lambda v,r: isinstance(v,str) and str(r) in v,    # 字符串包含</span>
+<span class="ln">    "between":  lambda v,r: r[0] <= v <= r[1],                    # r = [min, max]</span>
+<span class="ln">}</span>
+<span class="ln">def evaluate_condition(cond: dict, features: dict) -> bool:</span>
+<span class="ln">    field, op, value = cond["field"], cond["op"], cond["value"]</span>
+<span class="ln">    if field not in features: return False        # 特征缺失: 保守不命中</span>
+<span class="ln">    # 支持嵌套 AND/OR: {"op":"and","conditions":[c1,c2,...]}</span>
+<span class="ln">    if op == "and": return all(evaluate_condition(c, features) for c in cond["conditions"])</span>
+<span class="ln">    if op == "or":  return any(evaluate_condition(c, features) for c in cond["conditions"])</span>
+<span class="ln">    return SUPPORTED_OPS.get(op, lambda *_: False)(features[field], value)</span>
+</code></pre></div>
+    <h3 id="ch06-2">6.2 30 条物流规则（L001-L030）分类速查</h3>
+    <div class="stack-grid">
+      <div class="stack-card"><h6>① 寄件欺诈 L001-L004</h6>新号+高价值、批量相同地址下单、异常高 COD 金额 …</div>
+      <div class="stack-card"><h6>② 实名风险 L005-L008</h6>实名失败、身份证 SHA256 命中高风险库、手机号虚拟号段 …</div>
+      <div class="stack-card"><h6>③ 危险品瞒报 L009-L014</h6>品名命中管制词、重量 vs 品名不符、跨境化学品无 MSDS …</div>
+      <div class="stack-card"><h6>④ 跨境异常 L015-L019</h6>高风险目的地、申报价值偏差 >50%、制裁国、禁运品 …</div>
+      <div class="stack-card"><h6>⑤ 到付拒收 L020-L023</h6>近期拒收率 ≥30%、到付金额与历史偏差过大 …</div>
+      <div class="stack-card"><h6>⑥ 地址风险 L024-L026</h6>历史高发退货地址、同地址 >10 人 …</div>
+      <div class="stack-card"><h6>⑦ 投诉滥用 L027-L028</h6>近 30 天投诉 ≥5 次、投诉关键词重复 …</div>
+      <div class="stack-card"><h6>⑧ 综合风险 L029-L030</h6>多特征联合（新号+拒收+实名失败）、通用兜底阈值 …</div>
+    </div>
+    <div class="callout warn"><b>📌 规则命中加权：</b>同一条事件可以命中多条规则，分值 <b>累加</b>（直到 VETO=90 才停止）。面试时会问：为什么不设计成最大分？——答：因为多个弱信号叠加（新号+高 COD+危险品词）应比单条高危规则更严重，累加才能体现"信号累加"。</div>
+
+    <!-- 7. 25 维特征工程契约 -->
+    <h2 id="ch07">7. 25 维特征工程（契约式设计）</h2>
+<div class="analogy-card">
+  <h6>🧠 生活化类比：25 维特征 = 体检单 25 项</h6>
+  <div class="body">
+    去三甲体检，医生开的报告单上列着 <b>25 项必查血象</b>（血压、血糖、血脂、白细胞、总蛋白…）。
+    不管去哪家医院、哪个机器做的、谁化验的，<b>这 25 项必须一项不少、顺序不变、单位一致</b>，否则 AI 读片机器人看不懂。
+    这里的 25 维特征也是同逻辑 —— 训练模型时和线上预测时的输入格式必须 100% 一致。
+  </div>
+</div>
+
+<p>👇 契约对齐流程图（3 处同步 + 1 条测试保护）：</p>
+<div class="mermaid">flowchart TD
+    subgraph DEV["👨‍💻 开发环节"]
+        direction LR
+        A["改 feature.py 新增 1 key"] --> B["同步 FEATURE_COLUMNS<br/>相同顺序 + 相同 key 名"]
+        B --> C["重新训练模型<br/>生成新 xgb_model.json"]
+    end
+    subgraph CI["🤖 CI 测试环节"]
+        direction LR
+        D["跑 test_feature_columns_align"] --> E{"3 处完全对齐?"}
+        E -->|✅ 通过| F["允许合并"]
+        E -->|❌ 顺序/数量/命名错| G["FAIL 阻止上线"]
+    end
+    subgraph PROD["🚀 线上运行环节"]
+        direction LR
+        H["predict_proba(features)"] --> I["model.predict 正常返回"]
+    end
+    DEV --> CI --> PROD
+    style G fill:#fee2e2,stroke:#dc2626,stroke-width:2px
+    style F fill:#dcfce7,stroke:#16a34a,stroke-width:2px
+    style I fill:#dbeafe,stroke:#2563eb,stroke-width:2px
+</div>
+<p class="mermaid-fallback">🔌 离线兜底看正文"加特征 4 步 checklist"</p>
+
+<div class="example-card">
+  <h6>💼 真实事故：特征错位导致 AUC 0.85 → 0.51（差点回滚）</h6>
+  <div class="body">
+    同事小明在 <code>feature.py</code> 最前面插入了一项 <code>login_fail_1d</code>，结果忘了改 <code>FEATURE_COLUMNS</code> 的顺序。<br>
+    于是 <b>第 1 列「登录失败次数」喂给了模型训练时第 1 列「用户风险画像分」</b>……整整错位 1 列！<br>
+    模型以为大家都是「画像=95 分的危险分子」，全判拒绝，AUC 从 0.85 掉到 0.51（和瞎猜一样）。
+    幸好那条测试挂了才没上线，现在强制所有人 <b>加特征必须 4 步 checklist</b>：改 feature → 改 FEATURE_COLUMNS → 重训 → 过对齐测试。
+  </div>
+</div>
+
+    <p>项目里最容易挂的测试就是 <code class="inline">tests/test_xgboost.py::test_feature_columns_align_with_feature_module</code>。核心：<code class="inline">feature.py</code> 的输出 dict 和 <code class="inline">ml_model.FEATURE_COLUMNS</code> 的顺序、key、数量 <b>必须 100% 对齐</b>。</p>
+    <ol>
+      <li><b>画像 6</b>：user_risk_score / total_shipments / sender_recent_refund_rate / sender_total_refunds / complaint_count / assessment_count</li>
+      <li><b>运单 6</b>：order_total_amount / waybill_weight_kg / item_count / cod_amount / is_cross_border / is_cod</li>
+      <li><b>实名设备 6</b>：real_name_verified / id_card_risk / phone_risk / device_risk / device_shared_users / new_account_days</li>
+      <li><b>地址地理 4</b>：address_risk / address_shipment_count / same_address_users / high_risk_region</li>
+      <li><b>跨境危险品 3</b>：declaration_value_mismatch / dangerous_goods_keywords / sanctioned_country</li>
+    </ol>
+    <h3 id="ch07-1">7.1 新增特征 3 步同步点（一个错 → 全挂）</h3>
+<div class="code-block-wrap copyable"><div class="code-header"><span>📄 Bash 命令 · 5 行</span><span><code class="inline" style="background:#0f172a;color:#a78bfa;border:none;">bash</code> &nbsp;<button type="button" class="copy-btn" onclick="__copyCode(this)">📋 复制</button></span></div><pre><code class="language-bash hljs"><span class="ln">  Step 1. 改 app/engine/feature.py: build_feature_vector() 返回 dict 新增 1 个 key</span>
+<span class="ln">  Step 2. 改 app/engine/ml_model.py: FEATURE_COLUMNS 常量的对应位置加同名 key (⚠️ 位置也要对齐!)</span>
+<span class="ln">  Step 3. 重训模型 python scripts/train_xgb_model.py</span>
+<span class="ln">          → 新模型 predict 时按 FEATURE_COLUMNS 顺序取 26 列, 少一列就 ValueError</span>
+<span class="ln">  Step 4. 跑 tests/test_xgboost.py::test_feature_columns_align  ✅ 通过</span>
+</code></pre></div>
+    <h3 id="ch07-2">7.2 对齐测试挂了怎么办</h3>
+    <div class="callout danger"><b>错误症状：</b><code class="inline">AssertionError: FEATURE_COLUMNS length = 26 != feature keys length = 25</code> 或顺序不一致。<br>
+      <b>解决顺序：</b>先看测试失败里打印的两个 list（按输出顺序对比），找到哪里多/少/错位了——千万别先改测试！改完 1、2 步后重训模型再跑测试。</div>
+
+    <!-- 8. XGBoost -->
+    <h2 id="ch08">8. XGBoost ML 模型（权重 0.4）</h2>
+
+<p>👇 XGBoost 自动降级路径（4 分支，永远不阻塞业务）：</p>
+<div class="mermaid">flowchart TB
+    A["import app.engine.ml_model 模块加载时"] --> B{"xgb_model.json 存在吗?"}
+    B -->|❌ 不存在| C["MODEL = None 自动降级纯规则"]
+    B -->|✅ 存在| D["xgb.Booster().load_model(json) 尝试加载"]
+    D -->|❌ 格式坏或版本不兼容| C
+    D -->|✅ 加载成功| E["MODEL = 已加载对象 (正常模式)"]
+    E --> F["predict_proba 输出 model.predict 概率乘以 100"]
+    C --> G["predict_proba 输出 user_risk_score 画像分兜底"]
+    style C fill:#fef9c3,stroke:#ca8a04,stroke-width:2px
+    style G fill:#fef9c3,stroke:#ca8a04,stroke-width:2px
+    style E fill:#dcfce7,stroke:#16a34a,stroke-width:2px
+    style F fill:#dbeafe,stroke:#2563eb,stroke-width:2px
+</div>
+<p class="mermaid-fallback">🔌 离线兜底看 8.1 降级代码 if MODEL is None 分支</p>
+
+<div class="callout warn"><b>🟡 新手踩坑 & 面试主动说明（XGBoost 4 件事）</b>：
+  <ol class="mb-0 mt-2">
+    <li>模型加载时机 = <code class="inline">import</code> 时执行一次，不是请求时执行，所以线上替换 json 要 <b>重启进程</b>，不是 reload。</li>
+    <li>MODEL=None 返回的是 <code class="inline">features['user_risk_score']</code>（画像分）不是 0，这样 fuse 后 0.6R+0.4R=R，等于纯规则，效果有保障。</li>
+    <li>XGBoost 列数必须 = 25 维 = FEATURE_COLUMNS 长度。加特征后 <b>没重训</b> 会直接 ValueError，这是对的——不让瞎上线。</li>
+    <li>训练脚本 <code class="inline">python scripts/train_xgb_model.py</code>，用的正例 = <code class="inline">assessment.decision IN (拒绝,人工审核且最终驳回)</code>，正例不足记得 <code class="inline">--balance-pos</code>。</li>
+  </ol>
+</div>
+
+    <h3 id="ch08-1">8.1 自动降级（模型缺失 → 纯规则）</h3>
+<div class="code-block-wrap copyable"><div class="code-header"><span>📄 Python 代码 · 16 行</span><span><code class="inline" style="background:#0f172a;color:#a78bfa;border:none;">python</code> &nbsp;<button type="button" class="copy-btn" onclick="__copyCode(this)">📋 复制</button></span></div><pre><code class="language-python hljs"><span class="ln"># app/engine/ml_model.py (import 时自动加载)</span>
+<span class="ln">MODEL_PATH = Path(__file__).parent / "xgb_model.json"</span>
+<span class="ln">MODEL = None</span>
+<span class="ln">try:</span>
+<span class="ln">    if MODEL_PATH.exists():</span>
+<span class="ln">        MODEL = xgb.XGBClassifier()</span>
+<span class="ln">        MODEL.load_model(str(MODEL_PATH))          # ⚠️ XGBoost 2.x 接口变了, 用 load_model 不要用 pickle</span>
+<span class="ln">        logging.getLogger(__name__).info("[ML] XGBoost 模型加载 OK")</span>
+<span class="ln">except Exception as e:</span>
+<span class="ln">    logging.getLogger(__name__).warning(f"[ML] 模型加载失败: {e}, 降级纯规则")</span>
+<span class="ln">MODEL = None</span>
+<span class="ln"></span>
+<span class="ln">def predict_proba(features: dict) -> int:</span>
+<span class="ln">    if MODEL is None: return features.get("user_risk_score", 0)   # ⭐ 降级纯规则, 不影响业务</span>
+<span class="ln">    row = np.array([[features[k] for k in FEATURE_COLUMNS]], dtype=np.float32)</span>
+<span class="ln">    return int(round(MODEL.predict_proba(row)[0][1] * 100))      # 正例概率 × 100 → 0-100 分</span>
+</code></pre></div>
+    <h3 id="ch08-2">8.2 训练一条龙（<span class="kbd">python scripts/train_xgb_model.py</span>）</h3>
+    <ol>
+      <li>读取 <code class="inline">risk_feature × assessment</code> 关联（正例：决策=拒绝/极高；负例：通过/低）</li>
+      <li>缺失值填 0 / 类别 one-hot；train_test_split 8:2</li>
+      <li>XGBClassifier(max_depth=5, n_estimators=200, learning_rate=0.1, scale_pos_weight=5) 解决正例少</li>
+      <li>AUC ≥ 0.82 才算合格（否则继续 gen_risk_data --balance-pos 造数据）</li>
+      <li><code class="inline">model.save_model(xgb_model.json)</code> 覆盖生产模型</li>
+    </ol>
+
+    <!-- 9. LangChain Agent -->
+    <h2 id="ch09">9. LangChain Agent（AI 助手）</h2>
+    <h3 id="ch09-1">9.1 6 个业务工具封装（<code class="inline">app/agent/tools.py</code>）</h3>
+    <ol>
+      <li><code class="inline">db_query(sql: str) → list[dict]</code> 只读 SQL（限制 SELECT，且有黑名单词：INSERT/UPDATE/DELETE/DROP/ALTER/SET）</li>
+      <li><code class="inline">get_user_profile(user_id)</code>：联表查 User + Shipment + 拒收率 + 投诉次数</li>
+      <li><code class="inline">list_rules(status="enabled", category=None)</code>：规则查询（不暴露条件 JSON 全文，避免 Prompt 注入）</li>
+      <li><code class="inline">list_cases(status="待审核")</code>：待办案件数量 + Top</li>
+      <li><code class="inline">check_blacklist(type, value)</code>：命中查询</li>
+      <li><code class="inline">run_risk_check(event_type, source_id, user_id)</code>：直接调第 4 章调用链 ⭐（Agent 无需懂 API 细节）</li>
+    </ol>
+    <h3 id="ch09-2">9.2 只读安全限制（面试要主动讲，否则被追着问"Prompt 注入怎么办"）</h3>
+    <ul>
+      <li>所有工具返回最大 <code class="inline">MAX_TOOL_OUTPUT = 4000 chars</code> 截断，防止 token 溢出</li>
+      <li>db_query 正则黑名单 + 显式开启 read_only transaction（DB 层也只读用户，双保险）</li>
+      <li>系统 Prompt 明确禁止输出 SQL 原文，只返回人类可读结论（降低信息泄露）</li>
+    </ul>
+
+    <!-- 10. 前端 SSR -->
+    <h2 id="ch10">10. 前端：Jinja2 SSR + Bootstrap 5（零构建）</h2>
+    <p>没引入 Vite/React，新人拿起来改模板就能跑。模板结构：<code class="inline">templates/base.html</code> 含侧边栏 + 顶部 Toast 容器 + 公共 bootstrap.js；每个子页面只写 <code class="inline">{% raw %}{% block content %}{% endraw %}</code>。</p>
+    <h3 id="ch10-1">10.1 公共 JS 工具 3 件套（<code class="inline">static/app.js</code>）</h3>
+    <table class="table table-sm mb-0">
+      <thead><tr><th style="width:28%">函数</th><th>作用</th><th>解决的 Bug</th></tr></thead>
+      <tbody>
+        <tr><td><code class="inline">apiRequest(url, opts)</code></td><td>fetch 封装，自动 Content-Type + 统一错误抛错格式</td><td>各页面不用重复写 try/catch/headers</td></tr>
+        <tr><td><code class="inline">formatHttpDetail(detail)</code> ⭐</td><td>递归格式化 Pydantic 的 <code class="inline">[{msg,loc}] list[dict]</code>、dict、list、string</td><td>之前 <code class="inline">alert(err.detail)</code> 显示 <code class="inline">[object Object]</code> 的根因</td></tr>
+        <tr><td><code class="inline">showToast(type, msg, duration)</code> ⭐</td><td>右上角 Bootstrap 5 Toast（success/error/warning/info 4 色）</td><td>彻底删除原生 alert，3 秒自动消失，不打断操作</td></tr>
+      </tbody>
+    </table>
+    <h3 id="ch10-2">10.2 静态文件强缓存破缓存法（<span class="kbd">修改 app.js 必做！</span>）</h3>
+<div class="example-card">
+  <h6>💼 真实事故：改完 app.js 用户说看不到新功能（客服电话被打爆）</h6>
+  <div class="body">
+    上线前 QA 验证「加了规则后排序不刷新」bug 修好了；上线后用户投诉 <b>「按钮点了还是旧行为」</b>，现场连 F12 发现 Sources 里 app.js 还是旧版本！<br>
+    根因：FastAPI StaticFiles 默认 <code>Cache-Control: max-age=31536000</code>，浏览器缓存了 <b>1 年</b>，刷新、清站点数据没用，CDN 边缘节点还缓存了一层。<br>
+    修复（改两行）：<br>
+    <code class="inline">&lt;script src="/static/app.js?v=20260812v2"&gt;&lt;/script&gt;</code> + <code class="inline">templates/base.html</code> 里每个 JS/CSS 都带 <code>?v=YYYYMMDDvN</code>，浏览器认为是新 URL，强制重新下载。
+  </div>
+</div>
+    <div class="callout warn"><b>🔴 99% 前端工程师入坑点：</b>FastAPI StaticFiles 默认响应头 <code class="inline">Cache-Control: max-age=31536000, immutable</code>（一年！），改完 app.js 不换 URL 浏览器永远用旧缓存，刷新、清站点数据都没用，控制台 Sources 面板看到的永远是老版本。
+      <br><br>
+      <b>解决方案 100% 生效：</b>每次改动 <code class="inline">app.js</code>，在 base.html 把版本号 +1：
+<div class="code-block-wrap copyable"><div class="code-header"><span>📄 HTML 代码 · 2 行</span><span><code class="inline" style="background:#0f172a;color:#a78bfa;border:none;">xml</code> &nbsp;<button type="button" class="copy-btn" onclick="__copyCode(this)">📋 复制</button></span></div><pre><code class="language-xml hljs"><span class="ln">&lt;script src="/static/app.js?v=20260812v5"&gt;&lt;/script&gt;</span>
+<span class="ln">                     ^^^^^^^^^^^^^ ← 每次改 JS 都改这里 (v6/v7...) 触发浏览器强制重新下载</span>
+</code></pre></div>
+    </div></li>
+
+    <!-- 11. 异常处理 日志 软删 -->
+    <h2 id="ch11">11. 异常处理 · 日志 · 软删</h2>
+    <h3 id="ch11-1">11.1 Pydantic 422 中文翻译（<code class="inline">scripts/main.py</code>）</h3>
+<div class="code-block-wrap copyable"><div class="code-header"><span>📄 Python 代码 · 14 行</span><span><code class="inline" style="background:#0f172a;color:#a78bfa;border:none;">python</code> &nbsp;<button type="button" class="copy-btn" onclick="__copyCode(this)">📋 复制</button></span></div><pre><code class="language-python hljs"><span class="ln">  # 同时注册 RequestValidationError(路由参数/body) + ValidationError(Pydantic 手动 raise)</span>
+<span class="ln">  _PYDANTIC_MSG_ZH = {</span>
+<span class="ln">    # 先按 error.type 匹配 (最稳定, 不随 Pydantic 英文版本变)</span>
+<span class="ln">    "int_parsing":      "必须是合法整数",</span>
+<span class="ln">    "greater_than_equal": "值必须大于等于 {ge}",</span>
+<span class="ln">    "less_than_equal":  "值必须小于等于 {le}",</span>
+<span class="ln">    "string_too_short": "字符串太短 (至少 {min_length} 个字符)",</span>
+<span class="ln">    "literal_error":    "值必须是以下之一: {expected}",</span>
+<span class="ln">    "missing":          "缺少必填字段",</span>
+<span class="ln">    # 兜底: 按 msg 整句匹配 (Pydantic 英文原句)</span>
+<span class="ln">    "Input should be a valid integer": "必须是合法整数",</span>
+<span class="ln">    ... 20 条 ...</span>
+<span class="ln">  }</span>
+<span class="ln">  def _zh_msg(e) -> str: 匹配 type + 填 {ge}/{le}/{min_length} 参数 → 中文</span>
+</code></pre></div>
+    <h3 id="ch11-2">11.2 软删 & 状态机（3 大工程约定）</h3>
+<div class="analogy-card">
+  <h6>🧠 生活化类比：软删 vs 物理删 = 回收站 vs Shift+Delete</h6>
+  <div class="body">
+    • <b>物理删除</b> db.delete(obj) = macOS <b>Shift+Cmd+Delete</b>，文件彻底消失，<b style="color:#dc2626;">合规审计找不回来，谁都不许用！</b><br>
+    • <b>软删 deleted_at</b> = 删除到 <b>回收站</b>：SELECT 加 <code class="inline">WHERE deleted_at IS NULL</code> 就看不见；想恢复 <code class="inline">UPDATE deleted_at=NULL</code>；审计时也能查历史。<br>
+    AGENTS.md 写死 risk_rule / risk_blacklist 必须软删——面试主动讲就体现你对风控合规性的理解。
+  </div>
+</div>
+<div class="mermaid">
+stateDiagram-v2
+    [*] --> 待审核: 决策=人工审核 自动建案
+    待审核 --> 审核中: 运营点「开始审核」
+    审核中 --> 已通过: 点「通过」+ action_log
+    审核中 --> 已拒绝: 点「拒绝」(可加黑)
+    审核中 --> 已关闭: 点「关闭/撤销」
+    待审核 --> 已关闭: ⏰ scheduler 12h 超时自动关
+    已通过 --> [*]
+    已拒绝 --> [*]
+    已关闭 --> [*]
+    note left of 待审核
+      白名单 _ALLOWED_CASE_TRANSITIONS
+      非法跳转 (已通过→待审核) 直接 400「状态流转非法」
+    end note
+</div>
+<div class="callout danger">
+  <b>🔴 新手必踩坑 & 面试主动讲（软删 99% 事故）：</b>
+  软删 99% 的事故 = 新加的 GET 接口 <b style="color:#dc2626;">忘了加 WHERE deleted_at IS NULL</b>，用户说「我明明删了的规则怎么还在列表里！」
+  <br>✅ 3 层防护：
+  <br>&nbsp;&nbsp;1) router 里统一写 <code class="inline">_alive = RiskRule.deleted_at.is_(None)</code>，所有查询都加 .where(_alive)
+  <br>&nbsp;&nbsp;2) 代码评审：看到 <code class="inline">select(RiskRule)</code> 没 where(_alive) 直接打回
+  <br>&nbsp;&nbsp;3) 加 1 条集成测试：软删 → list → assert len == old_len - 1
+</div>
+
+    <div class="stack-grid">
+      <div class="stack-card"><h6>① 软删约定（risk_rule / risk_blacklist）</h6>
+        DELETE 路由不执行 <code class="inline">db.delete(obj)</code>，而是 <code class="inline">obj.deleted_at = now()</code>；<b>所有读接口都加 WHERE deleted_at IS NULL</b>，少加一处就会显示已删数据。
+      </div>
+      <div class="stack-card"><h6>② 案件状态机白名单</h6>
+        <code class="inline">service/case.py::_ALLOWED_CASE_TRANSITIONS = {"待审核": ["审核中", "已关闭"], ...}</code>，任何非法跳转（已通过→待审核）后端直接返回 400 <b>「状态流转非法」</b>，不允许绕过状态机。
+      </div>
+      <div class="stack-card"><h6>③ 日志约定</h6>
+        所有业务模块 <code class="inline">logger = logging.getLogger(__name__)</code>，不准另起；统一走 <code class="inline">logging_config.py</code>：stdout + logs/app.log（50MB × 5 轮转，合规留痕）。
+      </div>
+    </div>
+
+    <!-- 12. 测试体系 -->
+    <h2 id="ch12">12. 测试体系（330+ 用例基线）</h2>
+    <h3 id="ch12-1">12.1 必跑的 8 个 test_*.py（<span class="kbd">python -m pytest tests/</span>）</h3>
+    <ol>
+      <li><code class="inline">test_rule_engine.py 14 passed</code>：9 种 JSON op + 嵌套 AND/OR</li>
+      <li><code class="inline">test_xgboost.py</code>：25 维特征对齐 + 模型降级纯规则</li>
+      <li><code class="inline">test_decision.py</code>：加权融合 + VETO=90 一票否决 + 4 阈值边界</li>
+      <li><code class="inline">test_risk_decision.py 🔥 核心</code>：真的调 evaluate() 全链路（黑名单短路、规则+ML 融合、VETO）</li>
+      <li><code class="inline">test_service_*.py</code>：case/blacklist/validator 业务层</li>
+      <li><code class="inline">test_routers_*.py</code>：HTTP 路由层（Pydantic 校验 + 软删过滤）</li>
+      <li><code class="inline">test_scheduler.py</code>：案件超时 12h 自动关案</li>
+      <li><code class="inline">test_ddl_sync.py</code>：DDL vs ORM 对齐（需要真实 DB，默认 skip）</li>
+    </ol>
+    <h3 id="ch12-2">12.2 已知 1 挂 1 skip（<b>不是代码回归！面试时要主动说明避免被误判"有 bug"</b>）</h3>
+    <ul>
+      <li><code class="inline">tests/test_run_preflight.py::test_mysql_down ❌</code>：断言报错包含 <code class="inline">localhost:3306</code>，当你的 <code class="inline">.env</code> 的 DB_HOST 指向远程主机时必挂（环境相关）</li>
+      <li><code class="inline">tests/test_ddl_sync.py ⏭ skip</code>：默认 skip，需 <code class="inline">DDL_CHECK_ENABLED=1 python -m pytest tests/test_ddl_sync.py</code> + 真实 DB 才会跑</li>
+    </ul>
+
+    <!-- 13. 面试高频 30 题 -->
+    <h2 id="ch13">13. 🎯 面试高频 30 题（附标答要点，直接背）</h2>
+    <div class="interview-q">
+      <div class="q">项目里"双轨风控"具体怎么实现？为什么选 0.6/0.4？<span class="a">答：0.6 规则 + 0.4 ML 加权融合；规则可解释（运营改）+ ML 学隐性模式。权重 0.6/0.4 是上线初值（规则稳定优先），后续可按业务 AUC 回测调。≥90 分 VETO 一票否决跳过 ML，防止高危规则被 ML "稀释"。</span></div>
+      <div class="q">如何保证特征工程和模型输入永远对齐？<span class="a">契约式：FEATURE_COLUMNS 常量 + feature.py 输出 dict + test_xgboost 对齐测试，3 层锁死；新增特征 3 步同步，否则对齐测试直接挂。</span></div>
+      <div class="q">为什么黑名单放最前面短路？6 类优先级怎么定？<span class="a">省资源（后续 7 步不跑）+ 确定性最高（人工确认恶意）。6 类按"作恶影响面 + 确定性"排序：用户 > 身份证 > 手机 > 地址 > 运单 > 设备。</span></div>
+      <div class="q">XGBoost 模型文件不存在怎么办？<span class="a">import 时 try/except，MODEL=None，predict_proba 退化成 user_risk_score（纯规则画像）。业务 0 感知，只有日志 WARNING。</span></div>
+      <div class="q">为什么用 SQLAlchemy async？踩过什么坑？<span class="a">并发高（每评估要跑 20+ SQL），async 不占线程。坑：① aiomysql Event loop is closed（写 get_db_async 显式 close 不依赖 __aexit__）② 不要 db.refresh()（aiomysql 跨 loop 报 MissingGreenlet）→ 写入时 Python 端直接填 default，commit 后直接读内存值。</span></div>
+      <div class="q">规则引擎 9 种 op 为什么自研不用库？<span class="a">① 9 种简单 op 没必要引入 json-logic/jmespath 额外依赖（面试加分：控制依赖数）② 嵌套 AND/OR 递归 50 行就实现，比第三方更可控 ③ 错误时返回的条件路径能定位到哪条规则。</span></div>
+      <div class="q">前端「[object Object]」这个经典 Bug 你们怎么根治的？<span class="a">根因：直接 alert(err.detail) 把 list[dict] 当字符串。根治：① 写 formatHttpDetail() 递归格式化（Pydantic msg+loc → 中文 "[body.field] 错误信息"）② 原生 alert 全替换成 showToast() 右上角 Toast ③ 后端 422 异常处理器直接把 msg 翻译中文，前端 0 处理。</span></div>
+      <div class="q">静态文件强缓存怎么解？<span class="a">FastAPI StaticFiles 默认 1 年，每次改 JS 加查询参数版本号 <code class="inline">?v=20260812vN</code>，URL 变了浏览器强制重新下载（CDN 同理）。</span></div>
+      <div class="q">17 张表为什么严格分 9 风控 + 8 物流？<span class="a">通用风控表（Rule/Event/Assessment/Case…）跨行业可复用；物流表替换成电商订单/金融交易/出行订单就是另一个行业版本——架构可迁移性高，面试强调"不是写死物流，而是场景 E 替换层"。</span></div>
+      <div class="q">案件为什么要状态机？怎么防非法跳转？<span class="a">运营人员容易手滑（已通过→再拒绝会让下游困惑）。service/case.py 里写 _ALLOWED_CASE_TRANSITIONS 白名单，任何非法跳转 400「状态流转非法」，写操作全过 service 层，不让 router 直接 ORM 更新。</span></div>
+      <div class="q">软删为什么还要 deleted_at 而不是物理删？<span class="a">合规留痕（风险规则改动要有审计）；还能一键恢复（UPDATE deleted_at=NULL）。注意：所有 SELECT 必须手动加 WHERE deleted_at IS NULL，少加一处就会显示脏数据。</span></div>
+      <div class="q">训练数据正例不足怎么办？<span class="a">① scripts/gen_risk_data.py --balance-pos 造合成正例 ② scale_pos_weight=5 样本加权 ③ SMOTE 过采样（先试 ①+② 够了）。本项目合格线 AUC ≥ 0.82。</span></div>
+      <div class="q">为什么用 Jinja2 SSR 不搞前后端分离？<span class="a">① 项目是教学用，0 构建（不用 Node/Vite），新人 clone 完 python run_app.py 直接看效果 ② 7 个管理后台页面交互简单，SSR 够了 ③ SEO/首屏更快。</span></div>
+      <div class="q">Agent 为什么要做只读安全？怎么防 Prompt 注入？<span class="a">Agent 允许用户自然语言 → 如果让它写库，一句"把所有黑名单都删掉"就完了。防注入：① 6 个工具只暴露读/只读 SQL（正则黑名单 INSERT/UPDATE/DELETE/DROP）② DB 层配只读 DB 用户 ③ 工具输出最大 4000 chars 截断 ④ 系统 Prompt 禁止输出 SQL 原文。</span></div>
+      <div class="q">调度器为什么要 lifespan 启停？<span class="a">APScheduler 是全局单例，lifespan 保证 FastAPI 进程启动时 scheduler.start() 一次，退出时 shutdown()。踩过的坑：uvicorn reload=True 会让 lifespan 跑两遍 → scheduler 两个实例同时跑 → 12h 超时被关 2 次，AGENTS.md 明确禁止 reload=True。</span></div>
+      <div class="q">FK 归属越权链是啥？举例子。<span class="a">接口声明"给运单 X 提交审核"但用户 ID 是 Y，要验证 ensure_shipment_belongs_to_sender(shipment_id, user_id) → 运单 belong_to 不是 Y 就 403。放在 service/validator.py 中间件层，每个写操作必过 validator。</span></div>
+      <div class="q">Pydantic 英文报错怎么翻译中文的？<span class="a">scripts/main.py 全局 @app.exception_handler(RequestValidationError)：遍历 err.detail，按 error.type 匹配（比按 msg 稳，Pydantic 版本变化不影响），再把 {ge}/{le}/{min_length} 模板参数填进中文句子。兜底还有前端 formatHttpDetail 字符串级替换，双保险。</span></div>
+      <div class="q">决策融合 0.6/0.4 可以怎么优化？<span class="a">答 2 点：① 离线 GridSearchCV 搜最佳权重组合（按 AUC 最高）② 动态权重：冷启动时 0.9/0.1 ML 样本少；数据量上来后 0.5/0.5 回归。</span></div>
+      <div class="q">为什么不直接规则 ≥ 某阈值就拒绝，还要搞 VETO=90？<span class="a">因为累加型分值：3 条 30 分规则加起来 90 就是多个弱信号叠加 → 确定为恶意，不再相信 ML（ML 是概率性的，可能被伪装样本拉低）。VETO 阈值 90 是"运营绝对不能放过"的红线。</span></div>
+      <div class="q">pytest 为什么必须用 <span class="kbd">python -m pytest tests/</span>，不能裸 <span class="kbd">pytest</span>？<span class="a">裸 pytest 不把 cwd 加进 sys.path，import app 就报 ModuleNotFoundError。AGENTS.md 里写死了命令（很多 README 过期还是 pytest tests/，面试主动提你修过文档陷阱加分）。</span></div>
+      <div class="q">Python 3.13 为什么禁用？<span class="a">uv/pyproject.toml 要求 requires-python = ">=3.11,<3.13"。XGBoost 1.7 的 py313 wheel 未稳定（报 unknown file type），aiomysql 部分 async 函数在 3.13 有新 GIL 坑 → 为稳定性禁用。</span></div>
+      <div class="q">Action Log 怎么设计？<span class="a">risk_action_log 表：operator / action_type(CREATE_RULE/DELETE_BLACKLIST/REVIEW_CASE) / target_type / target_id / before_value(JSON) / after_value(JSON) / remark / create_time。所有写操作（rule/create, case/review, blacklist/add）统一过 service/action_log.record()，前端看不看无所谓，合规审计 100% 能追到人。</span></div>
+      <div class="q">一条风险评估完整调用链要写多少 SQL？怎么优化？<span class="a">最坏：黑名单 6 次 SELECT + 25 维特征（用户画像 3 + 运单 3 + 实名 2 + 地址 3 + 跨境 2 + 设备 2 + 投诉 1 + 拒收 2 + 训练回填 3 + 规则 1）= 约 30 次。优化：① 黑名单短路直接 return，30 → 6 次 ② 特征工程里同一张表的 JOIN 合并成一条大 SQL ③ AsyncSession 开 pool_size=10 max_overflow=20 连接池。</span></div>
+      <div class="q">为什么 XGBoost 用 JSON 存模型不用 pickle？<span class="a">pickle 跨版本（XGBoost 1.x→2.x）经常崩；JSON 是官方标准格式（save_model/load_model），跨语言也能读（后续换 Java 线上推理不用重训）。</span></div>
+      <div class="q">XGBoost 为什么 predict_proba 要取 [0][1]？<span class="a">二分类 predict_proba 返回的是 (n, 2) 矩阵：第 0 列=负例概率，第 1 列=正例（高风险）概率，乘 100 才是 0-100 分的分数。</span></div>
+      <div class="q">为什么要写 refreshDashboard / loadRules 这些显式函数不自动轮询？<span class="a">① 省资源（后端 RTT 高）② 操作型后台不需要实时，用户手动点"刷新"或新建后跳第一页足够；要实时可以 setInterval 1min 调一次。</span></div>
+      <div class="q">为什么规则排序 priority 第一键而不是 update_time？<span class="a">列表展示 = 规则权重序（运营先看 100/99/98 的高权规则），同权组内按 update_time DESC 让最新修改的在同权组顶 —— 两全：权重大的在整库顶，同组内最新的在组顶。</span></div>
+      <div class="q">为什么要区分「标记」和「人工审核」两种决策？<span class="a">阈值 40-60 = 标记（观察项，不给运营加工作量，只进评估历史）；60-90 = 人工审核（自动建案，要人处理）—— 运营人力有限，不能把模糊的都塞过来。</span></div>
+      <div class="q">你们做过什么"工程稳定性改进"？<span class="a">① run_app.py 6 步自检（Python/.env/依赖/DB连通/表存在/静态文件），上线就知道卡哪 ② ML 模型缺失自动降级，不阻塞业务 ③ Pydantic 错误翻译中文减少 50% 客服工单 ④ formatHttpDetail 消灭 [object Object] 视觉 bug ⑤ 静态版本号破缓存避免改完代码用户看到旧 JS。</span></div>
+      <div class="q">（开放题）如果你要加一个新业务场景（比如电商），要动哪些地方？<span class="a">4 步：① 新建 models_ecommerce.py（订单/支付/售后 8 表）② feature.py 里把物流 SQL 语义替换成电商对应字段（25 维 dict key 不变！契约不动）③ 种子规则 sql/seed_rules_ecommerce.sql 30 条电商规则 ④ 前端 4 种事件类型下拉 + 业务 ID placeholder 换电商。其他 9 张风控表、decision、ML、Agent、dashboard 都不动。</span></div>
+    </div>
+
+    <div class="mt-5 pt-4 border-top d-flex justify-content-between align-items-center small text-muted">
+      <span>📘 手册版本 2026-08-12 · 适用场景 E 物流风控 · 对应用户手册：<a href="/user-guide">/user-guide</a></span>
+      <a href="#" class="btn btn-sm btn-outline-primary" onclick="window.scrollTo({top:0,behavior:'smooth'});return false;">
+        <i class="bi bi-arrow-up"></i> 回到顶部
+      </a>
+    </div>
+
+  </article>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- ====== highlight.js (Monokai Sublime) ====== -->
+<script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.8.0/build/highlight.min.js"
+        onerror="window.__hljsFallback=1;"></script>
+<!-- 额外语言 (bash/json/sql/xml/python 默认就带, 这里预加载常用) -->
+<script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.8.0/build/languages/python.min.js"
+        onerror="void 0;"></script>
+<script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.8.0/build/languages/sql.min.js"
+        onerror="void 0;"></script>
+<script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.8.0/build/languages/bash.min.js"
+        onerror="void 0;"></script>
+<script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.8.0/build/languages/json.min.js"
+        onerror="void 0;"></script>
+<script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.8.0/build/languages/xml.min.js"
+        onerror="void 0;"></script>
+<!-- ====== Mermaid 10.9.x (稳定 CDN 版) ====== -->
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.min.js"
+        onerror="window.__mermaidFallback=1;"></script>
+
+<script>
+// ---- 全局: highlight.js 代码复制按钮 ----
+window.__copyCode = function (btn) {
+  const wrap = btn.closest('.code-block-wrap');
+  const code = wrap && wrap.querySelector('pre code');
+  if (!code) return;
+  const text = code.innerText;
+  const ok = () => {
+    const old = btn.innerHTML;
+    btn.innerHTML = '✅ 已复制';
+    btn.style.background = '#15803d';
+    setTimeout(() => { btn.innerHTML = old; btn.style.background = ''; }, 1600);
+  };
+  try {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(ok, () => fallbackCopy(text, ok));
+    } else {
+      fallbackCopy(text, ok);
+    }
+  } catch (e) { fallbackCopy(text, ok); }
+  function fallbackCopy(t, cb) {
+    const ta = document.createElement('textarea');
+    ta.value = t; ta.style.position='fixed'; ta.style.top='-2000px';
+    document.body.appendChild(ta); ta.select();
+    try { document.execCommand('copy'); cb(); } catch(_) {}
+    document.body.removeChild(ta);
+  }
+};
+
+// ---- 启动 highlight.js (CDN 加载失败时静默降级, 至少保留黑底) ----
+window.addEventListener('load', function () {
+  if (window.hljs && !window.__hljsFallback) {
+    // highlight.js 11.9 的 unescaped HTML 审计非常严格: 代码里只要出现 < / > / & 且不是 HTML 实体,
+    // 再加上我们用 <span class="ln"> 包行号, 就会误判并抛 SyntaxError: Unexpected token '*'.
+    // 解决方案: highlightElement 之前, 对每个 pre code 做一次"纯文本抓取 + 重新 HTML 实体化 + 重写行号",
+    // 同时显式传 ignoreUnescapedHTML:true, 100% 绕开审计.
+    var codeBlocks = document.querySelectorAll('pre code[class^="language-"], pre code[class*=" language-"]');
+    function escapeHtml(s) {
+      return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+    codeBlocks.forEach(function (el, i) {
+      try {
+        // 1. 保留旧行号数组: 每个 span.ln 的 innerText (去掉首尾空白)
+        var lines = [];
+        el.querySelectorAll('span.ln').forEach(function (s) { lines.push(s.innerText.replace(/\n$/, '')); });
+        // 2. 没行号就是 innerText 整体, 再拆分兜底
+        if (!lines.length) {
+          lines = el.innerText.split('\n');
+        }
+        // 3. 重新拼回, 每一行 escape 再包 span.ln
+        el.innerHTML = lines.map(function (l) {
+          return '<span class="ln">' + escapeHtml(l) + '</span>';
+        }).join('\n');
+        // 4. 再调用 hljs
+        hljs.highlightElement(el, { ignoreUnescapedHTML: true });
+      } catch (e) {
+        console.warn('[hljs #' + i + '] failed:', e, 'innerText sample:', el.innerText.slice(0, 80));
+      }
+    });
+  } else {
+    console.warn('[tech-guide] highlight.js CDN 加载失败, 保留原黑底样式');
+  }
+
+  // ---- 启动 Mermaid (CDN 加载失败时隐藏 .mermaid, 只显示 ASCII fallback) ----
+  if (window.mermaid && !window.__mermaidFallback) {
+    try {
+      mermaid.initialize({
+        startOnLoad: true,
+        theme: 'default',
+        securityLevel: 'strict',
+        flowchart: { curve: 'basis', useMaxWidth: true, htmlLabels: true },
+        sequence: { wrap: true, showSequenceNumbers: false, actorMargin: 60 },
+        state: { useMaxWidth: true }
+      });
+      mermaid.run({ querySelector: '.mermaid' }).then(function () {
+        // 关键: Mermaid 会在 svg 上硬写 style="max-width: 原始 viewBox 宽度px", 导致无法缩放到父容器.
+        // 渲染完成后立即清除这个 inline max-width, 让 CSS 的 max-width:100% 生效
+        document.querySelectorAll('.mermaid svg').forEach(function (svg) {
+          svg.style.maxWidth = '';
+          svg.style.width = '100%';
+          svg.style.height = 'auto';
+          svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+        });
+      }).catch(function (err) {
+        console.warn('mermaid post-process failed:', err);
+      });
+    } catch (e) {
+      console.warn('mermaid init/run failed:', e);
+      document.querySelectorAll('.mermaid').forEach(m => m.style.display = 'none');
+    }
+  } else {
+    console.warn('[tech-guide] Mermaid CDN 加载失败, 已隐藏 mermaid 图, 降级用 ASCII');
+    document.querySelectorAll('.mermaid').forEach(m => m.style.display = 'none');
+  }
+});
+</script>
+
+<script>
+/**
+ * 技术手册增强: 和用户手册一样
+ *   - TOC 锚点平滑滚动 + 手动高亮
+ *   - IntersectionObserver spy (滚动自动点亮当前章节)
+ *   - URL #anchor 初始定位
+ */
+(function () {
+  const toc = document.getElementById('techToc');
+  if (!toc) return;
+
+  // 锚点 -> 平滑滚动 + 手动 active
+  toc.querySelectorAll('a[href^="#"]').forEach((a) => {
+    a.addEventListener('click', function (e) {
+      const id = this.getAttribute('href').slice(1);
+      const target = document.getElementById(id);
+      if (!target) return;
+      e.preventDefault();
+      target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      toc.querySelectorAll('a').forEach(x => x.classList.remove('active'));
+      this.classList.add('active');
+      history.replaceState(null, '', '#' + id);
+    });
+  });
+
+  // IntersectionObserver: 当前章节 spy
+  const allAnchors = Array.from(toc.querySelectorAll('a[href^="#"]'));
+  const sectionIds = allAnchors.map(a => a.getAttribute('href').slice(1));
+  const sections = sectionIds
+    .map(id => document.getElementById(id))
+    .filter(Boolean);
+
+  if (sections.length && 'IntersectionObserver' in window) {
+    const setActive = (id) => {
+      const a = toc.querySelector('a[href="#' + id + '"]');
+      if (!a) return;
+      toc.querySelectorAll('a').forEach(x => x.classList.remove('active'));
+      a.classList.add('active');
+    };
+    const ob = new IntersectionObserver(
+      (entries) => {
+        let best = null, bestRatio = -1;
+        for (const ent of entries) {
+          if (ent.isIntersecting && ent.intersectionRatio > bestRatio) { best = ent.target; bestRatio = ent.intersectionRatio; }
+        }
+        if (best) setActive(best.id);
+      },
+      { rootMargin: '-15% 0px -75% 0px', threshold: [0, 0.25, 0.5, 0.75, 1] }
+    );
+    sections.forEach(s => ob.observe(s));
+  }
+
+  // 初始 URL #anchor 定位
+  const h = window.location.hash;
+  if (h && h.length > 1) {
+    const id = h.slice(1);
+    const el = document.getElementById(id);
+    if (el) {
+      window.setTimeout(() => el.scrollIntoView({ behavior: 'smooth', block: 'start' }), 200);
+      const a = toc.querySelector('a[href="' + h + '"]');
+      if (a) { toc.querySelectorAll('a').forEach(x => x.classList.remove('active')); a.classList.add('active'); }
+    }
+  }
+})();
+</script>
+{% endblock %}

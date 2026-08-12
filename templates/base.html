@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#1d4ed8">
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', path='favicon.svg') }}?v=1">
+    <title>{% block title %}物流风控系统{% endblock %}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.2/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        /* P4-L4 2026-08-08 布局: 左侧 fixed 不动, 右侧独立滚动 */
+        html, body { height: 100%; margin: 0; }
+        body { background: #f0f2f5; overflow: hidden; }
+        /* 去掉 Bootstrap 默认 gutter, 让 main-content 精确占右侧 */
+        .container-fluid, .row { padding: 0 !important; margin: 0 !important; }
+        /* 左侧 sidebar 绝对定位, 不参与文档流 */
+        .sidebar {
+            position: fixed;
+            top: 0; left: 0; bottom: 0;
+            width: 16.66667%;   /* 等同 col-md-2 = 2/12 */
+            background: #1e293b;
+            overflow-y: auto;   /* 侧边栏内容多时自己滚 */
+            z-index: 1000;
+        }
+        .sidebar .nav-link { color: #94a3b8; padding: 12px 20px; border-radius: 8px; margin: 2px 8px; }
+        .sidebar .nav-link:hover, .sidebar .nav-link.active { color: #fff; background: #334155; }
+        .sidebar .nav-link i { margin-right: 10px; width: 20px; text-align: center; }
+        .sidebar-brand { color: #fff; font-size: 18px; font-weight: 700; padding: 20px; border-bottom: 1px solid #334155; }
+        /* 主内容区: 显式 margin-left 16.66667% 避开 fixed sidebar (否则被盖住) */
+        .main-content {
+            margin-left: 16.66667%;   /* 等同 col-md-2 = 2/12, 跟 sidebar 宽度对齐 */
+            height: 100vh;
+            overflow-y: auto;  /* ← 关键: 只有这里上下滚 */
+            padding: 24px;
+        }
+        /* 【P4-L4 2026-08-08 修复】分页栏粘在 main-content 底部, 滚动时一直可见.
+         * 之前问题: .main-content { height: 100vh; overflow-y: auto } 把分页栏推到
+         * 滚动到底才看得到, 用户没滚到底就以为没分页. 现在 sticky 固定在底部. */
+        /* 【P4-L4 第二轮 2026-08-08】紧凑版: min-height 60→38, padding 减半, 单字符按钮 */
+        .pagination-bottom {
+            position: sticky;
+            bottom: 0;
+            background: #ffffff;
+            padding: 6px 12px;
+            margin: 12px 0 0 0;
+            border-top: 1px solid #e5e7eb;
+            box-shadow: 0 -2px 6px rgba(0, 0, 0, 0.04);
+            z-index: 100;
+            min-height: 38px;
+        }
+        /* 显式分页按钮样式, 防 Bootstrap reset 覆盖导致文字看不见 */
+        .pagination-bottom .pagination {
+            margin: 0;
+            display: flex;
+            list-style: none;
+            gap: 3px;
+            justify-content: center;
+            align-items: center;
+        }
+        .pagination-bottom .page-item .page-link {
+            color: #0d6efd;
+            background: #ffffff;
+            border: 1px solid #dee2e6;
+            padding: 4px 10px;
+            font-size: 13px;
+            line-height: 1.4;
+            min-width: 32px;
+            height: 28px;
+            text-align: center;
+            border-radius: 3px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .pagination-bottom .page-item.active .page-link {
+            color: #ffffff;
+            background: #0d6efd;
+            border-color: #0d6efd;
+            font-weight: 600;
+        }
+        .pagination-bottom .page-item.disabled .page-link {
+            color: #adb5bd;
+            background: #f8f9fa;
+            cursor: not-allowed;
+        }
+        .pagination-bottom .page-item .page-link:hover:not(.disabled) {
+            background: #e7f1ff;
+            border-color: #0d6efd;
+        }
+        .stat-card { border: none; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+        .stat-card .stat-value { font-size: 28px; font-weight: 700; }
+        .badge-risk-low { background: #dcfce7; color: #166534; }
+        .badge-risk-mid { background: #fef9c3; color: #854d0e; }
+        .badge-risk-high { background: #fed7aa; color: #9a3412; }
+        .badge-risk-critical { background: #fecaca; color: #991b1b; }
+        .chat-messages { height: calc(100vh - 320px); min-height: 300px; max-height: calc(100vh - 160px); overflow-y: auto; }
+        .chat-bubble { max-width: 80%; padding: 10px 14px; border-radius: 12px; margin-bottom: 8px; }
+        .chat-bubble.user { background: #3b82f6; color: #fff; margin-left: auto; }
+        .chat-bubble.ai { background: #f1f5f9; color: #1e293b; }
+        /* 红色粗线条关闭按钮 */
+        .btn-close-risk {
+            background: transparent;
+            border: 2px solid #dc2626;
+            border-radius: 6px;
+            color: #dc2626;
+            width: 32px;
+            height: 32px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            font-weight: 900;
+            line-height: 1;
+            padding: 0;
+            transition: all 0.15s ease;
+        }
+        .btn-close-risk:hover {
+            background: #dc2626;
+            color: #fff;
+        }
+        .btn-close-risk:focus {
+            box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.25);
+            outline: none;
+        }
+        /* 响应式: 窄屏 (md 以下) 恢复 Bootstrap 默认流式布局 (横排) */
+        @media (max-width: 767.98px) {
+            body { overflow: auto; }
+            .sidebar {
+                position: relative;
+                width: 100%;
+                height: auto;
+                overflow-y: visible;
+            }
+            .main-content {
+                margin-left: 0;
+                height: auto;
+                overflow-y: visible;
+            }
+        }
+    </style>
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+<div class="container-fluid">
+    <div class="row">
+        <!-- 侧边栏 -->
+        <div class="col-md-2 sidebar px-0">
+            <div class="sidebar-brand">
+                <i class="bi bi-shield-check"></i> 风控中心
+            </div>
+            <nav class="nav flex-column mt-3">
+                <a class="nav-link {% if request.url.path == '/' %}active{% endif %}" href="/">
+                    <i class="bi bi-speedometer2"></i> 仪表盘
+                </a>
+                <a class="nav-link {% if request.url.path == '/rules' %}active{% endif %}" href="/rules">
+                    <i class="bi bi-list-check"></i> 规则管理
+                </a>
+                <a class="nav-link {% if request.url.path == '/cases' %}active{% endif %}" href="/cases">
+                    <i class="bi bi-folder2-open"></i> 案件管理
+                </a>
+                <a class="nav-link {% if request.url.path == '/assessments' %}active{% endif %}" href="/assessments">
+                    <i class="bi bi-clipboard-data"></i> 评估历史
+                </a>
+                <a class="nav-link {% if request.url.path == '/risk-check' %}active{% endif %}" href="/risk-check">
+                    <i class="bi bi-search"></i> 风险检查
+                </a>
+                <a class="nav-link {% if request.url.path == '/chat' %}active{% endif %}" href="/chat">
+                    <i class="bi bi-robot"></i> AI 助手
+                </a>
+                <a class="nav-link {% if request.url.path == '/user-guide' %}active{% endif %}" href="/user-guide">
+                    <i class="bi bi-journal-text"></i> 使用手册
+                </a>
+                <a class="nav-link {% if request.url.path == '/tech-guide' %}active{% endif %}" href="/tech-guide">
+                    <i class="bi bi-code-slash"></i> 技术手册
+                </a>
+                <a class="nav-link {% if request.url.path == '/blacklist' %}active{% endif %}" href="/blacklist">
+                    <i class="bi bi-shield-x"></i> 黑名单
+                </a>
+            </nav>
+            <!-- 底部: 使用指引按钮 -->
+            <div class="px-3 mt-auto mb-3 pt-3 border-top border-secondary border-opacity-25">
+                <button class="btn btn-outline-light btn-sm w-100" onclick="openGuideModal()">
+                    <i class="bi bi-question-circle me-2"></i> 使用指引
+                </button>
+                <div class="text-muted small text-center mt-2 opacity-75" style="font-size:11px;">
+                    物流风控 · 双轨系统
+                </div>
+            </div>
+        </div>
+        <!-- 主内容区 -->
+        <div class="col-md-10 main-content">
+            {% block content %}{% endblock %}
+        </div>
+    </div>
+</div>
+<!-- 全局 Toast 容器 (右上角叠放) -->
+<div class="toast-container position-fixed top-0 end-0 p-3" style="z-index:9999">
+    <div id="globalToastWrap"></div>
+</div>
+
+<!-- ============================================================
+     全局使用指引模态框 (不熟悉业务的用户点侧边栏底 ? 按钮打开)
+     ============================================================ -->
+<div class="modal fade" id="guideModal" tabindex="-1" aria-labelledby="guideModalTitle" aria-hidden="true">
+  <div class="modal-dialog modal-xl modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header sticky-top bg-white" style="z-index:2;">
+        <h5 class="modal-title fw-bold" id="guideModalTitle">
+          <i class="bi bi-book text-primary me-2"></i>物流风控系统 · 使用指引
+        </h5>
+        <button type="button" class="btn-close-risk" data-bs-dismiss="modal" aria-label="关闭"><i class="bi bi-x-lg"></i></button>
+      </div>
+      <div class="modal-body">
+        <!-- Tab: 页面说明 | 业务概念 | 常见问题 -->
+        <ul class="nav nav-tabs mb-3" role="tablist">
+          <li class="nav-item" role="presentation">
+            <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#guideTabPages" type="button">一、各页面用途</button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#guideTabConcepts" type="button">二、业务概念</button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#guideTabQA" type="button">三、常见问题</button>
+          </li>
+        </ul>
+
+        <div class="tab-content">
+          <!-- ========== Tab1: 各页面用途 ========== -->
+          <div class="tab-pane fade show active" id="guideTabPages">
+
+            <div class="card card-body mb-3 border-0 bg-light" id="guide-dashboard">
+              <h6 class="fw-bold text-dark"><i class="bi bi-speedometer2 text-primary me-2"></i>① 仪表盘 / Dashboard</h6>
+              <p class="mb-1"><b>做什么：</b>给管理人员看的"全局总览"，一眼掌握今天/本周/本月风控整体情况。</p>
+              <p class="mb-1"><b>主要内容：</b></p>
+              <ul class="mb-0">
+                <li>今日评估数、案件数、黑名单总数、AI 命中率（4 张核心卡片）</li>
+                <li>近 7/30 天风险评估走势折线图 + 风险等级分布饼图</li>
+                <li>Top 高危用户、最近创建/修改的规则、最近新加入的黑名单</li>
+              </ul>
+              <div class="mt-2"><a class="btn btn-sm btn-outline-primary" href="/">→ 打开仪表盘</a></div>
+            </div>
+
+            <div class="card card-body mb-3 border-0 bg-light" id="guide-risk-check">
+              <h6 class="fw-bold text-dark"><i class="bi bi-search text-danger me-2"></i>② 风险检查（最常用）</h6>
+              <p class="mb-1"><b>做什么：</b>给任意"业务事件"跑一次完整的风控决策，立刻返回「通过/标记/人工审核/拒绝」。</p>
+              <p class="mb-1"><b>何时用：</b>客服接到用户投诉、运营要审核一个可疑运单、需要复核任意一笔交易。</p>
+              <p class="mb-1"><b>4 种事件类型（物流版）：</b></p>
+              <ul class="mb-0">
+                <li><code>寄件下单</code>：用户在小程序/APP 刚下单（最常用）</li>
+                <li><code>到付签收</code>：收件人拒收到付件、或者签收后投诉（拒收率画像用到）</li>
+                <li><code>跨境申报</code>：国际快件向海关申报（危险品、瞒报校验的核心入口）</li>
+                <li><code>投诉申诉</code>：用户主动发起投诉或申诉（投诉滥用检测）</li>
+              </ul>
+              <p class="mt-2 mb-1"><b>业务 ID（Source ID）填什么：</b>跟事件类型对应——</p>
+              <ul class="mb-0">
+                <li>寄件下单 → 运单号 <code>SHIPxxxxxx</code></li>
+                <li>到付签收 → 运单号 <code>SHIPxxxxxx</code></li>
+                <li>跨境申报 → 报关单号 <code>DECLxxxxxx</code></li>
+                <li>投诉申诉 → 投诉单号 <code>TICKET-1</code> / 数字 ID</li>
+              </ul>
+              <div class="mt-2"><a class="btn btn-sm btn-outline-danger" href="/risk-check">→ 打开风险检查</a></div>
+            </div>
+
+            <div class="card card-body mb-3 border-0 bg-light" id="guide-assessments">
+              <h6 class="fw-bold text-dark"><i class="bi bi-clipboard-data text-info me-2"></i>③ 评估历史</h6>
+              <p class="mb-1"><b>做什么：</b>回溯所有风控检查的结果（包括已经通过/标记/案件已结案的）。相当于"全量审计日志"。</p>
+              <p class="mb-1"><b>和案件管理的区别：</b>案件只显示<strong>待办（待审核+审核中）</strong>；评估历史是全量，包括"直接通过"和"标记后自动通过"的。</p>
+              <p class="mb-1"><b>筛选维度：</b>决策 / 风险等级 / 事件类型 / 用户 ID，都可以组合。默认每页 20 条。</p>
+              <div class="mt-2"><a class="btn btn-sm btn-outline-info" href="/assessments">→ 打开评估历史</a></div>
+            </div>
+
+            <div class="card card-body mb-3 border-0 bg-light" id="guide-rules">
+              <h6 class="fw-bold text-dark"><i class="bi bi-list-check text-success me-2"></i>④ 规则管理</h6>
+              <p class="mb-1"><b>做什么：</b>配置<strong>规则引擎</strong>（风控的"左脑"，占最终评分 60% 权重）。所有命中规则会加权融合，得到规则总分。</p>
+              <p class="mb-1"><b>字段说明（新建/编辑规则时会用到）：</b></p>
+              <table class="table table-sm mb-0 w-auto small">
+                <thead class="table-light"><tr><th>字段</th><th>说明</th><th>示例</th></tr></thead>
+                <tbody>
+                  <tr><td>规则 ID</td><td>唯一标识，建议 L001 / L002 递增</td><td>L015</td></tr>
+                  <tr><td>分类 (8 类)</td><td>见「业务概念」Tab</td><td>危险品瞒报</td></tr>
+                  <tr><td>风险等级</td><td>低 / 中 / 高 / 极高（仅标签展示，真实扣分看 risk_score）</td><td>高</td></tr>
+                  <tr><td>分值 0-100</td><td><b>最重要！</b>这条规则命中时贡献多少分（和其他规则加权后触发 VETO 一票否决）</td><td>60</td></tr>
+                  <tr><td>动作</td><td>通过 / 标记 / 人工审核 / 拒绝</td><td>人工审核</td></tr>
+                  <tr><td>优先级</td><td>数字越大越先执行（也决定列表排序），0 为默认</td><td>90</td></tr>
+                  <tr><td>条件表达式 (JSON)</td><td>匹配字段的逻辑条件（25 维特征名）</td><td><code>{"field":"sender_recent_refund_rate","op":">=","value":0.3}</code></td></tr>
+                </tbody>
+              </table>
+              <div class="mt-2"><a class="btn btn-sm btn-outline-success" href="/rules">→ 打开规则管理</a></div>
+            </div>
+
+            <div class="card card-body mb-3 border-0 bg-light" id="guide-blacklist">
+              <h6 class="fw-bold text-dark"><i class="bi bi-shield-x text-warning me-2"></i>⑤ 黑名单管理</h6>
+              <p class="mb-1"><b>做什么：</b>把<strong>确认欺诈/高危</strong>的对象加进 6 类黑名单，匹配到会<strong>直接短路</strong>出"拒绝"（不再跑后面的规则和 ML）。</p>
+              <p class="mb-1"><b>6 类黑名单（物流版，依次命中优先级从高到低）：</b></p>
+              <ol class="mb-0">
+                <li><b>用户</b>：<code>user_id</code>（最严，命中直接拒）</li>
+                <li><b>身份证号</b>：SHA256 或明文（实名风险共用）</li>
+                <li><b>手机号</b>：138xxxxxxx 格式</li>
+                <li><b>地址</b>：address_id 或 地址文本（频繁退货高发地址）</li>
+                <li><b>运单号</b>：特定已被标记的运单（走异常流程）</li>
+                <li><b>设备指纹</b>：<code>dev-xxx</code>（模拟器 / 多账号共用设备）</li>
+              </ol>
+              <p class="mt-2 mb-0 text-danger small"><b>⚠️ 使用原则：</b>只有<strong>人工核实确定是恶意</strong>时才加；如果是"疑似"请走「人工审核」案件流程，别滥用黑名单（会影响正常用户收寄件）。</p>
+              <div class="mt-2"><a class="btn btn-sm btn-outline-warning" href="/blacklist">→ 打开黑名单</a></div>
+            </div>
+
+            <div class="card card-body mb-3 border-0 bg-light" id="guide-cases">
+              <h6 class="fw-bold text-dark"><i class="bi bi-folder2-open text-secondary me-2"></i>⑥ 案件管理（审核台）</h6>
+              <p class="mb-1"><b>做什么：</b>风控双轨判定为「人工审核」的全部事项。给<strong>运营人员</strong>的工作台，通过 / 拒绝 / 关闭 三选一。</p>
+              <p class="mb-1"><b>审核流程：</b></p>
+              <ol class="mb-0">
+                <li>点「详情」查看命中了哪几条规则、ML 评分多少、用户历史画像（总运单数 / 拒收率 / 投诉次数）</li>
+                <li>如果用户历史画像非常糟糕（拒收率 >30%、投诉 5+ 次）→ 勾选「<b>拒绝时加入黑名单</b>」一次性处理</li>
+                <li>填审核人（默认 admin）和审核意见 → 点 绿色通过 / 红色拒绝 / 灰色关闭</li>
+              </ol>
+              <div class="mt-2"><a class="btn btn-sm btn-outline-secondary" href="/cases">→ 打开案件</a></div>
+            </div>
+
+            <div class="card card-body mb-3 border-0 bg-light" id="guide-chat">
+              <h6 class="fw-bold text-dark"><i class="bi bi-robot text-indigo me-2"></i>⑦ AI 助手</h6>
+              <p class="mb-1"><b>做什么：</b>用自然语言代替手动点页面。背后是 LangChain Agent + 业务工具集（SQL、查规则、查黑名单、查案件、算风险）。</p>
+              <p class="mb-1"><b>典型问法示例：</b></p>
+              <ul class="mb-0">
+                <li>"帮我查一下用户 RISK001 的所有运单和风险画像"</li>
+                <li>"最近 7 天有哪些规则被修改了？"</li>
+                <li>"对跨境申报 DECL007 执行一次风控检查"</li>
+              </ul>
+              <div class="mt-2"><a class="btn btn-sm btn-outline-primary" href="/chat">→ 打开 AI 助手</a></div>
+            </div>
+          </div><!-- /Tab1 -->
+
+          <!-- ========== Tab2: 业务概念 ========== -->
+          <div class="tab-pane fade" id="guideTabConcepts">
+
+            <h6 class="fw-bold mt-1 mb-2">📌 双轨风控架构（为什么有两套结果）</h6>
+            <p class="mb-0 small">最终分 = <strong>0.6 × 规则分 + 0.4 × ML 分</strong>。</p>
+            <ul>
+              <li><b>规则引擎</b>（60%）：运营写的 30 条 Lxxx 规则，可解释、可调整</li>
+              <li><b>ML 模型</b>（40%）：XGBoost 训练的 25 维分类器，学习历史标签的隐性模式</li>
+              <li><b>VETO 一票否决</b>（阈值 90 分）：规则分 ≥90 → 直接「拒绝」，不再融合 ML</li>
+            </ul>
+
+            <h6 class="fw-bold mb-2">📌 规则的 8 大分类（物流版）</h6>
+            <div class="row mb-2 g-2">
+              <div class="col-md-6"><div class="p-2 bg-danger-subtle rounded small"><b>① 寄件欺诈：</b>虚报寄件人信息、批量虚假下单</div></div>
+              <div class="col-md-6"><div class="p-2 bg-info-subtle rounded small"><b>② 实名风险：</b>身份证号 SHA256 匹配、实名失败</div></div>
+              <div class="col-md-6"><div class="p-2 bg-warning-subtle rounded small"><b>③ 危险品瞒报：</b>报关品名与实际不符 / 含违禁词</div></div>
+              <div class="col-md-6"><div class="p-2 bg-primary-subtle rounded small"><b>④ 跨境异常：</b>高风险目的地、申报价值不符</div></div>
+              <div class="col-md-6"><div class="p-2 bg-success-subtle rounded small"><b>⑤ 到付拒收：</b>近期拒收率、签收异常</div></div>
+              <div class="col-md-6"><div class="p-2 bg-secondary-subtle rounded small"><b>⑥ 地址风险：</b>历史高发退货/投诉地址</div></div>
+              <div class="col-md-6"><div class="p-2 bg-dark text-white rounded small"><b>⑦ 投诉滥用：</b>同一用户短时间内多次投诉</div></div>
+              <div class="col-md-6"><div class="p-2 bg-light border rounded small"><b>⑧ 综合风险：</b>跨多类别的通用兜底</div></div>
+            </div>
+
+            <h6 class="fw-bold mb-2">📌 4 种决策（全页面统一）</h6>
+            <table class="table table-sm small mb-4">
+              <thead class="table-light"><tr><th>决策</th><th>含义</th><th>触发阈值参考</th></tr></thead>
+              <tbody>
+                <tr><td><span class="badge bg-success">通过</span></td><td>正常放行，不进入人工</td><td>最终分 &lt; 40</td></tr>
+                <tr><td><span class="badge bg-info text-dark">标记</span></td><td>观察项，记录评估不进案件</td><td>40 ≤ 分 &lt; 60</td></tr>
+                <tr><td><span class="badge bg-warning text-dark">人工审核</span></td><td>自动创建案件 → 进入 案件管理</td><td>60 ≤ 分 &lt; 90</td></tr>
+                <tr><td><span class="badge bg-danger">拒绝</span></td><td>自动拦截（黑名单命中 / VETO 90+）</td><td>分 ≥ 90</td></tr>
+              </tbody>
+            </table>
+
+            <h6 class="fw-bold mb-2">📌 25 维特征（规则条件 JSON 的 field 填这些）</h6>
+            <p class="mb-1 small text-muted">这些字段是规则条件 <code>{"field": "...", "op": ">=", "value": x}</code> 里 <code>field</code> 的合法取值，写错了会触发"条件不匹配"，规则永不命中。</p>
+            <div class="row small">
+              <div class="col-md-4">
+                <b>① 用户画像（6 项）</b>
+                <ul class="mb-2">
+                  <li><code>user_risk_score</code> 画像评分</li>
+                  <li><code>total_shipments</code> 总运单数</li>
+                  <li><code>sender_recent_refund_rate</code> 近期拒收率</li>
+                  <li><code>sender_total_refunds</code> 总拒收次数</li>
+                  <li><code>complaint_count</code> 投诉次数</li>
+                  <li><code>assessment_count</code> 历史评估数</li>
+                </ul>
+                <b>② 运单本身（6 项）</b>
+                <ul class="mb-0">
+                  <li><code>order_total_amount</code> 申报价值</li>
+                  <li><code>waybill_weight_kg</code> 重量(kg)</li>
+                  <li><code>item_count</code> 件数</li>
+                  <li><code>cod_amount</code> 到付金额</li>
+                  <li><code>is_cross_border</code> 跨境(0/1)</li>
+                  <li><code>is_cod</code> 到付(0/1)</li>
+                </ul>
+              </div>
+              <div class="col-md-4">
+                <b>③ 实名与设备（6 项）</b>
+                <ul class="mb-2">
+                  <li><code>real_name_verified</code> 实名通过</li>
+                  <li><code>id_card_risk</code> 身份证风险分</li>
+                  <li><code>phone_risk</code> 手机号风险分</li>
+                  <li><code>device_risk</code> 设备指纹风险分</li>
+                  <li><code>device_shared_users</code> 设备共用人数</li>
+                  <li><code>new_account_days</code> 新号天数</li>
+                </ul>
+                <b>④ 地址与地理（4 项）</b>
+                <ul class="mb-0">
+                  <li><code>address_risk</code> 地址风险分</li>
+                  <li><code>address_shipment_count</code> 该地址总运单数</li>
+                  <li><code>same_address_users</code> 同地址人数</li>
+                  <li><code>high_risk_region</code> 是否高风险地区</li>
+                </ul>
+              </div>
+              <div class="col-md-4">
+                <b>⑤ 跨境/危险品（3 项）</b>
+                <ul class="mb-2">
+                  <li><code>declaration_value_mismatch</code> 申报价值异常(0/1)</li>
+                  <li><code>dangerous_goods_keywords</code> 命中违禁词数</li>
+                  <li><code>sanctioned_country</code> 制裁国(0/1)</li>
+                </ul>
+                <hr>
+                <div class="p-2 bg-light rounded small">
+                  <b>支持的 op：</b><br>
+                  <code>==</code> <code>!=</code> <code>&gt;</code> <code>&lt;</code> <code>&gt;=</code> <code>&lt;=</code><br>
+                  <code>in</code> (值是数组)<br>
+                  <code>contains</code> (字符串包含)<br>
+                  <code>between</code> (介于两值之间)
+                </div>
+              </div>
+            </div>
+          </div><!-- /Tab2 -->
+
+          <!-- ========== Tab3: 常见问题 ========== -->
+          <div class="tab-pane fade" id="guideTabQA">
+            <div class="accordion" id="guideQA">
+              <div class="accordion-item">
+                <h2 class="accordion-header"><button class="accordion-button fw-bold" type="button" data-bs-toggle="collapse" data-bs-target="#q1">
+                  Q1. 为什么我新建规则后列表里找不到？
+                </button></h2>
+                <div id="q1" class="accordion-collapse collapse show" data-bs-parent="#guideQA">
+                  <div class="accordion-body small">
+                    两种情况：① 你可能在<strong>第 2 页以后</strong>点的「新建」——系统现在已自动跳到第 1 页，新规则排第 1 条。② 规则 ID 重复了会弹 409 冲突红色提示，不会真的创建成功。
+                  </div>
+                </div>
+              </div>
+              <div class="accordion-item">
+                <h2 class="accordion-header"><button class="accordion-button collapsed fw-bold" type="button" data-bs-toggle="collapse" data-bs-target="#q2">
+                  Q2. 保存规则时报「分值必须是 0-100 整数」/「条件 JSON 格式错误」？
+                </button></h2>
+                <div id="q2" class="accordion-collapse collapse" data-bs-parent="#guideQA">
+                  <div class="accordion-body small">
+                    分值：<code>50</code> ✅ / <code>85.5</code> ❌ / <code>空</code> ❌。<br>
+                    条件 JSON：<code>{"field":"xxx","op":">=","value":30}</code> 这种最稳妥；<code>op</code> 没写、引号是中文 "「」"、字段名拼错（比如写成 <code>refund_rate</code> 应该是 <code>sender_recent_refund_rate</code>）都会报错。
+                  </div>
+                </div>
+              </div>
+              <div class="accordion-item">
+                <h2 class="accordion-header"><button class="accordion-button collapsed fw-bold" type="button" data-bs-toggle="collapse" data-bs-target="#q3">
+                  Q3. 为什么显示「未加载模型」？
+                </button></h2>
+                <div id="q3" class="accordion-collapse collapse" data-bs-parent="#guideQA">
+                  <div class="accordion-body small">
+                    <code>app/engine/xgb_model.json</code> 文件不存在（或模型训练时报错没生成）。系统会<strong>自动降级为纯规则</strong>（业务不受影响），只是 ML 那 40% 权重没了。<br>解决：<code>python scripts/train_xgb_model.py</code> 重新训练生成模型文件即可。
+                  </div>
+                </div>
+              </div>
+              <div class="accordion-item">
+                <h2 class="accordion-header"><button class="accordion-button collapsed fw-bold" type="button" data-bs-toggle="collapse" data-bs-target="#q4">
+                  Q4. 删除的规则还能恢复吗？
+                </button></h2>
+                <div id="q4" class="accordion-collapse collapse" data-bs-parent="#guideQA">
+                  <div class="accordion-body small">
+                    可以。删除是「软删除」（<code>deleted_at</code> 写了当前时间，数据没真丢），列表里已过滤掉不显示。需要恢复时请联系数据库管理员执行 <code>UPDATE risk_rule SET deleted_at = NULL WHERE rule_id = 'Lxxx';</code>。
+                  </div>
+                </div>
+              </div>
+              <div class="accordion-item">
+                <h2 class="accordion-header"><button class="accordion-button collapsed fw-bold" type="button" data-bs-toggle="collapse" data-bs-target="#q5">
+                  Q5. 风险检查时「业务 ID」随便填会怎样？
+                </button></h2>
+                <div id="q5" class="accordion-collapse collapse" data-bs-parent="#guideQA">
+                  <div class="accordion-body small">
+                    如果业务 ID 在数据库里查不到对应的运单 / 报关单 / 投诉单，特征工程会填<strong>默认值（0 / false / 空）</strong>，规则只能匹配到用户画像级、全局级的特征，不会报错。但建议填真实 ID 才能得到完整准确的评估结果。
+                  </div>
+                </div>
+              </div>
+              <div class="accordion-item">
+                <h2 class="accordion-header"><button class="accordion-button collapsed fw-bold" type="button" data-bs-toggle="collapse" data-bs-target="#q6">
+                  Q6. 右上角红色 Toast 提示的「[body.xxx] 缺少必填字段」是什么？
+                </button></h2>
+                <div id="q6" class="accordion-collapse collapse" data-bs-parent="#guideQA">
+                  <div class="accordion-body small">
+                    这是后端 Pydantic 校验失败后，系统已经帮你翻译成中文了。<code>[body.xxx]</code> 里的 xxx 就是你<strong>漏填 / 填错格式</strong>的字段名，直接回到表单检查该字段即可。
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="mt-4 p-3 bg-primary-subtle rounded">
+              <h6 class="fw-bold mb-1"><i class="bi bi-lightbulb text-primary me-1"></i>第一次上手建议操作顺序</h6>
+              <ol class="mb-0 small">
+                <li>先到「规则管理」把 L001~L030 30 条初始化规则读一遍（建立业务直觉）</li>
+                <li>到「风险检查」拿几个示例用户 <code>RISK001 / RISK002 / NORMAL001</code> 跑一遍检查</li>
+                <li>如果评估分 ≥ 60，去「案件管理」走一遍审核流程</li>
+                <li>确认是恶意用户，最后再加到「黑名单」里</li>
+              </ol>
+            </div>
+          </div><!-- /Tab3 -->
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-primary" data-bs-dismiss="modal">我知道了</button>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<!-- 改版加 ?v=YYYYMMDD[vN] 破 FastAPI StaticFiles 强缓存 (max-age=1y), 否则浏览器永远用旧版 -->
+<!-- 2026-08-12v5 物流版: 新增全局使用指引模态框 + openGuideModal 函数; 静态破缓存 -->
+<script src="/static/app.js?v=20260812v5"></script>
+{% block extra_js %}{% endblock %}
+</body>
+</html>
