@@ -128,32 +128,33 @@ DDL_CHECK_ENABLED=1 pytest tests/test_ddl_sync.py -v
 
 有 4 个场景，按需选：
 
-### 3.1 大量随机业务数据（10w 条 / 5w 用户 / 30w 订单）
+### 3.1 大量随机业务数据（5000 客户 / 3 万贷款申请）
 
 **默认 10w，可指定**：
 ```bash
 # 默认 10w
 python scripts/gen_10w_data.py
 
-# 指定 5w 业务数据
-python scripts/gen_10w_data.py --users 5000 --orders 30000
+# 指定业务规模
+python scripts/gen_10w_data.py --customers 5000 --loans 30000
 
-# 指定每用户 1-8 单
-python scripts/gen_10w_data.py --min-orders 1 --max-orders 8
+# 指定每客户申请数区间
+python scripts/gen_10w_data.py --min-loans 1 --max-loans 8
 ```
 
 **产出**：
-- `N` 用户 (默认 10,000)
-- 每个用户 1-3 个收货地址
-- 每个用户 1-8 笔订单（平均 3）
-- 每笔订单 1-5 个明细
-- 10-20% 概率有售后
-- 5% 概率有物流投诉
+- `N` 客户 (默认 5,000)
+- 每个客户 1-3 个联系信息
+- 每个客户 1-8 笔贷款申请（平均 3）
+- 每笔申请 1-36 期分期（loan_installment）
+- 10-20% 概率有还款记录
+- 5% 概率有逾期记录（PD 正例）
+- 3% 概率有客户投诉
 
 **风险画像**（自动注入）：
-- 80% 正常用户
-- 15% 中风险（高退款率 / 多地址）
-- 5% 高风险（大额订单 / 深夜下单 / 极高退款率 90%+）
+- 80% 正常客户
+- 15% 中风险（多头借贷 / 高负债 / 被拒史）
+- 5% 高风险（多头 + 逾期史，PD 违约概率正例）
 
 ### 3.2 业务数据补充（如果 init_db.py 的 4100 条不够用）
 
@@ -167,19 +168,19 @@ python scripts/gen_risk_data.py 100   # 100 条
 python scripts/gen_risk_data.py --count 200 --balance-pos
 ```
 
-从现有订单/售后里随机挑，跑 `process_event()` 7 步流水线，**生成 risk_event / risk_feature / risk_assessment / risk_case 记录**。
-`--balance-pos` 优先抽 `RISK00X` 预置高风险用户（高退款率/高频下单/大额退款/多地址/有投诉），让训练时正例占比 25%~35%。
+从现有贷款申请/逾期记录里随机挑，跑 `process_event()` 7 步流水线，**生成 risk_event / risk_feature / risk_assessment / risk_case 记录**。
+`--balance-pos` 优先抽高风险客户（多头借贷/逾期史/大额申请/被拒史/有投诉），让训练时正例占比 25%~35%。
 
 ### 3.2.1 训练数据严格化（**P4-L4 2026-08-08**）
 
 **问题**：之前的 `gen_risk_data.py` 随机抽样，标签跟用户身份弱相关，正例比例 < 3%，模型假收敛。
 
-**解决**：`gen_train_dataset.py` 严格造 1500 条训练数据：
+**解决**：`gen_train_dataset.py` 严格造 3000 条 PD 训练数据：
 
 ```bash
 python scripts/gen_train_dataset.py --reset
-# 30 RISK × 25 售后申请 (高风险事件) + 30 普通 × 25 下单 (正常事件) = 1500 条
-# 标签: 30 规则跑出 (decision 字段)
+# 60 逾期客户 × 25 贷款申请 (PD 正例) + 60 正常客户 × 25 贷款申请 (负例) = 3000 条
+# 标签: 客户逾期事实 (overdue_record → 1 违约 / 0 履约, Q5 决策)
 # 特征: 25 维真实从 DB 查 (feature.py)
 # ml_score: 写库后强制 NULL (干净, 避免"未训练模型"垃圾值)
 ```
@@ -239,7 +240,7 @@ python scripts/gen_risk_data_with_dates.py --days 7 --per-day 20 --clean
 python scripts/gen_risky_users.py
 ```
 
-生成 5 个 RISK001-RISK005 高风险样本（高退款率 / 高频下单 / 高退款金额 / 多地址 / 有投诉），用于规则引擎单测和前端演示。
+> ⚠️ 已废弃（DEPRECATED）：功能被 gen_10w_data.py 内置 80/15/5 风险分层取代，仅作历史参考。
 
 ---
 
@@ -247,24 +248,24 @@ python scripts/gen_risky_users.py
 
 ### 4.1 30 条预置规则
 
-`init_risk_data.sql` 已经插入了 30 条规则 (R001-R030)，分布 6 大类：
+`init_risk_data.sql` 已经插入了 30 条银行规则 (R101-R604)，分布 6 大场景：
 
-| 类别 | 数量 | 典型规则 |
+| 场景 | 数量 | 典型规则 |
 |---|---:|---|
-| 订单欺诈 | 5 | R001 (≥5000 标记) / R002 (≥10000 拒绝, 极高) |
-| 支付风险 | 4 | R006 (7 天 10 单) / R007 (30 天 30 单, 极高) |
-| 账户风险 | 4 | R010 (退款率 ≥30%) / R015 (≥80%, 极高) |
-| 售后滥用 | 3 | R012 (退款次数 ≥5) |
-| 地址风险 | 4 | R017 (多省份) |
-| 物流风险 | 3 | R022 (投诉 ≥3) |
+| 欺诈风险 | 6 | R101 (30 天 ≥8 笔多头借贷) / R102 (≥8 笔, 一票否决) |
+| 信用风险 | 6 | R201 (负债率 ≥50%) / R202 (≥80%, 一票否决) |
+| 反洗钱 | 4 | R301 (频繁大额 / 拆分交易) |
+| 账户风险 | 5 | R401 (异常登录 / 新设备 / 密码尝试) |
+| 贷后风险 | 5 | R501 (历史逾期率 ≥30%) / R502 (≥50%, 一票否决) |
+| 合规风险 | 4 | R601 (黑名单 / 制裁名单 / 敏感行业) |
 
 ### 4.2 规则 JSON 结构
 
 ```json
 {
-  "field": "order_total_amount",   // 25 维特征名
+  "field": "loan_debt_ratio",       // 25 维特征名 (cust_/loan_/dev_ 前缀)
   "op": ">=",                       // > >= < <= == != in not_in between
-  "value": 5000                     // 比较值 / 列表 [min, max]
+  "value": 0.5                      // 比较值 / 列表 [min, max]
 }
 ```
 
@@ -272,8 +273,8 @@ python scripts/gen_risky_users.py
 ```json
 {
   "and": [
-    {"field": "user_refund_rate", "op": ">=", "value": 0.3},
-    {"field": "user_total_orders", "op": ">=", "value": 5}
+    {"field": "loan_debt_ratio", "op": ">=", "value": 0.5},
+    {"field": "cust_total_loans", "op": ">=", "value": 5}
   ]
 }
 ```
@@ -285,10 +286,10 @@ INSERT INTO risk_rule (
   rule_id, rule_name, rule_category, event_type,
   rule_condition, risk_level, risk_score, action, is_enabled, priority, description
 ) VALUES (
-  'R025', '我的新规则', '订单欺诈', '下单',
-  '{"field": "order_total_amount", "op": ">=", "value": 3000}',
+  'R605', '我的新规则', '信用风险', '贷款申请',
+  '{"field": "loan_debt_ratio", "op": ">=", "value": 0.5}',
   '高', 60, '人工审核', 1, 50,
-  '单笔订单 ≥3000 触发审核'
+  '负债率 ≥50% 触发审核'
 );
 ```
 
@@ -301,14 +302,14 @@ curl -X POST http://localhost:8000/api/rules \
   -d '{
     "rule_id": "R025",
     "rule_name": "我的新规则",
-    "rule_category": "订单欺诈",
-    "event_type": "下单",
-    "rule_condition": {"field": "order_total_amount", "op": ">=", "value": 3000},
+    "rule_category": "信用风险",
+    "event_type": "贷款申请",
+    "rule_condition": {"field": "loan_debt_ratio", "op": ">=", "value": 0.5},
     "risk_level": "高",
     "risk_score": 60,
     "action": "人工审核",
     "priority": 50,
-    "description": "单笔订单 ≥3000 触发审核"
+    "description": "负债率 ≥50% 触发审核"
   }'
 
 # 列表
@@ -524,10 +525,10 @@ INFO:     Started reloader process
 curl -X POST http://localhost:8000/api/risk/check \
   -H "Content-Type: application/json" \
   -d '{
-    "event_type": "下单",
-    "source_id": "ORD_TEST_001",
-    "user_id": "1001",
-    "order_id": "ORD_TEST_001"
+    "event_type": "贷款申请",
+    "source_id": "LN_TEST_001",
+    "user_id": "C00001",
+    "order_id": "LN_TEST_001"
   }'
 ```
 
@@ -822,7 +823,7 @@ python scripts/main.py
 - 脚本：`scripts/` (8 个脚本, 含 gen_10w_data / gen_risk_data_with_dates / migrate_2026_08_07)
 - DDL/SQL：`sql/` (6 个 DDL + 3 个 migration)
 - 文档：`docs/` (含 11 份教学 md, 新增 `agent_design.md` 介绍 8 @tool 设计)
-- 测试：`tests/` (315 cases, 含 P4-L3 案件超时关闭 + XGBoost 特征重要性 + XGBoost 训练优化 4 个 + XGBoost 训练质量验收 6 个 (假收敛检测 + 最佳 F1 阈值) + P4-L4 统一日志 13 个 + 一键启动 preflight 16 个 + scheduler bug 回归 1 个 + 通用分页 9 个 + 左侧固定布局 10 个 (含分页栏粘底 2 个 + 分页按钮文字可见 1 个) + train 脚本解包顺序回归 1 个 + RISK 用户参数化生成 8 个 + 训练数据校验 6 个 (条数/pos 比例/时间跨度) + 训练数据生成器正例控制 12 个 (`--balance-pos` / `--target-pos-ratio` / `--live` / `--force-pos-ratio` 参数 + 正例统计 + 比例提示 + day_offset 循环回归 + 3 个高风险 picker + retry 机制 + 脚本 emoji GBK 修复 + decision_hit 引用清理) + 前端 ML 评分 sigmoid 校准 21 个 + 一条龙命令 13 个 + 教学场景训练 11 个 + 训练数据严格化 15 个 + sigmoid 校准 15 个 + ML 风险检查页 7 个 + 物流投诉 picker bug 修复 4 个 + P4-L5 校验去重 15 个 (死代码删除 + 决策引擎重复调用清理))
+- 测试：`tests/` (361 cases, 含 P4-L3 案件超时关闭 + XGBoost 特征重要性 + XGBoost 训练优化 4 个 + XGBoost 训练质量验收 6 个 (假收敛检测 + 最佳 F1 阈值) + P4-L4 统一日志 13 个 + 一键启动 preflight 16 个 + scheduler bug 回归 1 个 + 通用分页 9 个 + 左侧固定布局 10 个 (含分页栏粘底 2 个 + 分页按钮文字可见 1 个) + train 脚本解包顺序回归 1 个 + RISK 用户参数化生成 8 个 + 训练数据校验 6 个 (条数/pos 比例/时间跨度) + 训练数据生成器正例控制 12 个 (`--balance-pos` / `--target-pos-ratio` / `--live` / `--force-pos-ratio` 参数 + 正例统计 + 比例提示 + day_offset 循环回归 + 3 个高风险 picker + retry 机制 + 脚本 emoji GBK 修复 + decision_hit 引用清理) + 前端 ML 评分 sigmoid 校准 21 个 + 一条龙命令 13 个 + 教学场景训练 11 个 + 训练数据严格化 15 个 + sigmoid 校准 15 个 + ML 风险检查页 7 个 + 银行化领域测试全量 (361 个通过) + P4-L5 校验去重 15 个 (死代码删除 + 决策引擎重复调用清理))
 - 部署：`docker/` (P4-L4 2026-08-08, 含 Dockerfile + docker-compose.yml + nginx.conf + .env.example + README)
 - 环境管理：`uv/` (P4-L4 2026-08-08, 含 pyproject.toml + requirements-uv.txt + uv.lock + README)
 - 部署：`Dockerfile` + `docker-compose.yml` + `nginx.conf` (P4-L3 一键启动)

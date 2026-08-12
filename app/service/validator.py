@@ -1,5 +1,5 @@
 """
-业务实体校验器: 集中处理"用户/订单/售后"等业务实体的存在性、一致性校验.
+业务实体校验器: 集中处理"客户/贷款申请/还款"等业务实体的存在性、一致性校验.
 所有校验失败都抛 HTTPException, 由 FastAPI 统一返回 4xx 响应.
 """
 import asyncio
@@ -10,11 +10,11 @@ from fastapi import HTTPException
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models import (
-    LogisticsComplaintsRecord,
-    OrderInfo,
-    Postsale,
-    UserInfo,
+from app.models_business import (
+    ComplaintRecord,
+    CustomerInfo,
+    LoanApplication,
+    RepaymentRecord,
 )
 from app.schemas import RiskCheckRequest
 
@@ -54,38 +54,40 @@ async def ensure_exists(
 
 
 async def ensure_user_exists(db: AsyncSession, user_id: str) -> None:
-    await ensure_exists(db, UserInfo, "user_id", user_id, entity_label="用户")
+    await ensure_exists(db, CustomerInfo, "customer_id", user_id, entity_label="客户")
 
 
-# 防"水平越权": 拿真订单+假用户绕过风控
-# 攻击场景: 攻击者拿自己的 user_id + 别人的真实 order_id 调风控
-# 后果: 别人的订单被风控/被拒, 业务投诉
+# 防"水平越权": 拿真申请+假客户绕过风控
+# 攻击场景: 攻击者拿自己的 user_id + 别人的真实 loan_id 调风控
+# 后果: 别人的贷款申请被风控/被拒, 业务投诉
 async def ensure_order_belongs_to_user(
     db: AsyncSession,
     order_id: str,
     user_id: str,
 ) -> None:
+    """校验贷款申请归属 (字段名 order_id 保留 = D5 契约, 语义为 loan_id)."""
     owner = (await db.execute(
-        select(OrderInfo.user_id).where(OrderInfo.order_id == order_id).limit(1)
+        select(LoanApplication.customer_id).where(LoanApplication.loan_id == order_id).limit(1)
     )).scalar_one_or_none()
     if not owner:
-        raise HTTPException(status_code=404, detail=f"订单ID不存在: {order_id}")
+        raise HTTPException(status_code=404, detail=f"贷款申请ID不存在: {order_id}")
     if owner != user_id:
         logger.warning(
-            "安全告警: 订单归属不一致 order_id=%s, owner=%s, request_user=%s",
+            "安全告警: 申请归属不一致 loan_id=%s, owner=%s, request_user=%s",
             order_id, owner, user_id,
         )
         raise HTTPException(
             status_code=403,
-            detail=f"订单 {order_id} 属于用户 {owner}, 与请求用户 {user_id} 不一致",
+            detail=f"贷款申请 {order_id} 属于客户 {owner}, 与请求用户 {user_id} 不一致",
         )
 
 
 # source_id 与 event_type 匹配的校验规则 (字典派发, 加新 event_type 只加 1 行)
+# 银行事件: 贷款申请/放款 → loan_id; 还款 → repayment_id; 客户投诉 → record_id
 _EVENT_SOURCE_VALIDATORS = {
-    ("下单", "支付"): (OrderInfo, "order_id", None, "订单", 400),
-    ("售后申请",): (Postsale, "postsale_id", None, "售后单", 400),
-    ("物流投诉",): (LogisticsComplaintsRecord, "record_id", int, "投诉记录", 400),
+    ("贷款申请", "放款"): (LoanApplication, "loan_id", None, "贷款申请", 400),
+    ("还款",): (RepaymentRecord, "repayment_id", None, "还款记录", 400),
+    ("客户投诉",): (ComplaintRecord, "record_id", int, "投诉记录", 400),
 }
 
 
@@ -164,7 +166,7 @@ if __name__ == "__main__":
 
     # 3. ensure_source_matches_event_type: event_type 不匹配 → 400
     print("\n[3] ensure_source_matches_event_type 行为:")
-    print("  event_type='下单' 但用 postsale_id 当 source_id → 报错 (派发错模型)")
+    print("  event_type='贷款申请' 但用 repayment_id 当 source_id → 报错 (派发错模型)")
 
     async def demo_event_dispatch():
         # mock: 同时支持 .scalar() (给 ensure_exists) 和 .scalar_one_or_none() (给 ensure_order_belongs_to_user)
@@ -180,21 +182,21 @@ if __name__ == "__main__":
                 return _R(self.count_n, self.row)
 
         from app.schemas import RiskCheckRequest
-        req_ok = RiskCheckRequest(event_type="下单", source_id="ORD001", user_id="U001")
-        # count=1 (存在), row 也有 (单条订单)
+        req_ok = RiskCheckRequest(event_type="贷款申请", source_id="LN001", user_id="C00001")
+        # count=1 (存在), row 也有 (单条贷款申请)
         try:
-            await ensure_source_matches_event_type(_FlexDB(1, SimpleNamespace(order_id="ORD001")), req_ok)
-            print("  [OK]   event_type=下单 + source_id=ORD001 → OrderInfo 存在, 通过")
+            await ensure_source_matches_event_type(_FlexDB(1, SimpleNamespace(loan_id="LN001")), req_ok)
+            print("  [OK]   event_type=贷款申请 + source_id=LN001 → LoanApplication 存在, 通过")
         except HTTPException as e:
             print(f"  [FAIL] {e.detail}")
 
-        # 错误配对: 用 postsale_id 当 source_id 但 event_type=下单 → 走 OrderInfo 但查不到
-        req_bad = RiskCheckRequest(event_type="下单", source_id="PS001", user_id="U001")
+        # 错误配对: 用 repayment_id 当 source_id 但 event_type=贷款申请 → 走 LoanApplication 但查不到
+        req_bad = RiskCheckRequest(event_type="贷款申请", source_id="RP001", user_id="C00001")
         try:
             await ensure_source_matches_event_type(_FlexDB(0, None), req_bad)
             print("  [FAIL] 不该到这里")
         except HTTPException as e:
-            print(f"  [400]  source_id='PS001' 在 OrderInfo 找不到 → {e.detail[:60]}...  (status={e.status_code})")
+            print(f"  [400]  source_id='RP001' 在 LoanApplication 找不到 → {e.detail[:60]}...  (status={e.status_code})")
 
     asyncio.run(demo_event_dispatch())
 
@@ -208,7 +210,7 @@ if __name__ == "__main__":
             async def execute(self, stmt):
                 class _R:
                     def scalar(self): return 1
-                    def scalar_one_or_none(self): return "U002"   # 订单属于别人
+                    def scalar_one_or_none(self): return "C00002"   # 申请属于别人客户
                 return _R()
         try:
             await ensure_order_belongs_to_user(_OrderOwnerU002(), "ORD999", "U001")
@@ -216,12 +218,12 @@ if __name__ == "__main__":
         except HTTPException as e:
             print(f"  [403]  {e.detail[:60]}...  (status={e.status_code})")
 
-        # 订单属于本人 → 通过
+        # 申请属于本人客户 → 通过
         class _OrderOwnerU001:
             async def execute(self, stmt):
                 class _R:
                     def scalar(self): return 1
-                    def scalar_one_or_none(self): return "U001"   # 订单属于本人
+                    def scalar_one_or_none(self): return "C00001"   # 申请属于本人客户
                 return _R()
         try:
             await ensure_order_belongs_to_user(_OrderOwnerU001(), "ORD001", "U001")
@@ -246,8 +248,8 @@ async def validate_risk_check_request(
     # 2. source_id 与事件类型匹配
     await ensure_source_matches_event_type(db, request)
 
-    # 3. 下单/支付场景: 校验订单归属 (防绕过)
-    if request.event_type in ("下单", "支付"):
+    # 3. 贷款申请/放款场景: 校验申请归属 (防绕过)
+    if request.event_type in ("贷款申请", "放款"):
         # order_id 优先用请求里传的, 没传就用 source_id (业务约定)
         order_id = request.order_id or request.source_id
         await ensure_order_belongs_to_user(db, order_id, request.user_id)

@@ -1,29 +1,26 @@
-"""
-电商风控系统 - ORM 模型总入口 (re-export hub)
-包含 17 张业务表 + 7 张风控表的 SQLAlchemy 2.x 映射
-
-
+"""银行信贷风控系统 - ORM 模型总入口 (re-export hub)
+包含 17 张银行业务表 + 9 张风控表的 SQLAlchemy 2.x 映射
 """
 
 # 业务表 (17 个)
 from app.models_business import (
-    Logistics,
-    LogisticsCompany,
-    LogisticsComplaint,
-    LogisticsComplaintsRecord,
-    OrderDetail,
-    OrderInfo,
-    OrderLogistics,
-    OrderStatus,
-    Postsale,
-    PostsaleLogistics,
-    PostsaleReason,
-    PostsaleStatus,
-    ProductCategory,
-    ReceiveInfo,
+    BankBranch,
+    ComplaintContent,
+    ComplaintRecord,
+    ContactInfo,
+    CustomerInfo,
+    LoanApplication,
+    LoanInstallment,
+    LoanProduct,
+    LoanProductCategory,
+    LoanRepaymentRel,
+    LoanStatus,
+    OverdueReason,
+    OverdueRecord,
+    OverdueRepaymentRel,
     Region,
-    SkuInfo,
-    UserInfo,
+    RepaymentRecord,
+    RepaymentStatus,
 )
 
 # 风控表 (7 个)
@@ -42,12 +39,11 @@ from app.models_risk import (
 
 __all__ = [
     # 业务表 (17)
-    "UserInfo", "Region", "ProductCategory", "SkuInfo",
-    "OrderStatus", "OrderInfo", "OrderDetail",
-    "Logistics", "OrderLogistics", "LogisticsCompany",
-    "LogisticsComplaint", "LogisticsComplaintsRecord",
-    "PostsaleStatus", "PostsaleReason", "Postsale", "PostsaleLogistics",
-    "ReceiveInfo",
+    "CustomerInfo", "Region", "LoanProductCategory", "LoanStatus",
+    "BankBranch", "RepaymentStatus", "ContactInfo", "LoanProduct",
+    "OverdueReason", "LoanApplication", "RepaymentRecord",
+    "LoanInstallment", "LoanRepaymentRel", "ComplaintContent",
+    "ComplaintRecord", "OverdueRecord", "OverdueRepaymentRel",
     # 风控表 (9 = 7 业务 + 2 系统管理, P4 新增)
     "RiskRule", "RiskEvent", "RiskFeature", "RiskAssessment",
     "RiskCase", "RiskBlacklist", "RiskUserProfile",
@@ -61,15 +57,15 @@ __all__ = [
 # ============================================================
 if __name__ == "__main__":
     print("=" * 60)
-    print("ORM 模型总览 — 26 张表 (17 业务 + 9 风控)")
+    print("ORM 模型总览 — 26 张表 (17 银行业务 + 9 风控)")
     print("=" * 60)
 
     business_models = [
-        "UserInfo", "Region", "ProductCategory", "OrderStatus",
-        "LogisticsCompany", "PostsaleStatus", "PostsaleReason",
-        "ReceiveInfo", "SkuInfo", "OrderInfo", "OrderDetail",
-        "Logistics", "OrderLogistics", "LogisticsComplaint",
-        "LogisticsComplaintsRecord", "Postsale", "PostsaleLogistics",
+        "CustomerInfo", "Region", "LoanProductCategory", "LoanStatus",
+        "BankBranch", "RepaymentStatus", "ContactInfo", "LoanProduct",
+        "OverdueReason", "LoanApplication", "RepaymentRecord",
+        "LoanInstallment", "LoanRepaymentRel", "ComplaintContent",
+        "ComplaintRecord", "OverdueRecord", "OverdueRepaymentRel",
     ]
     risk_models = [
         "RiskRule", "RiskEvent", "RiskFeature", "RiskAssessment",

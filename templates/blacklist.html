@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}黑名单管理 - 电商风控系统{% endblock %}
+{% block title %}黑名单管理 - 华信银行信贷风控平台{% endblock %}
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h4 class="mb-0">黑名单管理</h4>
@@ -12,8 +12,8 @@
 <div class="row mb-4" id="bl-stats">
     <div class="col-md-3">
         <div class="card stat-card p-3 text-center">
-            <div class="text-muted small">用户黑名单</div>
-            <div class="stat-value text-primary" id="bl-stat-user">-</div>
+            <div class="text-muted small">客户黑名单</div>
+            <div class="stat-value text-primary" id="bl-stat-customer">-</div>
         </div>
     </div>
     <div class="col-md-3">
@@ -30,6 +30,12 @@
     </div>
     <div class="col-md-3">
         <div class="card stat-card p-3 text-center">
+            <div class="text-muted small">设备黑名单</div>
+            <div class="stat-value text-secondary" id="bl-stat-device">-</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card p-3 text-center">
             <div class="text-muted small">总数</div>
             <div class="stat-value text-dark" id="bl-stat-total">-</div>
         </div>
@@ -40,9 +46,10 @@
 <div class="mb-3 d-flex gap-2 align-items-center">
     <select class="form-select form-select-sm w-auto" id="filterType" onchange="loadList(1)">
         <option value="">全部类型</option>
-        <option value="用户">用户</option>
+        <option value="客户">客户</option>
         <option value="地址">地址</option>
         <option value="手机号">手机号</option>
+        <option value="设备">设备</option>
     </select>
     <span class="text-muted small">每页</span>
     <select class="form-select form-select-sm w-auto" id="pageSize" onchange="onPageSizeChange()">
@@ -89,19 +96,21 @@
                 <div class="mb-3">
                     <label class="form-label">类型 <span class="text-danger">*</span></label>
                     <select class="form-select" id="addType">
-                        <option value="用户">用户 (user_id)</option>
-                        <option value="地址">地址 (收货地址)</option>
+                        <option value="客户">客户 (customer_id)</option>
                         <option value="手机号">手机号</option>
+                        <option value="地址">地址 (联系信息ID)</option>
+                        <option value="设备">设备 (device_id)</option>
+        <option value="设备">设备</option>
                     </select>
-                    <div class="form-text">用户 = user_id; 地址 = 收货地址字符串; 手机号 = 11位手机号</div>
+                    <div class="form-text">客户 = customer_id; 手机号 = 11位手机号; 地址 = 联系信息ID; 设备 = 申请设备ID</div>
                 </div>
                 <div class="mb-3">
                     <label class="form-label">值 <span class="text-danger">*</span></label>
-                    <input type="text" class="form-control" id="addValue" placeholder="例如: 1001 / 北京市朝阳区xxx / 13800138000">
+                    <input type="text" class="form-control" id="addValue" placeholder="例如: C00001 / 13800138000 / ct0001 / DEV-0001">
                 </div>
                 <div class="mb-3">
                     <label class="form-label">原因</label>
-                    <input type="text" class="form-control" id="addReason" placeholder="例如: 多次退货骗保 / 关联欺诈用户">
+                    <input type="text" class="form-control" id="addReason" placeholder="例如: 逾期失联 / 关联欺诈客户">
                 </div>
                 <div class="mb-3">
                     <label class="form-label">过期时间 (留空 = 永久)</label>
@@ -134,9 +143,9 @@ function onPageSizeChange() {
     loadList(1);
 }
 
-// 类型徽章颜色: 用户=蓝 / 地址=黄 / 手机号=红
+// 类型徽章颜色: 客户=蓝 / 手机号=红 / 地址=黄 / 设备=灰
 function typeBadge(t) {
-    const cls = {'用户':'bg-primary','地址':'bg-warning text-dark','手机号':'bg-danger'}[t] || 'bg-secondary';
+    const cls = {'客户':'bg-primary','手机号':'bg-danger','地址':'bg-warning text-dark','设备':'bg-secondary'}[t] || 'bg-dark';
     return `<span class="badge ${cls}">${t}</span>`;
 }
 
@@ -144,10 +153,11 @@ function typeBadge(t) {
 async function loadStats() {
     const res = await fetch('/api/blacklist?page=1&page_size=100');
     const data = await res.json();
-    const cnt = {用户: 0, 地址: 0, 手机号: 0};
+    const cnt = {客户: 0, 手机号: 0, 地址: 0, 设备: 0};
     data.items.forEach(it => { if (cnt[it.blacklist_type] !== undefined) cnt[it.blacklist_type]++; });
-    document.getElementById('bl-stat-user').textContent = cnt.用户;
+    document.getElementById('bl-stat-customer').textContent = cnt.客户;
     document.getElementById('bl-stat-address').textContent = cnt.地址;
+    document.getElementById('bl-stat-device').textContent = cnt.设备;
     document.getElementById('bl-stat-phone').textContent = cnt.手机号;
     document.getElementById('bl-stat-total').textContent = data.total;
 }
@@ -193,7 +203,7 @@ async function loadList(page) {
 
 // 新增模态框
 function showAddModal() {
-    document.getElementById('addType').value = '用户';
+    document.getElementById('addType').value = '客户';
     document.getElementById('addValue').value = '';
     document.getElementById('addReason').value = '';
     document.getElementById('addExpire').value = '';

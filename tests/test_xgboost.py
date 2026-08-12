@@ -27,21 +27,21 @@ class TestFeatureColumns:
         assert len(ml_model.FEATURE_COLUMNS) == 25
 
     def test_feature_prefixes(self):
-        """14 user_* + 8 order_* + 3 addr_* (align with feature.py naming)"""
-        user = [c for c in ml_model.FEATURE_COLUMNS if c.startswith("user_")]
-        order = [c for c in ml_model.FEATURE_COLUMNS if c.startswith("order_")]
-        addr = [c for c in ml_model.FEATURE_COLUMNS if c.startswith("addr_")]
-        assert len(user) == 14, f"user features should be 14, got {len(user)}"
-        assert len(order) == 8, f"order features should be 8, got {len(order)}"
-        assert len(addr) == 3, f"addr features should be 3, got {len(addr)}"
+        """14 cust_* + 8 loan_* + 3 dev_* (align with feature.py naming)"""
+        user = [c for c in ml_model.FEATURE_COLUMNS if c.startswith("cust_")]
+        order = [c for c in ml_model.FEATURE_COLUMNS if c.startswith("loan_")]
+        addr = [c for c in ml_model.FEATURE_COLUMNS if c.startswith("dev_")]
+        assert len(user) == 14, f"cust features should be 14, got {len(user)}"
+        assert len(order) == 8, f"loan features should be 8, got {len(order)}"
+        assert len(addr) == 3, f"dev features should be 3, got {len(addr)}"
 
     def test_features_to_array(self):
         """dict -> 1x25 ndarray, missing filled with 0, string -> float"""
         features = {
-            "user_total_orders": 10,         # 0
-            "user_orders_30d": 3,            # 1
+            "cust_total_loans": 10,         # 0
+            "cust_loans_30d": 3,            # 1
             # intentionally omit 22 middle keys -> 0
-            "addr_is_new": 0,                # 24 (last in FEATURE_COLUMNS)
+            "dev_is_new": 0,                # 24 (last in FEATURE_COLUMNS)
         }
         arr = ml_model._features_to_array(features)
         assert arr.shape == (1, 25)
@@ -59,36 +59,36 @@ class TestFeatureColumns:
         causing XGBoost train/inference degraded to 0-imputation" bug (found 2026-08-07).
         If feature.py renames/reorders features, must sync this list.
         """
-        # 14 user + 8 order + 3 addr, aligned with feature.py's 3 feat_funcs dict order
+        # 14 cust + 8 loan + 3 dev, aligned with feature.py's 3 feat_funcs dict order
         expected = [
-            # --- 14 user features (compute_user_features) ---
-            "user_total_orders",
-            "user_orders_30d",
-            "user_orders_7d",
-            "user_total_amount",
-            "user_avg_order_amount",
-            "user_max_order_amount",
-            "user_refund_count",
-            "user_postsale_count",
-            "user_refund_rate",
-            "user_postsale_rate",
-            "user_refund_amount",
-            "user_cancel_count",
-            "user_complaint_count",
-            "user_address_count",
-            # --- 8 order features (compute_order_features) ---
-            "order_total_amount",
-            "order_item_count",
-            "order_sku_count",
-            "order_discount_amount",
-            "order_discount_rate",
-            "order_pay_interval_sec",
-            "order_is_night",
-            "order_category_count",
-            # --- 3 addr features (compute_address_features) ---
-            "addr_total_count",
-            "addr_province_count",
-            "addr_is_new",
+            # --- 14 cust features (compute_user_features) ---
+            "cust_total_loans",
+            "cust_loans_30d",
+            "cust_loans_7d",
+            "cust_total_amount",
+            "cust_avg_loan_amount",
+            "cust_max_loan_amount",
+            "cust_overdue_count",
+            "cust_overdue_rate",
+            "cust_overdue_amount",
+            "cust_repay_count",
+            "cust_repay_rate",
+            "cust_reject_count",
+            "cust_complaint_count",
+            "cust_contact_count",
+            # --- 8 loan features (compute_loan_features) ---
+            "loan_amount",
+            "loan_term_month",
+            "loan_debt_ratio",
+            "loan_apply_interval_sec",
+            "loan_apply_is_night",
+            "loan_to_income",
+            "loan_apply_product_count",
+            "loan_income_debt_ratio",
+            # --- 3 dev features (compute_device_features) ---
+            "dev_device_count",
+            "dev_ip_province_count",
+            "dev_is_new",
         ]
         assert ml_model.FEATURE_COLUMNS == expected, (
             "FEATURE_COLUMNS not aligned with the 25 keys computed by feature.py. "
@@ -203,36 +203,36 @@ class TestPredict:
         之前只填 5 维 (其他 20 维默认 0), 跟训练分布偏离大, 模型预测失真.
         修法: 用全 25 维特征 + 把"高风险信号"叠加在关键特征上, 让模型能在训练分布内识别."""
         from app.engine.ml_model import FEATURE_COLUMNS
-        # 高风险用户: 25 维全部填, 高退款率/短间隔/大额/夜单
+        # 高风险用户: 25 维全部填, 多头借贷/高负债/逾期史/设备异常
         risky = {
-            # 用户画像 (高退款 + 多售后)
-            "user_total_orders": 200,
-            "user_orders_30d": 100,
-            "user_orders_7d": 50,
-            "user_total_amount": 800000,       # 80w 累计
-            "user_avg_order_amount": 4000,
-            "user_max_order_amount": 50000,   # 5w 单笔
-            "user_refund_count": 180,         # 90% 退款率
-            "user_postsale_count": 120,
-            "user_refund_rate": 0.9,
-            "user_postsale_rate": 0.6,
-            "user_refund_amount": 700000,     # 退款金额也很高
-            "user_cancel_count": 50,
-            "user_complaint_count": 30,
-            "user_address_count": 8,          # 多地址 (可疑)
-            # 订单特征 (大额 + 短间隔 + 夜单 + 多品类)
-            "order_total_amount": 50000,
-            "order_item_count": 5,
-            "order_sku_count": 5,
-            "order_discount_amount": 49000,   # 几乎不打折
-            "order_discount_rate": 0.02,
-            "order_pay_interval_sec": 30,     # 30s 内支付 (极短)
-            "order_is_night": 1,              # 凌晨下单
-            "order_category_count": 5,
-            # 地址特征
-            "addr_total_count": 8,
-            "addr_province_count": 3,         # 跨省 (可疑)
-            "addr_is_new": 1,                  # 新地址
+            # 客户画像 (多头 + 逾期史 + 被拒史)
+            "cust_total_loans": 40,
+            "cust_loans_30d": 12,
+            "cust_loans_7d": 6,               # 多头借贷
+            "cust_total_amount": 800000,       # 80w 累计
+            "cust_avg_loan_amount": 20000,
+            "cust_max_loan_amount": 50000,
+            "cust_overdue_count": 8,          # 多次逾期
+            "cust_overdue_rate": 0.5,         # 逾期率 50%
+            "cust_overdue_amount": 700000,
+            "cust_repay_count": 5,
+            "cust_repay_rate": 0.2,           # 履约率低
+            "cust_reject_count": 6,           # 被拒史
+            "cust_complaint_count": 4,
+            "cust_contact_count": 1,          # 失联风险
+            # 申请特征 (大额 + 高负债 + 夜申)
+            "loan_amount": 100000,
+            "loan_term_month": 36,
+            "loan_debt_ratio": 0.8,           # 高负债
+            "loan_apply_interval_sec": 30,     # 30s 内再次申请
+            "loan_apply_is_night": 1,          # 凌晨申请
+            "loan_to_income": 0.9,
+            "loan_apply_product_count": 5,
+            "loan_income_debt_ratio": 0.7,
+            # 设备特征 (设备多 + 跨省 + 新设备)
+            "dev_device_count": 6,
+            "dev_ip_province_count": 5,        # 跨省 (可疑)
+            "dev_is_new": 1,                   # 新设备
         }
         # 验证 25 维都填了 (否则回退到训练分布外)
         assert set(risky.keys()) >= set(FEATURE_COLUMNS), (
@@ -244,17 +244,17 @@ class TestPredict:
         # 普通用户: 25 维都填, 都填低值
         normal = {col: 0.0 for col in FEATURE_COLUMNS}
         normal.update({
-            "user_total_orders": 5,
-            "user_orders_30d": 1,
-            "user_orders_7d": 0,
-            "user_total_amount": 500,
-            "order_total_amount": 100,
+            "cust_total_loans": 3,
+            "cust_loans_30d": 1,
+            "cust_loans_7d": 0,
+            "cust_total_amount": 150000,
+            "loan_amount": 30000,
         })
         normal_result = ml_model.predict(normal)
-        # 高风险用户应该 P(拒绝) >= 普通用户
+        # 高风险用户应该 PD违约概率 >= 普通用户
         assert result.score >= normal_result.score, (
             f"高风险用户 score={result.score} 应 >= 普通用户 score={normal_result.score}。"
-            f"  如果 fail: 1) 训练数据可能不平衡 (用 --balance-pos 重造), "
+            f"  如果 fail: 1) 训练数据可能不平衡 (用 --target-pos-ratio 重造), "
             f"2) 特征工程 25 维可能没区分度, 3) 验证 best_iter 是否太低 (假收敛)"
         )
 

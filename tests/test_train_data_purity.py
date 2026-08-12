@@ -39,14 +39,15 @@ class TestTrainDataPurity:
         )
 
     def test_train_sql_comment_documents_ml_filter(self):
-        """SQL 块必须有注释说明 ml_score 过滤原因"""
+        """SQL 块必须有注释说明 ml_score 过滤原因 (或 PD 标签语义)"""
         src = TRAIN_PY.read_text(encoding="utf-8")
         # 找 SQL 周围的注释 (向上 5 行内)
         m = re.search(r'(.{0,500}SQL_FETCH_ASSESSMENTS\s*=\s*""")(.*?)(""")', src, re.DOTALL)
         assert m, "找不到 SQL 块上下文"
         before = m.group(1)
-        assert "ml_score" in before or "ml 痕迹" in before or "无 ml" in before, (
-            "SQL 块前必须有注释说明 ml_score 过滤原因"
+        assert ("ml_score" in before or "ml 痕迹" in before or "无 ml" in before
+                or "PD 标签" in before or "逾期" in before), (
+            "SQL 块前必须有注释说明 ml_score 过滤/PD 标签语义"
         )
 
 
@@ -71,22 +72,20 @@ class TestGenTrainDatasetScript:
         assert "from app.service.event import process_event" in src
         assert "await process_event(" in src, "应调 process_event 跑 30 规则"
 
-    def test_script_default_1500_samples(self):
-        """默认 30 RISK + 30 普通 × 25 = 1500 条"""
+    def test_script_default_3000_samples(self):
+        """默认 60 逾期 + 60 正常 × 25 = 3000 条 (PD 训练集)"""
         src = GEN_PY.read_text(encoding="utf-8")
-        # argparse default
-        assert '"--n-risk"' in src or "'--n-risk'" in src
-        assert "default=30" in src, "n_risk/n_normal 默认 30"
+        assert '"--overdue"' in src or "'--overdue'" in src
+        assert "default=60" in src, "overdue/normal 默认 60"
         assert "default=25" in src, "per_user 默认 25"
-        # 注释说明
-        assert "1500" in src, "应有 1500 字样"
+        assert "3000" in src, "应有 3000 字样"
 
-    def test_script_picks_risk_and_normal_users(self):
-        """脚本应分别选 RISK 用户和普通用户"""
+    def test_script_picks_overdue_and_normal_users(self):
+        """脚本应分别选逾期客户 (PD 正例) 和正常客户 (负例)"""
         src = GEN_PY.read_text(encoding="utf-8")
-        assert "_pick_risk_users" in src, "应有 _pick_risk_users 函数"
-        assert "_pick_normal_users" in src, "应有 _pick_normal_users 函数"
-        assert "RISK" in src, "应区分 RISK 用户"
+        assert "_pick_overdue_customers" in src, "应有 _pick_overdue_customers 函数"
+        assert "_pick_normal_customers" in src, "应有 _pick_normal_customers 函数"
+        assert "逾期" in src, "应区分逾期客户"
 
 
 class TestBackfillMlScoreScript:
@@ -134,6 +133,6 @@ class TestTrainingWorkflowIntegration:
         assert "train_xgb_model" in backfill_src or "回填" in backfill_src
 
     def test_total_dataset_size_documented(self):
-        """三个脚本应有"1500 条" 文档 (默认数据集大小)"""
+        """gen_train_dataset.py 应文档化默认数据集大小 (3000 条)"""
         gen_src = GEN_PY.read_text(encoding="utf-8")
-        assert "1500" in gen_src, "gen_train_dataset.py 应说明 1500 条"
+        assert "3000" in gen_src, "gen_train_dataset.py 应说明 3000 条"

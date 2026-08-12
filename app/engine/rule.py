@@ -62,7 +62,7 @@ def evaluate_condition(condition: dict, features: dict[str, float]) -> bool:
     """递归求值 1 个 JSON 条件表达式, 返回 bool.
 
     条件格式:
-      {"field": "user_refund_rate", "op": ">", "value": 0.5}    ← 单条件
+      {"field": "loan_debt_ratio", "op": ">", "value": 0.5}    ← 单条件
       {"and": [条件1, 条件2]}                                      ← 逻辑组合
       {"or": [条件1, 条件2]}                                       ← 逻辑组合
     """
@@ -139,18 +139,18 @@ if __name__ == "__main__":
     # 14 种 op 测试
     test_cases = [
         # (描述, 条件, 特征, 期望)
-        ("基础 >=",         {"field": "order_total_amount", "op": ">=", "value": 5000}, {"order_total_amount": 8000}, True),
-        ("基础 ==",         {"field": "addr_is_new", "op": "==", "value": 1},            {"addr_is_new": 1},            True),
-        ("基础 !=",         {"field": "user_total_orders", "op": "!=", "value": 0},     {"user_total_orders": 5},      True),
+        ("基础 >=",         {"field": "loan_amount", "op": ">=", "value": 5000}, {"loan_amount": 8000}, True),
+        ("基础 ==",         {"field": "dev_is_new", "op": "==", "value": 1},            {"dev_is_new": 1},            True),
+        ("基础 !=",         {"field": "cust_total_loans", "op": "!=", "value": 0},     {"cust_total_loans": 5},      True),
         ("AND 嵌套 (R030)", {"and": [
-            {"field": "user_refund_rate", "op": ">=", "value": 0.5},
-            {"field": "user_avg_order_amount", "op": ">=", "value": 2000},
-            {"field": "user_address_count", "op": ">=", "value": 3},
-        ]}, {"user_refund_rate": 0.6, "user_avg_order_amount": 3000, "user_address_count": 5}, True),
+            {"field": "loan_debt_ratio", "op": ">=", "value": 0.5},
+            {"field": "loan_amount", "op": ">=", "value": 2000},
+            {"field": "cust_contact_count", "op": ">=", "value": 3},
+        ]}, {"loan_debt_ratio": 0.6, "loan_amount": 3000, "cust_contact_count": 5}, True),
         ("OR 嵌套",         {"or": [
-            {"field": "user_total_orders", "op": ">=", "value": 100},
-            {"field": "user_total_orders", "op": "<", "value": 1},
-        ]}, {"user_total_orders": 0}, True),
+            {"field": "cust_total_loans", "op": ">=", "value": 100},
+            {"field": "cust_total_loans", "op": "<", "value": 1},
+        ]}, {"cust_total_loans": 0}, True),
         ("AND 失败",        {"and": [
             {"field": "x", "op": ">", "value": 5},
             {"field": "y", "op": ">", "value": 5},
@@ -190,12 +190,12 @@ if __name__ == "__main__":
             return json.loads(self.rule_condition) if self.rule_condition else {}
 
     rules = [
-        _MockRule("R001", {"field": "order_total_amount", "op": ">=", "value": 5000}, 70, "高", "人工审核", 80),
-        _MockRule("R002", {"field": "order_total_amount", "op": ">=", "value": 10000}, 95, "极高", "拒绝", 100),
-        _MockRule("R003", {"field": "user_refund_rate", "op": ">=", "value": 0.5}, 60, "高", "人工审核", 70),
+        _MockRule("R001", {"field": "loan_amount", "op": ">=", "value": 5000}, 70, "高", "人工审核", 80),
+        _MockRule("R002", {"field": "loan_amount", "op": ">=", "value": 10000}, 95, "极高", "拒绝", 100),
+        _MockRule("R003", {"field": "loan_debt_ratio", "op": ">=", "value": 0.5}, 60, "高", "人工审核", 70),
     ]
     # 高风险用户特征: 大额 + 高退款率
-    feats = {"order_total_amount": 15000, "user_refund_rate": 0.6, "user_total_orders": 5}
+    feats = {"loan_amount": 15000, "loan_debt_ratio": 0.6, "cust_total_loans": 5}
     hits = match_rules(rules, feats)
     print(f"  输入特征: {feats}")
     print(f"  命中 {len(hits)} 条 (RuleHitResult 含 7 字段):")

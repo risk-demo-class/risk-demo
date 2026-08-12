@@ -10,9 +10,12 @@ from pydantic import BaseModel, Field
 # ============================================================
 
 class RiskCheckRequest(BaseModel):
-    """风险检查请求"""
-    event_type: Literal["下单", "支付", "售后申请", "物流投诉"]
-    source_id: str = Field(description="关联业务ID (order_id / postsale_id 等)")
+    """风险检查请求, event_type 为银行 4 事件.
+
+    字段名 order_id/receive_id 保留 (D5 契约): 语义换为 loan_id/contact_id.
+    """
+    event_type: Literal["贷款申请", "放款", "还款", "客户投诉"]
+    source_id: str = Field(description="关联业务ID (loan_id / repayment_id / overdue_id 等)")
     user_id: str
     order_id: Optional[str] = None
     receive_id: Optional[str] = None
@@ -58,8 +61,8 @@ class RuleCreate(BaseModel):
     """创建规则请求"""
     rule_id: str = Field(max_length=50)
     rule_name: str = Field(max_length=100)
-    rule_category: Literal["订单欺诈", "支付风险", "账户风险", "售后滥用", "地址风险", "物流风险"]
-    event_type: Literal["下单", "支付", "售后申请", "物流投诉", "通用"] = "通用"
+    rule_category: Literal["欺诈风险", "信用风险", "反洗钱", "账户风险", "贷后风险", "合规风险"]
+    event_type: Literal["贷款申请", "放款", "还款", "客户投诉", "通用"] = "通用"
     rule_condition: dict
     risk_level: Literal["低", "中", "高", "极高"]
     risk_score: int = Field(ge=0, le=100)
@@ -71,8 +74,8 @@ class RuleCreate(BaseModel):
 class RuleUpdate(BaseModel):
     """更新规则请求 (所有字段可选)"""
     rule_name: Optional[str] = None
-    rule_category: Optional[Literal["订单欺诈", "支付风险", "账户风险", "售后滥用", "地址风险", "物流风险"]] = None
-    event_type: Optional[Literal["下单", "支付", "售后申请", "物流投诉", "通用"]] = None
+    rule_category: Optional[Literal["欺诈风险", "信用风险", "反洗钱", "账户风险", "贷后风险", "合规风险"]] = None
+    event_type: Optional[Literal["贷款申请", "放款", "还款", "客户投诉", "通用"]] = None
     rule_condition: Optional[dict] = None
     risk_level: Optional[Literal["低", "中", "高", "极高"]] = None
     risk_score: Optional[int] = Field(default=None, ge=0, le=100)
@@ -158,8 +161,8 @@ class AssessmentDetailResponse(BaseModel):
 # 黑名单
 # ============================================================
 class BlacklistCreate(BaseModel):
-    """添加黑名单请求"""
-    blacklist_type: Literal["用户", "地址", "手机号"]
+    """添加黑名单请求 (客户/手机号/地址/设备 4 类)"""
+    blacklist_type: Literal["客户", "手机号", "地址", "设备"]
     blacklist_value: str
     reason: Optional[str] = None
     expire_time: Optional[datetime] = None
@@ -263,15 +266,15 @@ class CaseStatistics(BaseModel):
 # ============================================================
 
 class UserProfileResponse(BaseModel):
-    """用户风险画像响应"""
+    """客户风险画像响应"""
     user_id: str
     risk_score: int = 0
     risk_level: str = "低"
-    total_orders: int = 0
-    total_refunds: int = 0
-    refund_rate: float = 0
-    avg_order_amount: float = 0
-    address_count: int = 0
+    total_loans: int = 0
+    overdue_count: int = 0
+    overdue_rate: float = 0
+    avg_loan_amount: float = 0
+    contact_count: int = 0
     complaint_count: int = 0
     assessment_count: int = 0
     last_assessment_time: Optional[datetime] = None
@@ -308,7 +311,7 @@ if __name__ == "__main__":
 
     # 1. RiskCheckRequest — 入口 (前端"风险检查"页触发)
     req = RiskCheckRequest(
-        event_type="下单", source_id="ord_demo_001", user_id="U0001",
+        event_type="贷款申请", source_id="ln_demo_001", user_id="C00001",
         order_id="ord_demo_001", receive_id="rec_001",
         event_data={"amount": 5000, "category": "电子产品"},
     )
@@ -318,14 +321,14 @@ if __name__ == "__main__":
     # 2. RuleHitInfo + RiskCheckResponse — 7 步流水线返回
     hits = [
         RuleHitInfo(
-            rule_id="R002", rule_name="单笔极端高额订单",
-            rule_category="订单欺诈", risk_level="极高",
-            risk_score=95, action="拒绝",
-            description="单笔订单实付金额≥10000元, 一票否决",
+            rule_id="R102", rule_name="严重多头借贷",
+            rule_category="欺诈风险", risk_level="极高",
+            risk_score=90, action="拒绝",
+            description="近30天贷款申请≥8笔, 一票否决",
         ),
         RuleHitInfo(
-            rule_id="R005", rule_name="高折扣率订单",
-            rule_category="订单欺诈", risk_level="高",
+            rule_id="R201", rule_name="负债率过高",
+            rule_category="信用风险", risk_level="高",
             risk_score=65, action="人工审核",
         ),
     ]
@@ -333,7 +336,7 @@ if __name__ == "__main__":
         assessment_id="ast_demo_xxx", event_id="evt_demo_xxx",
         user_id="U0001", final_score=95, risk_level="极高", decision="拒绝",
         rule_count=2, triggered_rules=hits,
-        features={"user_total_orders": 3, "order_total_amount": 15000},
+        features={"cust_total_loans": 3, "loan_amount": 15000},
         create_time=datetime.now(),
         ml_score=0.92, ml_decision="拒绝",
     )
@@ -349,7 +352,7 @@ if __name__ == "__main__":
     # 3. AssessmentDetailResponse (P3-S9) — 评估历史详情
     detail = AssessmentDetailResponse(
         assessment_id="ast_demo_xxx", event_id="evt_demo_xxx",
-        user_id="U0001", event_type="下单", event_source_id="ord_demo_001",
+        user_id="C00001", event_type="贷款申请", event_source_id="ln_demo_001",
         final_score=95, risk_level="极高", decision="拒绝",
         rule_count=2, triggered_rules=hits,
         create_time=datetime.now(),

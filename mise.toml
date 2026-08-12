@@ -1,0 +1,30 @@
+# until-done CI 门禁适配
+# 项目无 mypy/ruff 约定, 工具链在 .venv; 将 CI 动词映射到 venv 真实检查:
+#   typecheck -> Python 语法编译检查 (compileall)
+#   lint      -> git diff 卫生检查 (冲突标记/空白错误)
+#   format    -> Python 源码编译检查
+#   test      -> 全量 pytest (与 verifyCommand 一致, DB_PORT=3307)
+
+[tasks.typecheck]
+description = "Python 语法编译检查 (compileall)"
+run = "DB_PORT=3307 .venv/bin/python -m compileall -q app scripts tests"
+
+[tasks.lint]
+description = "git diff 卫生检查 (冲突标记/空白错误)"
+run = "git diff --check"
+
+[tasks.format]
+description = "Python 源码编译检查 (无 ruff 约定)"
+run = "DB_PORT=3307 .venv/bin/python -m compileall -q app"
+
+[tasks.test]
+description = "全量 pytest (DB_PORT=3307)"
+run = "DB_PORT=3307 .venv/bin/python -m pytest tests/ -q"
+
+[tasks.compile]
+description = "同 typecheck"
+run = "DB_PORT=3307 .venv/bin/python -m compileall -q app scripts tests"
+
+[tasks.build]
+description = "无构建流程, 占位通过"
+run = "true"
