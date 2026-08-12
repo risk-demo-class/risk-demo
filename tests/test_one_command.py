@@ -1,5 +1,5 @@
 """
-一条龙命令测试 (P4-L4 2026-08-08)
+全流程一键命令测试 (P4-L4 2026-08-08)
 - 验证 scripts/one_command.py 结构 (6 步 + 3 个跳过选项)
 - 不实际跑 (避免破坏 DB)
 """
@@ -11,16 +11,16 @@ SCRIPT = ROOT / "scripts" / "one_command.py"
 
 
 class TestOneCommandStructure:
-    """一条龙命令的 6 步结构必须保持完整"""
+    """全流程一键命令的 6 步结构必须保持完整"""
 
     def test_script_exists(self):
         assert SCRIPT.exists(), "one_command.py 必须存在"
 
     def test_has_6_steps(self):
-        """6 个 step 函数: reset_db / risk_users / train_dataset / train_xgboost / backfill_ml_score / business_today"""
+        """6 个 step 函数: reset_db / biz_data / train_dataset / train_xgboost / backfill_ml_score / start_hint"""
         src = SCRIPT.read_text(encoding="utf-8")
-        for step in ["step_1_reset_db", "step_2_risk_users", "step_3_train_dataset",
-                     "step_4_train_xgboost", "step_5_backfill_ml_score", "step_6_business_today"]:
+        for step in ["step_1_reset_db", "step_2_biz_data", "step_3_train_dataset",
+                     "step_4_train_xgboost", "step_5_backfill_ml_score", "step_6_start_hint"]:
             assert f"def {step}(" in src, f"缺步骤函数: {step}"
 
     def test_steps_call_real_scripts(self):
@@ -28,11 +28,13 @@ class TestOneCommandStructure:
         src = SCRIPT.read_text(encoding="utf-8")
         # 6 个 step 各调一个真实脚本
         assert "init_db.py" in src, "step 1 调 init_db.py"
-        assert "gen_risky_users.py" in src, "step 2 调 gen_risky_users.py"
+        assert "gen_10w_data.py" in src, "step 2 调 gen_10w_data.py (业务数据)"
         assert "gen_train_dataset.py" in src, "step 3 调 gen_train_dataset.py (新训练数据集)"
         assert "train_xgb_model.py" in src, "step 4 调 train_xgb_model.py"
         assert "backfill_ml_score.py" in src, "step 5 调 backfill_ml_score.py (新回填脚本)"
-        assert "gen_risk_data_with_dates.py" in src, "step 6 调 gen_risk_data_with_dates.py (今日业务数据)"
+        # step 6 不调子进程, 只打印启动指引 (含 run_app.py 提示)
+        assert "step_6_start_hint" in src, "step 6 是 step_6_start_hint"
+        assert "run_app.py" in src, "启动指引需含 run_app.py 提示"
 
     def test_step_3_uses_reset_flag(self):
         """步骤 3 必须用 --reset (清表后重造训练数据)"""
@@ -50,12 +52,12 @@ class TestOneCommandStructure:
         # 训练不能随便传 --reset (没这个 flag)
         assert "--reset" not in m.group(0) or "不传" in m.group(0)
 
-    def test_step_6_uses_live_for_dashboard(self):
-        """步骤 6 用 --live (不回写 create_time, 仪表盘"今日"能看到)"""
+    def test_step_6_is_start_hint(self):
+        """步骤 6 打印启动指引 (含 run_app.py, 不调子进程)"""
         src = SCRIPT.read_text(encoding="utf-8")
-        m = re.search(r"def step_6_business_today.*?(?=\ndef )", src, re.DOTALL)
-        assert m, "找不到 step_6_business_today"
-        assert "--live" in m.group(0), "步骤 6 必须加 --live (仪表盘可见)"
+        m = re.search(r"def step_6_start_hint.*?(?=\ndef )", src, re.DOTALL)
+        assert m, "找不到 step_6_start_hint"
+        assert "run_app.py" in m.group(0), "步骤 6 必须打印 run_app.py 启动指引"
 
 
 class TestOneCommandSkipOptions:
@@ -71,7 +73,7 @@ class TestOneCommandSkipOptions:
         assert m, "skip-init 必须跳过 1+2"
         skip_text = m.group(0)
         assert "step_1_reset_db" in skip_text
-        assert "step_2_risk_users" in skip_text
+        assert "step_2_biz_data" in skip_text
 
     def test_has_skip_train_option(self):
         """--skip-train: 跳过 3+4+5"""
@@ -93,7 +95,7 @@ class TestOneCommandSkipOptions:
         # only-start 应该只调 step 6
         m = re.search(r'if args\.only_start:(.*?)(?=\s+else:)', src, re.DOTALL)
         assert m, "only-start 必须存在"
-        assert "step_6_business_today" in m.group(0)
+        assert "step_6_start_hint" in m.group(0)
 
 
 class TestOneCommandErrorHandling:
@@ -131,11 +133,11 @@ class TestOneCommandDocumentation:
         doc = m.group(1)
         for step_num, step_name in [
             ("1", "重置"),
-            ("2", "RISK"),
-            ("3", "1500"),
+            ("2", "业务"),
+            ("3", "PD"),
             ("4", "训练"),
             ("5", "回填"),
-            ("6", "业务"),
+            ("6", "启动"),
         ]:
             assert step_num in doc and step_name in doc, (
                 f"docstring 应提到步骤 {step_num} ({step_name})"

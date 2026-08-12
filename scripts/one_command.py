@@ -1,5 +1,5 @@
 """
-华信银行·信贷风控系统 - 一条龙命令 (P4-L4 2026-08-08)
+华信银行·信贷风控系统 - 全流程一键命令 (P4-L4 2026-08-08)
 从零开始, 一键完成所有准备 + 训练, 最后启动 Web 服务.
 
 【工作流 6 步】
@@ -115,7 +115,7 @@ def step_6_start_hint() -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="华信银行·信贷风控系统 - 一条龙命令 (6 步: 重置 → 业务数据 → PD 训练数据 → 训练 → 回填 → 启动指引)",
+        description="华信银行·信贷风控系统 - 全流程一键命令 (6 步: 重置 → 业务数据 → PD 训练数据 → 训练 → 回填 → 启动指引)",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 示例:
@@ -134,7 +134,7 @@ def main() -> None:
     args = parser.parse_args()
 
     print("=" * 70)
-    print("华信银行·信贷风控系统 - 一条龙命令 (6 步全流程)")
+    print("华信银行·信贷风控系统 - 全流程一键命令 (6 步全流程)")
     print("=" * 70)
     print(f"工作目录: {ROOT}")
     print(f"Python:    {sys.executable}")
@@ -174,7 +174,7 @@ def main() -> None:
         sys.exit(1)
 
     print("\n" + "=" * 70)
-    print("一条龙完成!")
+    print("全流程完成!")
     print("=" * 70)
     print("下一步:")
     print("  按上面的启动指引执行 run_app.py 即可启动 Web 服务")
