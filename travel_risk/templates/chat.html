@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% block title %}AI 助手 - 旅游风控系统{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h4 class="mb-0">AI 风控助手</h4>
+  <span id="agent-status" class="badge bg-secondary">检测模型中...</span>
+</div>
+<div class="card p-4">
+  <div id="chat-box" style="min-height:360px;max-height:520px;overflow-y:auto" class="mb-3">
+    <div class="alert alert-secondary">你好, 我是旅游风控助手。可以问我: 「有哪些风险规则」「搜索退改规则」「查看决策分布」「列出特征」</div>
+  </div>
+  <div class="d-flex flex-wrap gap-2 mb-3">
+    <span class="text-muted small align-self-center">快速提问:</span>
+    <button class="btn btn-sm btn-outline-primary" onclick="quickAsk('有哪些风险规则')">规则分布</button>
+    <button class="btn btn-sm btn-outline-primary" onclick="quickAsk('搜索退改规则')">搜索退改规则</button>
+    <button class="btn btn-sm btn-outline-primary" onclick="quickAsk('查看决策分布')">决策分布</button>
+    <button class="btn btn-sm btn-outline-primary" onclick="quickAsk('列出 28 维特征')">特征清单</button>
+    <button class="btn btn-sm btn-outline-primary" onclick="quickAsk('解释 R002 一票否决规则')">解释 R002</button>
+    <button class="btn btn-sm btn-outline-primary" onclick="quickAsk('最近风控概况怎么样')">风控概况</button>
+  </div>
+  <div class="input-group">
+    <input class="form-control" id="chat-input" placeholder="输入你的问题...">
+    <button class="btn btn-primary" onclick="sendChat()">发送</button>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+async function sendChat() {
+  const input = document.getElementById("chat-input");
+  const msg = input.value.trim();
+  if (!msg) return;
+  input.value = "";
+  const box = document.getElementById("chat-box");
+  box.insertAdjacentHTML("beforeend", `<div class="text-end mb-2"><span class="badge bg-primary">${escapeHtml(msg)}</span></div>`);
+  try {
+    const r = await apiFetch("/api/agent/chat", { method: "POST", body: JSON.stringify({ message: msg }) });
+    box.insertAdjacentHTML("beforeend", `<div class="mb-2"><span class="badge bg-light text-dark" style="white-space:normal">${escapeHtml(r.reply).replace(/\n/g, "<br>")}</span></div>`);
+  } catch (e) {
+    box.insertAdjacentHTML("beforeend", `<div class="text-danger small">${escapeHtml(e.message)}</div>`);
+  }
+  box.scrollTop = box.scrollHeight;
+}
+function quickAsk(text) {
+  document.getElementById("chat-input").value = text;
+  sendChat();
+}
+async function loadAgentStatus() {
+  try {
+    const h = await apiFetch("/api/agent/health");
+    const badge = document.getElementById("agent-status");
+    if (h.enabled) {
+      badge.className = "badge bg-success";
+      badge.textContent = `LLM 已接入: ${h.model}`;
+    } else {
+      badge.className = "badge bg-secondary";
+      badge.textContent = "本地规则问答 (未配置 LLM)";
+    }
+  } catch (e) {
+    document.getElementById("agent-status").textContent = "状态未知";
+  }
+}
+function escapeHtml(s) {
+  return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+}
+document.getElementById("chat-input").addEventListener("keydown", e => { if (e.key === "Enter") sendChat(); });
+loadAgentStatus();
+</script>
+{% endblock %}

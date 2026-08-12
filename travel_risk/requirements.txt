@@ -1,0 +1,32 @@
+# 旅游风控系统依赖 (Python 3.11+)
+
+# Web 框架
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+gunicorn==23.0.0
+pydantic==2.10.3
+pydantic-settings==2.7.0
+python-multipart==0.0.18
+jinja2==3.1.4
+
+# 数据库
+sqlalchemy==2.0.36
+pymysql==1.1.1
+aiomysql==0.2.0
+cryptography==44.0.0
+
+# 数据处理
+pandas==2.2.3
+numpy==2.2.0
+scikit-learn==1.5.1
+xgboost==2.0.3
+
+# 测试
+pytest==8.3.4
+pytest-asyncio==0.25.0
+httpx==0.28.1
+
+# 工具
+python-dotenv==1.0.1
+ulid-py==1.1.0
+faker==33.1.0

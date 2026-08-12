@@ -1,0 +1,191 @@
+{% extends "base.html" %}
+{% block title %}规则管理 - 旅游风控系统{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h4 class="mb-0">规则管理</h4>
+  <button class="btn btn-primary" onclick="openRuleModal()">+ 新增规则</button>
+</div>
+<div class="card p-3 mb-3">
+  <div class="row g-2">
+    <div class="col-md-3"><input class="form-control" id="f-keyword" placeholder="规则ID/名称关键词"></div>
+    <div class="col-md-3">
+      <select class="form-select" id="f-category" onchange="loadRules(1)">
+        <option value="">全部分类</option>
+        <option>下单欺诈</option><option>支付风险</option><option>账户风险</option>
+        <option>退改滥用</option><option>出行人风险</option><option>供应商风险</option><option>综合风险</option>
+      </select>
+    </div>
+    <div class="col-md-3">
+      <select class="form-select" id="f-event" onchange="loadRules(1)">
+        <option value="">全部事件</option>
+        <option>注册</option><option>下单</option><option>支付</option>
+        <option>退改申请</option><option>理赔申请</option><option>投诉</option><option>通用</option>
+      </select>
+    </div>
+    <div class="col-md-3 d-flex gap-2">
+      <button class="btn btn-primary flex-grow-1" onclick="loadRules(1)">查询</button>
+      <button class="btn btn-outline-secondary" onclick="resetRuleFilters()">重置</button>
+    </div>
+  </div>
+  <div class="mt-2 small text-muted" id="rule-filter-state"></div>
+</div>
+<div class="card p-3">
+  <table class="table table-hover align-middle">
+    <thead><tr><th>规则ID</th><th>名称</th><th>分类</th><th>事件</th><th>规则条件</th><th>等级</th><th>分值</th><th>动作</th><th>状态</th><th>优先级</th><th>操作</th></tr></thead>
+    <tbody id="rule-tbody"></tbody>
+  </table>
+  <div id="rule-pagination"></div>
+</div>
+
+<div class="modal fade" id="rule-modal"><div class="modal-dialog modal-lg"><div class="modal-content">
+  <div class="modal-header"><h6 class="modal-title" id="rule-modal-title">新增规则</h6>
+    <button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+  <div class="modal-body">
+    <input type="hidden" id="m-rule-id">
+    <div class="row g-2">
+      <div class="col-md-6"><label class="form-label">规则ID</label><input class="form-control" id="m-id"></div>
+      <div class="col-md-6"><label class="form-label">规则名称</label><input class="form-control" id="m-name"></div>
+      <div class="col-md-4"><label class="form-label">风险场景</label>
+        <select class="form-select" id="m-category">
+          <option>下单欺诈</option><option>支付风险</option><option>账户风险</option>
+          <option>退改滥用</option><option>出行人风险</option><option>供应商风险</option><option>综合风险</option>
+        </select></div>
+      <div class="col-md-4"><label class="form-label">适用事件</label>
+        <select class="form-select" id="m-event">
+          <option value="通用">通用</option><option>注册</option><option>下单</option><option>支付</option>
+          <option>退改申请</option><option>理赔申请</option><option>投诉</option>
+        </select></div>
+      <div class="col-md-4"><label class="form-label">风险等级</label>
+        <select class="form-select" id="m-level"><option>低</option><option>中</option><option>高</option><option>极高</option></select></div>
+      <div class="col-md-4"><label class="form-label">命中分值 (0-100)</label><input type="number" class="form-control" id="m-score"></div>
+      <div class="col-md-4"><label class="form-label">触发动作</label>
+        <select class="form-select" id="m-action"><option>通过</option><option>标记</option><option>人工审核</option><option>拒绝</option></select></div>
+      <div class="col-md-4"><label class="form-label">优先级</label><input type="number" class="form-control" id="m-priority" value="0"></div>
+      <div class="col-12"><label class="form-label">条件 JSON (支持 and/or 嵌套)</label>
+        <textarea class="form-control font-monospace" id="m-condition" rows="4"
+          placeholder='{"field": "order_total_amount", "op": "&gt;=", "value": 20000}'></textarea></div>
+      <div class="col-12"><label class="form-label">描述</label><input class="form-control" id="m-desc"></div>
+    </div>
+  </div>
+  <div class="modal-footer">
+    <button class="btn btn-outline-secondary" data-bs-dismiss="modal">取消</button>
+    <button class="btn btn-primary" onclick="saveRule()">保存</button>
+  </div>
+</div></div></div>
+{% endblock %}
+{% block scripts %}
+<script>
+let rulePage = 1, rulePageSize = 10;
+function escapeHtml(s) {
+  return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+function ruleConditionHtml(cond) {
+  let json = "";
+  try {
+    json = JSON.stringify(cond || {});
+  } catch (e) {
+    json = String(cond || "");
+  }
+  return `<td class="text-muted small" style="max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escapeHtml(json)}">${escapeHtml(json)}</td>`;
+}
+async function loadRules(page = 1) {
+  rulePage = page;
+  try {
+    const kw = encodeURIComponent(document.getElementById("f-keyword").value.trim());
+    const cat = document.getElementById("f-category").value;
+    const ev = document.getElementById("f-event").value;
+    const url = `/api/rules?page=${page}&page_size=${rulePageSize}&keyword=${kw}&category=${encodeURIComponent(cat)}&event_type=${encodeURIComponent(ev)}`;
+    const d = await apiFetch(url);
+    document.getElementById("rule-tbody").innerHTML = d.items.map(r => `
+      <tr>
+        <td>${r.rule_id}</td><td>${r.rule_name}</td><td>${r.rule_category}</td>
+        <td>${r.event_type}</td>
+        ${ruleConditionHtml(r.rule_condition)}
+        <td class="${riskLevelClass(r.risk_level)}">${r.risk_level}</td><td>${r.risk_score}</td>
+        <td>${decisionBadge(r.action)}</td>
+        <td>${r.is_enabled ? '<span class="badge bg-success">启用</span>' : '<span class="badge bg-secondary">停用</span>'}</td>
+        <td>${r.priority}</td>
+        <td>
+          <button class="btn btn-sm btn-outline-secondary" onclick="openRuleModal('${r.rule_id}')">编辑</button>
+          <button class="btn btn-sm btn-outline-warning" onclick="toggleRule('${r.rule_id}')">${r.is_enabled ? '停用' : '启用'}</button>
+          <button class="btn btn-sm btn-outline-danger" onclick="deleteRule('${r.rule_id}')">删除</button>
+        </td>
+      </tr>`).join("");
+    document.getElementById("rule-pagination").innerHTML = paginationBar(d.total, page, rulePageSize, "loadRules");
+    const parts = [];
+    if (cat) parts.push(`分类=${cat}`);
+    if (ev) parts.push(`事件=${ev}`);
+    const kwText = document.getElementById("f-keyword").value.trim();
+    if (kwText) parts.push(`关键词=${kwText}`);
+    document.getElementById("rule-filter-state").textContent =
+      `当前筛选: ${parts.length ? parts.join(" · ") : "无"} · 共 ${d.total} 条规则`;
+  } catch (e) {
+    showToast("加载规则失败: " + e.message, "error");
+  }
+}
+function resetRuleFilters() {
+  document.getElementById("f-keyword").value = "";
+  document.getElementById("f-category").value = "";
+  document.getElementById("f-event").value = "";
+  loadRules(1);
+}
+document.getElementById("f-keyword").addEventListener("keydown", e => {
+  if (e.key === "Enter") loadRules(1);
+});
+async function openRuleModal(id) {
+  document.getElementById("rule-modal-title").textContent = id ? "编辑规则" : "新增规则";
+  ["m-id","m-name","m-score","m-priority","m-desc"].forEach(i => document.getElementById(i).value = "");
+  document.getElementById("m-condition").value = '{"field": "order_total_amount", "op": ">=", "value": 20000}';
+  document.getElementById("m-id").disabled = !!id;
+  if (id) {
+    const r = await apiFetch(`/api/rules/${id}`);
+    document.getElementById("m-id").value = r.rule_id;
+    document.getElementById("m-name").value = r.rule_name;
+    document.getElementById("m-category").value = r.rule_category;
+    document.getElementById("m-event").value = r.event_type;
+    document.getElementById("m-level").value = r.risk_level;
+    document.getElementById("m-score").value = r.risk_score;
+    document.getElementById("m-action").value = r.action;
+    document.getElementById("m-priority").value = r.priority;
+    document.getElementById("m-condition").value = JSON.stringify(r.rule_condition, null, 2);
+    document.getElementById("m-desc").value = r.description || "";
+  }
+  new bootstrap.Modal(document.getElementById("rule-modal")).show();
+}
+async function saveRule() {
+  const id = document.getElementById("m-id").value;
+  const payload = {
+    rule_id: id,
+    rule_name: document.getElementById("m-name").value,
+    rule_category: document.getElementById("m-category").value,
+    event_type: document.getElementById("m-event").value,
+    risk_level: document.getElementById("m-level").value,
+    risk_score: parseInt(document.getElementById("m-score").value),
+    action: document.getElementById("m-action").value,
+    priority: parseInt(document.getElementById("m-priority").value) || 0,
+    rule_condition: JSON.parse(document.getElementById("m-condition").value),
+    description: document.getElementById("m-desc").value,
+  };
+  try {
+    await apiFetch(id && document.getElementById("m-id").disabled ? `/api/rules/${id}` : "/api/rules", {
+      method: id && document.getElementById("m-id").disabled ? "PUT" : "POST",
+      body: JSON.stringify(payload),
+    });
+    bootstrap.Modal.getInstance(document.getElementById("rule-modal")).hide();
+    showToast("规则已保存");
+    loadRules(rulePage);
+  } catch (e) { showToast(e.message, "error"); }
+}
+async function toggleRule(id) {
+  await apiFetch(`/api/rules/${id}/toggle`, { method: "PATCH" });
+  loadRules(rulePage);
+}
+async function deleteRule(id) {
+  if (!confirm(`确认删除规则 ${id}?`)) return;
+  await apiFetch(`/api/rules/${id}`, { method: "DELETE" });
+  showToast("规则已删除");
+  loadRules(rulePage);
+}
+loadRules(1);
+</script>
+{% endblock %}

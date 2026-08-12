@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}数据总览 - 旅游风控系统{% endblock %}
+{% block content %}
+<h4 class="mb-4">数据总览</h4>
+<div class="row g-3 mb-4" id="stat-cards">
+  <div class="col-6 col-md-3"><div class="card stat-card p-3"><div class="num" id="st-bookings">-</div><div class="label">旅游订单数</div></div></div>
+  <div class="col-6 col-md-3"><div class="card stat-card p-3"><div class="num" id="st-travelers">-</div><div class="label">累计出行人次</div></div></div>
+  <div class="col-6 col-md-3"><div class="card stat-card p-3"><div class="num" id="st-refunds">-</div><div class="label">退改申请数</div></div></div>
+  <div class="col-6 col-md-3"><div class="card stat-card p-3"><div class="num" id="st-claims">-</div><div class="label">理赔申请数</div></div></div>
+  <div class="col-6 col-md-3"><div class="card stat-card p-3"><div class="num" id="st-complaints">-</div><div class="label">投诉数</div></div></div>
+  <div class="col-6 col-md-3"><div class="card stat-card p-3"><div class="num" id="st-rules">-</div><div class="label">启用规则数</div></div></div>
+  <div class="col-6 col-md-3"><div class="card stat-card p-3"><div class="num" id="st-assessments">-</div><div class="label">风控评估次数</div></div></div>
+  <div class="col-6 col-md-3"><div class="card stat-card p-3"><div class="num" id="st-cases">-</div><div class="label">待审核案件</div></div></div>
+</div>
+<div class="card p-4">
+  <h6 class="mb-3">风控决策分布</h6>
+  <div id="decision-bars" class="d-flex gap-3 align-items-end" style="height:200px"></div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+async function loadDashboard() {
+  const s = await apiFetch("/api/dashboard/stats");
+  document.getElementById("st-bookings").textContent = s.total_bookings;
+  document.getElementById("st-travelers").textContent = s.total_travelers;
+  document.getElementById("st-refunds").textContent = s.total_refunds;
+  document.getElementById("st-claims").textContent = s.total_claims;
+  document.getElementById("st-complaints").textContent = s.total_complaints;
+  document.getElementById("st-rules").textContent = s.enabled_rules;
+  document.getElementById("st-assessments").textContent = s.assessments;
+  document.getElementById("st-cases").textContent = s.pending_cases;
+  const bars = document.getElementById("decision-bars");
+  const colors = {"通过":"#198754","标记":"#0dcaf0","人工审核":"#fd7e14","拒绝":"#dc3545"};
+  const entries = Object.entries(s.decisions || {});
+  const max = Math.max(1, ...entries.map(([,v]) => v));
+  bars.innerHTML = entries.map(([k, v]) => `
+    <div class="text-center">
+      <div style="height:${Math.round(180 * v / max)}px;width:70px;background:${colors[k]||'#6c757d'};border-radius:6px 6px 0 0;display:flex;align-items:flex-start;justify-content:center;color:#fff;font-weight:600;padding-top:4px">${v}</div>
+      <div class="small mt-1">${k}</div>
+    </div>`).join("");
+}
+loadDashboard().catch(e => showToast(e.message, "error"));
+</script>
+{% endblock %}

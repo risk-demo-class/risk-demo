@@ -1,0 +1,151 @@
+{% extends "base.html" %}
+{% block title %}案件管理 - 旅游风控系统{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h4 class="mb-0">案件管理</h4>
+  <select class="form-select w-auto" id="f-status" onchange="loadCases(1)">
+    <option value="">全部状态</option>
+    <option>待审核</option><option>审核中</option><option>已通过</option><option>已拒绝</option><option>已关闭</option>
+  </select>
+</div>
+<div class="card p-3">
+  <table class="table table-hover align-middle">
+    <thead><tr><th>案件ID</th><th>用户</th><th>事件</th><th>业务ID</th><th>分类</th><th>状态</th><th>审核人</th><th>创建时间</th><th>操作</th></tr></thead>
+    <tbody id="case-tbody"></tbody>
+  </table>
+  <div id="case-pagination"></div>
+</div>
+<div class="modal fade" id="case-modal" data-bs-backdrop="static"><div class="modal-dialog modal-xl"><div class="modal-content">
+  <div class="modal-header"><h6 class="modal-title" id="case-modal-title">案件审核 - 风控检查详情</h6>
+    <button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+  <div class="modal-body">
+    <input type="hidden" id="c-case-id">
+    <div id="c-risk-detail" class="mb-3"></div>
+    <div id="c-review-box" class="border-top pt-3 mt-3">
+      <h6 class="mb-3">审核操作</h6>
+      <div class="row g-2">
+        <div class="col-md-4"><label class="form-label">审核结论</label>
+          <select class="form-select" id="c-decision"><option>已通过</option><option>已拒绝</option><option>已关闭</option></select></div>
+        <div class="col-md-4"><label class="form-label">审核人</label><input class="form-control" id="c-reviewer" value="admin"></div>
+        <div class="col-md-4"><label class="form-label">审核意见</label><input class="form-control" id="c-comment" placeholder="填写审核意见"></div>
+      </div>
+      <div class="form-check mt-2"><input class="form-check-input" type="checkbox" id="c-blacklist">
+        <label class="form-check-label">拒绝时加入黑名单</label></div>
+    </div>
+  </div>
+  <div class="modal-footer">
+    <button class="btn btn-outline-secondary" data-bs-dismiss="modal">关闭</button>
+    <button class="btn btn-primary" id="c-submit-btn" onclick="submitReview()">提交审核</button>
+  </div>
+</div></div></div>
+{% endblock %}
+{% block scripts %}
+<script>
+let casePage = 1, casePageSize = 10;
+function escapeHtml(s) {
+  return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+async function loadCases(page = 1) {
+  casePage = page;
+  const status = document.getElementById("f-status").value;
+  const url = `/api/cases?page=${page}&page_size=${casePageSize}&status=${encodeURIComponent(status)}`;
+  const d = await apiFetch(url);
+  document.getElementById("case-tbody").innerHTML = d.items.map(c => `
+    <tr>
+      <td>${c.case_id}</td><td>${c.user_id}</td><td>${c.event_type || "-"}</td>
+      <td>${c.source_id || "-"}</td><td>${c.case_category || "-"}</td>
+      <td>${decisionBadge(c.case_status)}</td><td>${c.reviewer || "-"}</td>
+      <td>${formatTime(c.create_time)}</td>
+      <td>
+        ${["待审核","审核中"].includes(c.case_status) ? `<button class="btn btn-sm btn-primary" onclick="openCaseModal('${c.case_id}')">审核</button>` : `<button class="btn btn-sm btn-outline-secondary" onclick="viewCase('${c.case_id}')">详情</button>`}
+      </td>
+    </tr>`).join("");
+  document.getElementById("case-pagination").innerHTML = paginationBar(d.total, page, casePageSize, "loadCases");
+}
+async function openCaseModal(id) {
+  const c = await apiFetch(`/api/cases/${id}`);
+  document.getElementById("c-case-id").value = id;
+  document.getElementById("case-modal-title").textContent = "案件审核 - 风控检查详情";
+  document.getElementById("c-review-box").style.display = "";
+  document.getElementById("c-submit-btn").style.display = "";
+  await renderRiskDetail(c);
+  new bootstrap.Modal(document.getElementById("case-modal")).show();
+}
+async function viewCase(id) {
+  const c = await apiFetch(`/api/cases/${id}`);
+  document.getElementById("c-case-id").value = id;
+  document.getElementById("case-modal-title").textContent = "案件详情 - 风控检查详情";
+  document.getElementById("c-review-box").style.display = "none";
+  document.getElementById("c-submit-btn").style.display = "none";
+  await renderRiskDetail(c);
+  new bootstrap.Modal(document.getElementById("case-modal")).show();
+}
+async function renderRiskDetail(c) {
+  let html = `<div class="d-flex justify-content-between flex-wrap gap-2 small text-muted mb-2">
+    <span><strong>案件:</strong> ${c.case_id}</span>
+    <span><strong>用户:</strong> ${c.user_id}</span>
+    <span><strong>事件:</strong> ${c.event_type || "-"}</span>
+    <span><strong>业务ID:</strong> ${c.source_id || "-"}</span>
+    <span><strong>状态:</strong> ${decisionBadge(c.case_status)}</span>
+  </div>`;
+  const aid = c.assessment_id;
+  if (!aid) {
+    html += '<div class="alert alert-warning">该案件没有关联的风控评估记录</div>';
+    document.getElementById("c-risk-detail").innerHTML = html;
+    return;
+  }
+  const a = await apiFetch(`/api/assessments/${aid}`);
+  html += `
+    <div class="row g-2 mb-2 text-center">
+      <div class="col-6 col-md-3"><div class="border rounded p-2 bg-light"><small class="text-muted">综合评分</small>
+        <div class="fs-4 fw-bold">${a.final_score}</div></div></div>
+      <div class="col-6 col-md-3"><div class="border rounded p-2 bg-light"><small class="text-muted">风险等级</small>
+        <div class="fs-5 fw-bold ${riskLevelClass(a.risk_level)}">${a.risk_level}</div></div></div>
+      <div class="col-6 col-md-3"><div class="border rounded p-2 bg-light"><small class="text-muted">决策</small>
+        <div class="fs-5">${decisionBadge(a.decision)}</div></div></div>
+      <div class="col-6 col-md-3"><div class="border rounded p-2 bg-light"><small class="text-muted">ML 评分</small>
+        <div class="fs-5 fw-bold">${a.ml_score == null ? "-" : a.ml_score}</div></div></div>
+    </div>
+    <p class="small text-muted mb-2">
+      评估ID: ${a.assessment_id} · 命中规则: ${a.rule_count} 条 ·
+      ML 决策: ${a.ml_decision || "-"} · 评估时间: ${formatTime(a.create_time)}
+    </p>`;
+  const rules = a.triggered_rules || [];
+  html += `<h6 class="mt-3">命中规则 (${rules.length})</h6>
+    <div class="table-responsive"><table class="table table-sm table-bordered align-middle">
+      <thead><tr><th>规则</th><th>名称</th><th>场景</th><th>等级</th><th>分值</th><th>动作</th><th>描述</th></tr></thead><tbody>`;
+  html += rules.map(r => `
+    <tr>
+      <td>${r.rule_id}</td><td>${r.rule_name}</td><td>${r.rule_category}</td>
+      <td class="${riskLevelClass(r.risk_level)}">${r.risk_level}</td><td>${r.risk_score}</td>
+      <td>${decisionBadge(r.action)}</td>
+      <td class="small">${escapeHtml(r.description || "")}</td>
+    </tr>`).join("") || '<tr><td colspan="7" class="text-muted">无命中规则</td></tr>';
+  html += `</tbody></table></div>`;
+  if (a.event_data) {
+    html += `<h6 class="mt-3">事件快照</h6><pre class="features">${escapeHtml(a.event_data)}</pre>`;
+  }
+  const feats = a.features || {};
+  if (Object.keys(feats).length) {
+    html += `<h6 class="mt-3">28 维特征快照</h6><pre class="features">${escapeHtml(JSON.stringify(feats, null, 2))}</pre>`;
+  }
+  document.getElementById("c-risk-detail").innerHTML = html;
+}
+async function submitReview() {
+  const id = document.getElementById("c-case-id").value;
+  const payload = {
+    decision: document.getElementById("c-decision").value,
+    reviewer: document.getElementById("c-reviewer").value,
+    review_comment: document.getElementById("c-comment").value,
+    add_to_blacklist: document.getElementById("c-blacklist").checked,
+  };
+  try {
+    await apiFetch(`/api/cases/${id}/review`, { method: "POST", body: JSON.stringify(payload) });
+    bootstrap.Modal.getInstance(document.getElementById("case-modal")).hide();
+    showToast("案件已审核");
+    loadCases(casePage);
+  } catch (e) { showToast(e.message, "error"); }
+}
+loadCases(1);
+</script>
+{% endblock %}

@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}评估历史 - 旅游风控系统{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h4 class="mb-0">评估历史</h4>
+  <select class="form-select w-auto" id="f-decision" onchange="loadAssessments(1)">
+    <option value="">全部决策</option>
+    <option>通过</option><option>标记</option><option>人工审核</option><option>拒绝</option>
+  </select>
+</div>
+<div class="card p-3">
+  <table class="table table-hover align-middle">
+    <thead><tr><th>评估ID</th><th>用户</th><th>事件</th><th>评分</th><th>等级</th><th>决策</th><th>规则数</th><th>ML评分</th><th>ML决策</th><th>时间</th><th>操作</th></tr></thead>
+    <tbody id="as-tbody"></tbody>
+  </table>
+  <div id="as-pagination"></div>
+</div>
+<div class="modal fade" id="as-modal"><div class="modal-dialog modal-lg"><div class="modal-content">
+  <div class="modal-header"><h6 class="modal-title">评估详情</h6>
+    <button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+  <div class="modal-body">
+    <div id="as-detail"></div>
+  </div>
+</div></div></div>
+{% endblock %}
+{% block scripts %}
+<script>
+let asPage = 1, asPageSize = 10;
+async function loadAssessments(page = 1) {
+  asPage = page;
+  const decision = document.getElementById("f-decision").value;
+  const d = await apiFetch(`/api/assessments?page=${page}&page_size=${asPageSize}&decision=${encodeURIComponent(decision)}`);
+  document.getElementById("as-tbody").innerHTML = d.items.map(a => `
+    <tr>
+      <td>${a.assessment_id}</td><td>${a.user_id}</td><td>${a.event_type}</td>
+      <td><strong>${a.final_score}</strong></td>
+      <td class="${riskLevelClass(a.risk_level)}">${a.risk_level}</td>
+      <td>${decisionBadge(a.decision)}</td><td>${a.rule_count}</td>
+      <td>${a.ml_score == null ? "-" : a.ml_score}</td><td>${a.ml_decision || "-"}</td>
+      <td>${formatTime(a.create_time)}</td>
+      <td><button class="btn btn-sm btn-outline-secondary" onclick="viewAssessment('${a.assessment_id}')">详情</button></td>
+    </tr>`).join("");
+  document.getElementById("as-pagination").innerHTML = paginationBar(d.total, page, asPageSize, "loadAssessments");
+}
+async function viewAssessment(id) {
+  const a = await apiFetch(`/api/assessments/${id}`);
+  const rules = (a.triggered_rules || []).map(r =>
+    `<tr><td>${r.rule_id}</td><td>${r.rule_name}</td><td>${r.rule_category}</td><td class="${riskLevelClass(r.risk_level)}">${r.risk_level}</td><td>${r.risk_score}</td><td>${decisionBadge(r.action)}</td></tr>`
+  ).join("") || '<tr><td colspan="6" class="text-muted">无命中规则</td></tr>';
+  document.getElementById("as-detail").innerHTML = `
+    <p><strong>评估:</strong> ${a.assessment_id} · <strong>事件:</strong> ${a.event_type} (${a.event_source_id})
+       · <strong>用户:</strong> ${a.user_id}<br>
+       <strong>评分:</strong> ${a.final_score} · <strong>等级:</strong> ${a.risk_level}
+       · <strong>决策:</strong> ${a.decision}
+       · <strong>ML:</strong> ${a.ml_score == null ? "-" : a.ml_score + " → " + a.ml_decision}</p>
+    <h6>命中规则</h6>
+    <table class="table table-sm"><thead><tr><th>规则</th><th>名称</th><th>分类</th><th>等级</th><th>分值</th><th>动作</th></tr></thead>
+    <tbody>${rules}</tbody></table>`;
+  new bootstrap.Modal(document.getElementById("as-modal")).show();
+}
+loadAssessments(1);
+</script>
+{% endblock %}

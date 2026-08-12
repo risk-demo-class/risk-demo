@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+{% block title %}风控检查 - 旅游风控系统{% endblock %}
+{% block content %}
+<h4 class="mb-4">风控检查</h4>
+<div class="row g-4">
+  <div class="col-md-5">
+    <div class="card p-4">
+      <form id="risk-form">
+        <div class="mb-3">
+          <label class="form-label">事件类型 (可选, 留空自动识别)</label>
+          <select class="form-select" name="event_type">
+            <option value="">自动识别</option>
+            <option value="通用">通用 (账户级)</option>
+            <option value="下单">下单</option>
+            <option value="支付">支付</option>
+            <option value="退改申请">退改申请</option>
+            <option value="理赔申请">理赔申请</option>
+            <option value="投诉">投诉</option>
+            <option value="注册">注册</option>
+          </select>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">用户 ID (可选)</label>
+          <input class="form-control" name="user_id" placeholder="例如 U003 / RISK002">
+        </div>
+        <div class="mb-3">
+          <label class="form-label">业务 ID (可选: 订单/支付/退改/理赔/投诉 ID)</label>
+          <input class="form-control" name="source_id" placeholder="例如 RISKB00200 / B001 / RF001">
+        </div>
+        <div class="mb-3">
+          <label class="form-label">设备 ID (可选)</label>
+          <input class="form-control" name="device_id" placeholder="DEV001">
+        </div>
+        <button type="submit" class="btn btn-primary w-100">执行风控检查</button>
+      </form>
+      <div class="mt-3 small text-muted">
+        用户ID / 业务ID / 设备ID <strong>任填一个</strong>即可检查, 缺的维度系统自动补全:
+        <br>· 只填业务ID → 自动识别事件类型并反查用户
+        <br>· 只填设备ID → 反查最近绑定用户
+        <br>· 只填用户ID → 走账户级通用检查
+        <br>演示账号: RISK001(高退改) / RISK002(大额) / RISK003(深夜) / DEV001(多设备)
+      </div>
+    </div>
+  </div>
+  <div class="col-md-7">
+    <div class="card p-4">
+      <div id="result-empty" class="text-muted">提交检查后这里显示决策结果</div>
+      <div id="result-box" style="display:none">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <h6 class="mb-0">评估结果</h6>
+          <span id="r-decision"></span>
+        </div>
+        <p><strong>综合评分:</strong> <span id="r-score"></span> 分
+           · <strong>风险等级:</strong> <span id="r-level"></span>
+           · <strong>命中规则:</strong> <span id="r-count"></span> 条
+        </p>
+        <p id="r-message" class="text-muted small"></p>
+        <p class="small text-muted">ML 评分: <span id="r-ml"></span> (XGBoost 拒绝概率)</p>
+        <h6 class="mt-3">命中规则</h6>
+        <table class="table table-sm" id="r-rules">
+          <thead><tr><th>规则</th><th>场景</th><th>等级</th><th>分值</th><th>动作</th></tr></thead>
+          <tbody></tbody>
+        </table>
+        <h6 class="mt-3">28 维特征快照</h6>
+        <pre class="features" id="r-features"></pre>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+document.getElementById("risk-form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const form = new FormData(e.target);
+  const payload = {};
+  const et = form.get("event_type");
+  if (et) payload.event_type = et;
+  const uid = form.get("user_id").trim();
+  const sid = form.get("source_id").trim();
+  const did = form.get("device_id").trim();
+  if (uid) payload.user_id = uid;
+  if (sid) payload.source_id = sid;
+  if (did) payload.device_id = did;
+  if (!(uid || sid || did)) {
+    showToast("请至少填写 用户ID / 业务ID / 设备ID 中的一个", "error");
+    return;
+  }
+  try {
+    const r = await apiFetch("/api/risk/check", { method: "POST", body: JSON.stringify(payload) });
+    document.getElementById("result-empty").style.display = "none";
+    document.getElementById("result-box").style.display = "block";
+    document.getElementById("r-decision").innerHTML = decisionBadge(r.decision);
+    document.getElementById("r-score").textContent = r.final_score;
+    document.getElementById("r-level").textContent = r.risk_level;
+    document.getElementById("r-level").className = riskLevelClass(r.risk_level);
+    document.getElementById("r-count").textContent = r.rule_count;
+    document.getElementById("r-message").textContent = r.message || "";
+    document.getElementById("r-ml").textContent =
+      r.ml_score == null ? "模型未加载 (纯规则模式)" : `${r.ml_score} → ${r.ml_decision}`;
+    const tbody = document.querySelector("#r-rules tbody");
+    tbody.innerHTML = (r.triggered_rules || []).map(rule => `
+      <tr>
+        <td>${rule.rule_id}<br><small>${rule.rule_name}</small></td>
+        <td>${rule.rule_category}</td>
+        <td class="${riskLevelClass(rule.risk_level)}">${rule.risk_level}</td>
+        <td>${rule.risk_score}</td>
+        <td>${decisionBadge(rule.action)}</td>
+      </tr>`).join("");
+    document.getElementById("r-features").textContent = JSON.stringify(r.features, null, 2);
+  } catch (err) {
+    showToast(err.message, "error");
+  }
+});
+</script>
+{% endblock %}

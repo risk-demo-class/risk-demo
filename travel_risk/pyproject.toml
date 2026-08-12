@@ -1,0 +1,35 @@
+[project]
+name = "travel-risk"
+version = "1.0.0"
+description = "旅游行业风控系统: 规则引擎 + XGBoost 双轨融合"
+requires-python = ">=3.11"
+dependencies = [
+    "aiomysql==0.2.0",
+    "cryptography==44.0.0",
+    "faker==33.1.0",
+    "fastapi==0.115.6",
+    "gunicorn==23.0.0",
+    "httpx==0.28.1",
+    "jinja2==3.1.4",
+    "numpy==2.2.0",
+    "pandas==2.2.3",
+    "pydantic==2.10.3",
+    "pydantic-settings==2.7.0",
+    "pymysql==1.1.1",
+    "pytest==8.3.4",
+    "pytest-asyncio==0.25.0",
+    "python-dotenv==1.0.1",
+    "python-multipart==0.0.18",
+    "scikit-learn==1.5.1",
+    "sqlalchemy==2.0.36",
+    "ulid-py==1.1.0",
+    "uvicorn[standard]==0.34.0",
+    "xgboost==2.0.3",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+python_files = ["test_*.py"]
+addopts = "-q"

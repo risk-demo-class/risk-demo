@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block title %}黑名单 - 旅游风控系统{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h4 class="mb-0">黑名单</h4>
+  <button class="btn btn-primary" onclick="openAddModal()">+ 添加黑名单</button>
+</div>
+<div class="card p-3">
+  <div class="mb-3 w-25">
+    <select class="form-select" id="f-type" onchange="loadBlacklists(1)">
+      <option value="">全部类型</option><option>用户</option><option>手机号</option><option>设备</option>
+    </select>
+  </div>
+  <table class="table table-hover align-middle">
+    <thead><tr><th>ID</th><th>类型</th><th>值</th><th>原因</th><th>过期时间</th><th>创建时间</th><th>操作</th></tr></thead>
+    <tbody id="bl-tbody"></tbody>
+  </table>
+  <div id="bl-pagination"></div>
+</div>
+<div class="modal fade" id="bl-modal"><div class="modal-dialog"><div class="modal-content">
+  <div class="modal-header"><h6 class="modal-title">添加黑名单</h6>
+    <button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+  <div class="modal-body">
+    <div class="mb-3"><label class="form-label">类型</label>
+      <select class="form-select" id="b-type"><option>用户</option><option>手机号</option><option>设备</option></select></div>
+    <div class="mb-3"><label class="form-label">值</label><input class="form-control" id="b-value"></div>
+    <div class="mb-3"><label class="form-label">原因</label><input class="form-control" id="b-reason"></div>
+  </div>
+  <div class="modal-footer">
+    <button class="btn btn-outline-secondary" data-bs-dismiss="modal">取消</button>
+    <button class="btn btn-primary" onclick="addBlacklist()">添加</button>
+  </div>
+</div></div></div>
+{% endblock %}
+{% block scripts %}
+<script>
+let blPage = 1, blPageSize = 10;
+async function loadBlacklists(page = 1) {
+  blPage = page;
+  const type = document.getElementById("f-type").value;
+  const d = await apiFetch(`/api/blacklists?page=${page}&page_size=${blPageSize}&blacklist_type=${encodeURIComponent(type)}`);
+  document.getElementById("bl-tbody").innerHTML = d.items.map(b => `
+    <tr>
+      <td>${b.blacklist_id}</td><td>${b.blacklist_type}</td><td>${b.blacklist_value}</td>
+      <td>${b.reason || "-"}</td><td>${formatTime(b.expire_time)}</td><td>${formatTime(b.create_time)}</td>
+      <td><button class="btn btn-sm btn-outline-danger" onclick="removeBlacklist(${b.blacklist_id})">移除</button></td>
+    </tr>`).join("");
+  document.getElementById("bl-pagination").innerHTML = paginationBar(d.total, page, blPageSize, "loadBlacklists");
+}
+function openAddModal() { new bootstrap.Modal(document.getElementById("bl-modal")).show(); }
+async function addBlacklist() {
+  const payload = {
+    blacklist_type: document.getElementById("b-type").value,
+    blacklist_value: document.getElementById("b-value").value,
+    reason: document.getElementById("b-reason").value,
+  };
+  try {
+    await apiFetch("/api/blacklists", { method: "POST", body: JSON.stringify(payload) });
+    bootstrap.Modal.getInstance(document.getElementById("bl-modal")).hide();
+    showToast("黑名单已添加");
+    loadBlacklists(blPage);
+  } catch (e) { showToast(e.message, "error"); }
+}
+async function removeBlacklist(id) {
+  if (!confirm("确认移除该黑名单?")) return;
+  await apiFetch(`/api/blacklists/${id}`, { method: "DELETE" });
+  showToast("黑名单已移除");
+  loadBlacklists(blPage);
+}
+loadBlacklists(1);
+</script>
+{% endblock %}

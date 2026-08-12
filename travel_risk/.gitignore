@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# 环境与密钥
+.env
+
+# 日志
+logs/*.log
+logs/*.log.*
+
+# 模型产物 (训练后生成)
+app/engine/xgb_model.json
+
+# IDE
+.idea/
+.vscode/
+
+# 测试缓存
+.pytest_cache/
