@@ -1,0 +1,23 @@
+-- ============================================
+-- 旅游行业风控系统 - 数据库初始化指南
+-- ============================================
+--
+-- 本系统共需初始化 4 个 SQL 脚本，按以下顺序执行:
+--
+--   1. init_business_tables.sql  -- 10 张旅游业务表 DDL
+--   2. init_business_data.sql    -- 旅游业务模拟数据，每张表至少 110 条
+--   3. init_risk_tables.sql      -- 9 张风控核心表 DDL
+--   4. init_risk_data.sql        -- 25 条旅游风控规则 + 黑名单样例
+--
+-- 推荐方式:
+--
+--   python scripts/init_db.py --reset --yes
+--
+-- 手动方式:
+--
+--   mysql -u root -p123321 --default-character-set=utf8mb4 ecs < sql/init_business_tables.sql
+--   mysql -u root -p123321 --default-character-set=utf8mb4 ecs < sql/init_business_data.sql
+--   mysql -u root -p123321 --default-character-set=utf8mb4 ecs < sql/init_risk_tables.sql
+--   mysql -u root -p123321 --default-character-set=utf8mb4 ecs < sql/init_risk_data.sql
+--
+-- 数据库名默认 ecs，可通过 .env / scripts/init_db.py --db 调整。

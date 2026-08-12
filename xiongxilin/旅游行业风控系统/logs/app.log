@@ -1,0 +1,508 @@
+2026-08-12 11:40:00 [INFO] uvicorn.error: Started server process [5256]
+2026-08-12 11:40:00 [INFO] uvicorn.error: Waiting for application startup.
+2026-08-12 11:40:00 [INFO] app.scheduler: [scheduled] 启动: 间隔 15 分钟 (案件超时 + 告警检查)
+2026-08-12 11:40:00 [INFO] uvicorn.error: Application startup complete.
+2026-08-12 11:40:00 [INFO] uvicorn.error: Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+2026-08-12 11:40:00 [WARNING] app.service.alert: ALERT [P1 BUSINESS] 待审核案件积压 | 当前 61 个待审核案件, 超过阈值 50, 请及时处理 (metric=pending_case_count, value=61.0, threshold=50.0)
+2026-08-12 11:40:00 [INFO] app.scheduler: [scheduled] 本轮: 关案 0, 告警 1, 错误 0
+2026-08-12 11:40:17 [INFO] uvicorn.access: 127.0.0.1:57239 - "GET / HTTP/1.1" 200
+2026-08-12 11:40:18 [INFO] uvicorn.access: 127.0.0.1:57239 - "GET /static/app.js?v=20260808v4 HTTP/1.1" 200
+2026-08-12 11:40:18 [ERROR] app.agent.tools: 仪表盘统计 执行失败 [error_id=err_01kzt0wze03s]
+Traceback (most recent call last):
+  File "G:\day10 吴玉祥\尚硅谷大模型项目之风控系统\旅游行业风控系统\.venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1130, in _rollback_impl
+    self.engine.dialect.do_rollback(self.connection)
+  File "G:\day10 吴玉祥\尚硅谷大模型项目之风控系统\旅游行业风控系统\.venv\Lib\site-packages\sqlalchemy\engine\default.py", line 712, in do_rollback
+    dbapi_connection.rollback()
+  File "G:\day10 吴玉祥\尚硅谷大模型项目之风控系统\旅游行业风控系统\.venv\Lib\site-packages\sqlalchemy\connectors\asyncio.py", line 374, in rollback
+    self._handle_exception(error)
+  File "G:\day10 吴玉祥\尚硅谷大模型项目之风控系统\旅游行业风控系统\.venv\Lib\site-packages\sqlalchemy\connectors\asyncio.py", line 368, in _handle_exception
+    raise error.with_traceback(exc_info[2])
+  File "G:\day10 吴玉祥\尚硅谷大模型项目之风控系统\旅游行业风控系统\.venv\Lib\site-packages\sqlalchemy\connectors\asyncio.py", line 372, in rollback
+    self.await_(self._connection.rollback())
+  File "G:\day10 吴玉祥\尚硅谷大模型项目之风控系统\旅游行业风控系统\.venv\Lib\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 132, in await_only
+    return current.parent.switch(awaitable)  # type: ignore[no-any-return,attr-defined] # noqa: E501
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "G:\day10 吴玉祥\尚硅谷大模型项目之风控系统\旅游行业风控系统\.venv\Lib\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 196, in greenlet_spawn
+    value = await result
+            ^^^^^^^^^^^^
+  File "G:\day10 吴玉祥\尚硅谷大模型项目之风控系统\旅游行业风控系统\.venv\Lib\site-packages\aiomysql\connection.py", line 399, in rollback
+    await self._read_ok_packet()
+  File "G:\day10 吴玉祥\尚硅谷大模型项目之风控系统\旅游行业风控系统\.venv\Lib\site-packages\aiomysql\connection.py", line 374, in _read_ok_packet
+    raise OperationalError(2014, "Command Out of Sync")
+pymysql.err.OperationalError: (2014, 'Command Out of Sync')
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "G:\day10 吴玉祥\尚硅谷大模型项目之风控系统\旅游行业风控系统\app\agent\tools.py", line 42, in _safe_call
+    async with AsyncSessionLocal() as db:
+               ^^^^^^^^^^^^^^^^^^^
+  File "G:\day10 吴玉祥\尚硅谷大模型项目之风控系统\旅游行业风控系统\.venv\Lib\site-packages\sqlalchemy\ext\asyncio\session.py", line 1070, in __aexit__
+    await asyncio.shield(task)
+  File "G:\day10 吴玉祥\尚硅谷大模型项目之风控系统\旅游行业风控系统\.venv\Lib\site-packages\sqlalchemy\ext\asyncio\session.py", line 1015, in close
+    await greenlet_spawn(self.sync_session.close)
+  File "G:\day10 吴玉祥\尚硅谷大模型项目之风控系统\旅游行业风控系统\.venv\Lib\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 203, in greenlet_spawn
+    result = context.switch(value)
+             ^^^^^^^^^^^^^^^^^^^^^
+  File "G:\day10 吴玉祥\尚硅谷大模型项目之风控系统\旅游行业风控系统\.venv\Lib\site-packages\sqlalchemy\orm\session.py", line 2529, in close
+    self._close_impl(invalidate=False)
+  File "G:\day10 吴玉祥\尚硅谷大模型项目之风控系统\旅游行业风控系统\.venv\Lib\site-packages\sqlalchemy\orm\session.py", line 2598, in _close_impl
+    transaction.close(invalidate)
+  File "<string>", line 2, in close
+  File "G:\day10 吴玉祥\尚硅谷大模型项目之风控系统\旅游行业风控系统\.venv\Lib\site-packages\sqlalchemy\orm\state_changes.py", line 137, in _go
+    ret_value = fn(self, *arg, **kw)
+                ^^^^^^^^^^^^^^^^^^^^
+  File "G:\day10 吴玉祥\尚硅谷大模型项目之风控系统\旅游行业风控系统\.venv\Lib\site-packages\sqlalchemy\orm\session.py", line 1422, in close
+    transaction.close()
+  File "G:\day10 吴玉祥\尚硅谷大模型项目之风控系统\旅游行业风控系统\.venv\Lib\site-packages\sqlalchemy\engine\base.py", line 2599, in close
+    self._do_close()
+  File "G:\day10 吴玉祥\尚硅谷大模型项目之风控系统\旅游行业风控系统\.venv\Lib\site-packages\sqlalchemy\engine\base.py", line 2737, in _do_close
+    self._close_impl()
+  File "G:\day10 吴玉祥\尚硅谷大模型项目之风控系统\旅游行业风控系统\.venv\Lib\site-packages\sqlalchemy\engine\base.py", line 2723, in _close_impl
+    self._connection_rollback_impl()
+  File "G:\day10 吴玉祥\尚硅谷大模型项目之风控系统\旅游行业风控系统\.venv\Lib\site-packages\sqlalchemy\engine\base.py", line 2715, in _connection_rollback_impl
+    self.connection._rollback_impl()
+  File "G:\day10 吴玉祥\尚硅谷大模型项目之风控系统\旅游行业风控系统\.venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1132, in _rollback_impl
+    self._handle_dbapi_exception(e, None, None, None, None)
+  File "G:\day10 吴玉祥\尚硅谷大模型项目之风控系统\旅游行业风控系统\.venv\Lib\site-packages\sqlalchemy\engine\base.py", line 2365, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "G:\day10 吴玉祥\尚硅谷大模型项目之风控系统\旅游行业风控系统\.venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1130, in _rollback_impl
+    self.engine.dialect.do_rollback(self.connection)
+  File "G:\day10 吴玉祥\尚硅谷大模型项目之风控系统\旅游行业风控系统\.venv\Lib\site-packages\sqlalchemy\engine\default.py", line 712, in do_rollback
+    dbapi_connection.rollback()
+  File "G:\day10 吴玉祥\尚硅谷大模型项目之风控系统\旅游行业风控系统\.venv\Lib\site-packages\sqlalchemy\connectors\asyncio.py", line 374, in rollback
+    self._handle_exception(error)
+  File "G:\day10 吴玉祥\尚硅谷大模型项目之风控系统\旅游行业风控系统\.venv\Lib\site-packages\sqlalchemy\connectors\asyncio.py", line 368, in _handle_exception
+    raise error.with_traceback(exc_info[2])
+  File "G:\day10 吴玉祥\尚硅谷大模型项目之风控系统\旅游行业风控系统\.venv\Lib\site-packages\sqlalchemy\connectors\asyncio.py", line 372, in rollback
+    self.await_(self._connection.rollback())
+  File "G:\day10 吴玉祥\尚硅谷大模型项目之风控系统\旅游行业风控系统\.venv\Lib\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 132, in await_only
+    return current.parent.switch(awaitable)  # type: ignore[no-any-return,attr-defined] # noqa: E501
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "G:\day10 吴玉祥\尚硅谷大模型项目之风控系统\旅游行业风控系统\.venv\Lib\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 196, in greenlet_spawn
+    value = await result
+            ^^^^^^^^^^^^
+  File "G:\day10 吴玉祥\尚硅谷大模型项目之风控系统\旅游行业风控系统\.venv\Lib\site-packages\aiomysql\connection.py", line 399, in rollback
+    await self._read_ok_packet()
+  File "G:\day10 吴玉祥\尚硅谷大模型项目之风控系统\旅游行业风控系统\.venv\Lib\site-packages\aiomysql\connection.py", line 374, in _read_ok_packet
+    raise OperationalError(2014, "Command Out of Sync")
+sqlalchemy.exc.OperationalError: (pymysql.err.OperationalError) (2014, 'Command Out of Sync')
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+2026-08-12 11:40:18 [INFO] uvicorn.access: 127.0.0.1:57239 - "GET /api/dashboard/overview HTTP/1.1" 500
+2026-08-12 11:40:18 [INFO] uvicorn.access: 127.0.0.1:57239 - "GET /favicon.ico HTTP/1.1" 404
+2026-08-12 11:40:20 [INFO] uvicorn.access: 127.0.0.1:57239 - "GET /rules HTTP/1.1" 200
+2026-08-12 11:40:20 [INFO] uvicorn.access: 127.0.0.1:57239 - "GET /api/rules?page=1&page_size=20 HTTP/1.1" 200
+2026-08-12 11:40:22 [INFO] uvicorn.access: 127.0.0.1:57239 - "GET / HTTP/1.1" 200
+2026-08-12 11:40:22 [ERROR] app.agent.tools: 仪表盘统计 执行失败 [error_id=err_01kzt0x3724s]
+Traceback (most recent call last):
+  File "G:\day10 吴玉祥\尚硅谷大模型项目之风控系统\旅游行业风控系统\app\agent\tools.py", line 43, in _safe_call
+    return await impl(db=db, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "G:\day10 吴玉祥\尚硅谷大模型项目之风控系统\旅游行业风控系统\app\agent\tools.py", line 109, in _dashboard_impl
+    total = (await db.execute(select(func.count()).select_from(RiskAssessment))).scalar() or 0
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "G:\day10 吴玉祥\尚硅谷大模型项目之风控系统\旅游行业风控系统\.venv\Lib\site-packages\sqlalchemy\ext\asyncio\session.py", line 448, in execute
+    result = await greenlet_spawn(
+             ^^^^^^^^^^^^^^^^^^^^^
+  File "G:\day10 吴玉祥\尚硅谷大模型项目之风控系统\旅游行业风控系统\.venv\Lib\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 203, in greenlet_spawn
+    result = context.switch(value)
+             ^^^^^^^^^^^^^^^^^^^^^
+  File "G:\day10 吴玉祥\尚硅谷大模型项目之风控系统\旅游行业风控系统\.venv\Lib\site-packages\sqlalchemy\orm\session.py", line 2373, in execute
+    return self._execute_internal(
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "G:\day10 吴玉祥\尚硅谷大模型项目之风控系统\旅游行业风控系统\.venv\Lib\site-packages\sqlalchemy\orm\session.py", line 2271, in _execute_internal
+    result: Result[Any] = compile_state_cls.orm_execute_statement(
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "G:\day10 吴玉祥\尚硅谷大模型项目之风控系统\旅游行业风控系统\.venv\Lib\site-packages\sqlalchemy\orm\context.py", line 306, in orm_execute_statement
+    result = conn.execute(
+             ^^^^^^^^^^^^^
+  File "G:\day10 吴玉祥\尚硅谷大模型项目之风控系统\旅游行业风控系统\.venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1421, in execute
+    return meth(
+           ^^^^^
+  File "G:\day10 吴玉祥\尚硅谷大模型项目之风控系统\旅游行业风控系统\.venv\Lib\site-packages\sqlalchemy\sql\elements.py", line 526, in _execute_on_connection
+    return connection._execute_clauseelement(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "G:\day10 吴玉祥\尚硅谷大模型项目之风控系统\旅游行业风控系统\.venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1643, in _execute_clauseelement
+    ret = self._execute_context(
+          ^^^^^^^^^^^^^^^^^^^^^^
+  File "G:\day10 吴玉祥\尚硅谷大模型项目之风控系统\旅游行业风控系统\.venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1848, in _execute_context
+    return self._exec_single_context(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "G:\day10 吴玉祥\尚硅谷大模型项目之风控系统\旅游行业风控系统\.venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1988, in _exec_single_context
+    self._handle_dbapi_exception(
+  File "G:\day10 吴玉祥\尚硅谷大模型项目之风控系统\旅游行业风控系统\.venv\Lib\site-packages\sqlalchemy\engine\base.py", line 2368, in _handle_dbapi_exception
+    raise exc_info[1].with_traceback(exc_info[2])
+  File "G:\day10 吴玉祥\尚硅谷大模型项目之风控系统\旅游行业风控系统\.venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1969, in _exec_single_context
+    self.dialect.do_execute(
+  File "G:\day10 吴玉祥\尚硅谷大模型项目之风控系统\旅游行业风控系统\.venv\Lib\site-packages\sqlalchemy\engine\default.py", line 952, in do_execute
+    cursor.execute(statement, parameters)
+  File "G:\day10 吴玉祥\尚硅谷大模型项目之风控系统\旅游行业风控系统\.venv\Lib\site-packages\sqlalchemy\connectors\asyncio.py", line 230, in execute
+    self._adapt_connection._handle_exception(error)
+  File "G:\day10 吴玉祥\尚硅谷大模型项目之风控系统\旅游行业风控系统\.venv\Lib\site-packages\sqlalchemy\connectors\asyncio.py", line 368, in _handle_exception
+    raise error.with_traceback(exc_info[2])
+  File "G:\day10 吴玉祥\尚硅谷大模型项目之风控系统\旅游行业风控系统\.venv\Lib\site-packages\sqlalchemy\connectors\asyncio.py", line 228, in execute
+    return self.await_(self._execute_async(operation, parameters))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "G:\day10 吴玉祥\尚硅谷大模型项目之风控系统\旅游行业风控系统\.venv\Lib\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 132, in await_only
+    return current.parent.switch(awaitable)  # type: ignore[no-any-return,attr-defined] # noqa: E501
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "G:\day10 吴玉祥\尚硅谷大模型项目之风控系统\旅游行业风控系统\.venv\Lib\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 196, in greenlet_spawn
+    value = await result
+            ^^^^^^^^^^^^
+  File "G:\day10 吴玉祥\尚硅谷大模型项目之风控系统\旅游行业风控系统\.venv\Lib\site-packages\sqlalchemy\connectors\asyncio.py", line 251, in _execute_async
+    result = await self._cursor.execute(operation, parameters)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "G:\day10 吴玉祥\尚硅谷大模型项目之风控系统\旅游行业风控系统\.venv\Lib\site-packages\aiomysql\cursors.py", line 239, in execute
+    await self._query(query)
+  File "G:\day10 吴玉祥\尚硅谷大模型项目之风控系统\旅游行业风控系统\.venv\Lib\site-packages\aiomysql\cursors.py", line 457, in _query
+    await conn.query(q)
+  File "G:\day10 吴玉祥\尚硅谷大模型项目之风控系统\旅游行业风控系统\.venv\Lib\site-packages\aiomysql\connection.py", line 469, in query
+    await self._read_query_result(unbuffered=unbuffered)
+  File "G:\day10 吴玉祥\尚硅谷大模型项目之风控系统\旅游行业风控系统\.venv\Lib\site-packages\aiomysql\connection.py", line 683, in _read_query_result
+    await result.read()
+  File "G:\day10 吴玉祥\尚硅谷大模型项目之风控系统\旅游行业风控系统\.venv\Lib\site-packages\aiomysql\connection.py", line 1164, in read
+    first_packet = await self.connection._read_packet()
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "G:\day10 吴玉祥\尚硅谷大模型项目之风控系统\旅游行业风控系统\.venv\Lib\site-packages\aiomysql\connection.py", line 609, in _read_packet
+    packet_header = await self._read_bytes(4)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "G:\day10 吴玉祥\尚硅谷大模型项目之风控系统\旅游行业风控系统\.venv\Lib\site-packages\aiomysql\connection.py", line 657, in _read_bytes
+    data = await self._reader.readexactly(num_bytes)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\kong\AppData\Local\Programs\Python\Python312\Lib\asyncio\streams.py", line 752, in readexactly
+    await self._wait_for_data('readexactly')
+  File "C:\Users\kong\AppData\Local\Programs\Python\Python312\Lib\asyncio\streams.py", line 545, in _wait_for_data
+    await self._waiter
+RuntimeError: Task <Task pending name='Task-22' coro=<_safe_call() running at G:\day10 吴玉祥\尚硅谷大模型项目之风控系统\旅游行业风控系统\app\agent\tools.py:43> cb=[_run_until_complete_cb() at C:\Users\kong\AppData\Local\Programs\Python\Python312\Lib\asyncio\base_events.py:181]> got Future <Future pending> attached to a different loop
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "G:\day10 吴玉祥\尚硅谷大模型项目之风控系统\旅游行业风控系统\app\agent\tools.py", line 42, in _safe_call
+    async with AsyncSessionLocal() as db:
+               ^^^^^^^^^^^^^^^^^^^
+  File "G:\day10 吴玉祥\尚硅谷大模型项目之风控系统\旅游行业风控系统\.venv\Lib\site-packages\sqlalchemy\ext\asyncio\session.py", line 1070, in __aexit__
+    await asyncio.shield(task)
+  File "G:\day10 吴玉祥\尚硅谷大模型项目之风控系统\旅游行业风控系统\.venv\Lib\site-packages\sqlalchemy\ext\asyncio\session.py", line 1015, in close
+    await greenlet_spawn(self.sync_session.close)
+  File "G:\day10 吴玉祥\尚硅谷大模型项目之风控系统\旅游行业风控系统\.venv\Lib\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 201, in greenlet_spawn
+    result = context.throw(*sys.exc_info())
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "G:\day10 吴玉祥\尚硅谷大模型项目之风控系统\旅游行业风控系统\.venv\Lib\site-packages\sqlalchemy\orm\session.py", line 2529, in close
+    self._close_impl(invalidate=False)
+  File "G:\day10 吴玉祥\尚硅谷大模型项目之风控系统\旅游行业风控系统\.venv\Lib\site-packages\sqlalchemy\orm\session.py", line 2598, in _close_impl
+    transaction.close(invalidate)
+  File "<string>", line 2, in close
+  File "G:\day10 吴玉祥\尚硅谷大模型项目之风控系统\旅游行业风控系统\.venv\Lib\site-packages\sqlalchemy\orm\state_changes.py", line 137, in _go
+    ret_value = fn(self, *arg, **kw)
+                ^^^^^^^^^^^^^^^^^^^^
+  File "G:\day10 吴玉祥\尚硅谷大模型项目之风控系统\旅游行业风控系统\.venv\Lib\site-packages\sqlalchemy\orm\session.py", line 1422, in close
+    transaction.close()
+  File "G:\day10 吴玉祥\尚硅谷大模型项目之风控系统\旅游行业风控系统\.venv\Lib\site-packages\sqlalchemy\engine\base.py", line 2599, in close
+    self._do_close()
+  File "G:\day10 吴玉祥\尚硅谷大模型项目之风控系统\旅游行业风控系统\.venv\Lib\site-packages\sqlalchemy\engine\base.py", line 2737, in _do_close
+    self._close_impl()
+  File "G:\day10 吴玉祥\尚硅谷大模型项目之风控系统\旅游行业风控系统\.venv\Lib\site-packages\sqlalchemy\engine\base.py", line 2723, in _close_impl
+    self._connection_rollback_impl()
+  File "G:\day10 吴玉祥\尚硅谷大模型项目之风控系统\旅游行业风控系统\.venv\Lib\site-packages\sqlalchemy\engine\base.py", line 2715, in _connection_rollback_impl
+    self.connection._rollback_impl()
+  File "G:\day10 吴玉祥\尚硅谷大模型项目之风控系统\旅游行业风控系统\.venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1132, in _rollback_impl
+    self._handle_dbapi_exception(e, None, None, None, None)
+  File "G:\day10 吴玉祥\尚硅谷大模型项目之风控系统\旅游行业风控系统\.venv\Lib\site-packages\sqlalchemy\engine\base.py", line 2368, in _handle_dbapi_exception
+    raise exc_info[1].with_traceback(exc_info[2])
+  File "G:\day10 吴玉祥\尚硅谷大模型项目之风控系统\旅游行业风控系统\.venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1130, in _rollback_impl
+    self.engine.dialect.do_rollback(self.connection)
+  File "G:\day10 吴玉祥\尚硅谷大模型项目之风控系统\旅游行业风控系统\.venv\Lib\site-packages\sqlalchemy\engine\default.py", line 712, in do_rollback
+    dbapi_connection.rollback()
+  File "G:\day10 吴玉祥\尚硅谷大模型项目之风控系统\旅游行业风控系统\.venv\Lib\site-packages\sqlalchemy\connectors\asyncio.py", line 374, in rollback
+    self._handle_exception(error)
+  File "G:\day10 吴玉祥\尚硅谷大模型项目之风控系统\旅游行业风控系统\.venv\Lib\site-packages\sqlalchemy\connectors\asyncio.py", line 368, in _handle_exception
+    raise error.with_traceback(exc_info[2])
+  File "G:\day10 吴玉祥\尚硅谷大模型项目之风控系统\旅游行业风控系统\.venv\Lib\site-packages\sqlalchemy\connectors\asyncio.py", line 372, in rollback
+    self.await_(self._connection.rollback())
+  File "G:\day10 吴玉祥\尚硅谷大模型项目之风控系统\旅游行业风控系统\.venv\Lib\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 132, in await_only
+    return current.parent.switch(awaitable)  # type: ignore[no-any-return,attr-defined] # noqa: E501
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "G:\day10 吴玉祥\尚硅谷大模型项目之风控系统\旅游行业风控系统\.venv\Lib\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 196, in greenlet_spawn
+    value = await result
+            ^^^^^^^^^^^^
+  File "G:\day10 吴玉祥\尚硅谷大模型项目之风控系统\旅游行业风控系统\.venv\Lib\site-packages\aiomysql\connection.py", line 399, in rollback
+    await self._read_ok_packet()
+  File "G:\day10 吴玉祥\尚硅谷大模型项目之风控系统\旅游行业风控系统\.venv\Lib\site-packages\aiomysql\connection.py", line 372, in _read_ok_packet
+    pkt = await self._read_packet()
+          ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "G:\day10 吴玉祥\尚硅谷大模型项目之风控系统\旅游行业风控系统\.venv\Lib\site-packages\aiomysql\connection.py", line 609, in _read_packet
+    packet_header = await self._read_bytes(4)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "G:\day10 吴玉祥\尚硅谷大模型项目之风控系统\旅游行业风控系统\.venv\Lib\site-packages\aiomysql\connection.py", line 657, in _read_bytes
+    data = await self._reader.readexactly(num_bytes)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\kong\AppData\Local\Programs\Python\Python312\Lib\asyncio\streams.py", line 752, in readexactly
+    await self._wait_for_data('readexactly')
+  File "C:\Users\kong\AppData\Local\Programs\Python\Python312\Lib\asyncio\streams.py", line 545, in _wait_for_data
+    await self._waiter
+RuntimeError: Task <Task pending name='Task-23' coro=<AsyncSession.close() running at G:\day10 吴玉祥\尚硅谷大模型项目之风控系统\旅游行业风控系统\.venv\Lib\site-packages\sqlalchemy\ext\asyncio\session.py:1015> cb=[shield.<locals>._inner_done_callback() at C:\Users\kong\AppData\Local\Programs\Python\Python312\Lib\asyncio\tasks.py:905]> got Future <Future pending> attached to a different loop
+2026-08-12 11:40:22 [INFO] uvicorn.access: 127.0.0.1:57239 - "GET /api/dashboard/overview HTTP/1.1" 500
+2026-08-12 11:40:24 [INFO] uvicorn.access: 127.0.0.1:57239 - "GET /cases HTTP/1.1" 200
+2026-08-12 11:40:24 [ERROR] sqlalchemy.pool.impl.AsyncAdaptedQueuePool: The garbage collector is trying to clean up non-checked-in connection <AdaptedConnection <aiomysql.connection.Connection object at 0x000001D4563EC410>>, which will be terminated.  Please ensure that SQLAlchemy pooled connections are returned to the pool explicitly, either by calling ``close()`` or by using appropriate context managers to manage their lifecycle.
+2026-08-12 11:40:24 [INFO] uvicorn.access: 127.0.0.1:63230 - "GET /api/cases?page=1&page_size=20&active_only=true HTTP/1.1" 200
+2026-08-12 11:40:24 [INFO] uvicorn.access: 127.0.0.1:57239 - "GET /api/cases/statistics HTTP/1.1" 200
+2026-08-12 11:40:27 [INFO] uvicorn.access: 127.0.0.1:57239 - "GET /assessments HTTP/1.1" 200
+2026-08-12 11:40:27 [INFO] uvicorn.access: 127.0.0.1:57239 - "GET /api/assessments?page=1&page_size=20 HTTP/1.1" 200
+2026-08-12 11:40:28 [INFO] uvicorn.access: 127.0.0.1:57239 - "GET /risk-check HTTP/1.1" 200
+2026-08-12 11:40:30 [INFO] uvicorn.access: 127.0.0.1:57239 - "GET /chat HTTP/1.1" 200
+2026-08-12 11:40:42 [INFO] httpx: HTTP Request: POST https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions "HTTP/1.1 200 OK"
+2026-08-12 11:40:42 [INFO] uvicorn.access: 127.0.0.1:57239 - "POST /api/agent/chat HTTP/1.1" 200
+2026-08-12 11:40:54 [INFO] uvicorn.access: 127.0.0.1:61202 - "GET /risk-check HTTP/1.1" 200
+2026-08-12 11:40:55 [INFO] uvicorn.access: 127.0.0.1:61202 - "GET /assessments HTTP/1.1" 200
+2026-08-12 11:40:55 [INFO] uvicorn.access: 127.0.0.1:61202 - "GET /api/assessments?page=1&page_size=20 HTTP/1.1" 200
+2026-08-12 11:40:58 [INFO] uvicorn.access: 127.0.0.1:61202 - "GET /api/assessments?page=2&page_size=20 HTTP/1.1" 200
+2026-08-12 11:41:00 [INFO] uvicorn.access: 127.0.0.1:61202 - "GET /api/assessments?page=4&page_size=20 HTTP/1.1" 200
+2026-08-12 11:41:01 [INFO] uvicorn.access: 127.0.0.1:61202 - "GET /api/assessments?page=3&page_size=20 HTTP/1.1" 200
+2026-08-12 11:41:02 [INFO] uvicorn.access: 127.0.0.1:61202 - "GET /api/assessments?page=2&page_size=20 HTTP/1.1" 200
+2026-08-12 11:41:04 [INFO] uvicorn.access: 127.0.0.1:61202 - "GET /api/assessments/ast01kzt0jw7bnjmzy0s9tffa50z5 HTTP/1.1" 200
+2026-08-12 11:41:15 [INFO] uvicorn.access: 127.0.0.1:49616 - "GET /api/assessments?page=1&page_size=20 HTTP/1.1" 200
+2026-08-12 11:41:33 [INFO] uvicorn.access: 127.0.0.1:60051 - "GET /cases HTTP/1.1" 200
+2026-08-12 11:41:33 [INFO] uvicorn.access: 127.0.0.1:60051 - "GET /api/cases/statistics HTTP/1.1" 200
+2026-08-12 11:41:33 [INFO] uvicorn.access: 127.0.0.1:60051 - "GET /api/cases?page=1&page_size=20&active_only=true HTTP/1.1" 200
+2026-08-12 11:41:44 [INFO] uvicorn.access: 127.0.0.1:57537 - "GET /api/cases?page=1&page_size=20 HTTP/1.1" 200
+2026-08-12 11:41:47 [INFO] uvicorn.access: 127.0.0.1:57537 - "GET /rules HTTP/1.1" 200
+2026-08-12 11:41:47 [INFO] uvicorn.access: 127.0.0.1:57537 - "GET /api/rules?page=1&page_size=20 HTTP/1.1" 200
+2026-08-12 11:41:50 [INFO] uvicorn.access: 127.0.0.1:57537 - "GET / HTTP/1.1" 200
+2026-08-12 11:41:50 [ERROR] app.agent.tools: 仪表盘统计 执行失败 [error_id=err_01kzt0zsj6fk]
+Traceback (most recent call last):
+  File "G:\day10 吴玉祥\尚硅谷大模型项目之风控系统\旅游行业风控系统\app\agent\tools.py", line 43, in _safe_call
+    return await impl(db=db, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "G:\day10 吴玉祥\尚硅谷大模型项目之风控系统\旅游行业风控系统\app\agent\tools.py", line 109, in _dashboard_impl
+    total = (await db.execute(select(func.count()).select_from(RiskAssessment))).scalar() or 0
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "G:\day10 吴玉祥\尚硅谷大模型项目之风控系统\旅游行业风控系统\.venv\Lib\site-packages\sqlalchemy\ext\asyncio\session.py", line 448, in execute
+    result = await greenlet_spawn(
+             ^^^^^^^^^^^^^^^^^^^^^
+  File "G:\day10 吴玉祥\尚硅谷大模型项目之风控系统\旅游行业风控系统\.venv\Lib\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 203, in greenlet_spawn
+    result = context.switch(value)
+             ^^^^^^^^^^^^^^^^^^^^^
+  File "G:\day10 吴玉祥\尚硅谷大模型项目之风控系统\旅游行业风控系统\.venv\Lib\site-packages\sqlalchemy\orm\session.py", line 2373, in execute
+    return self._execute_internal(
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "G:\day10 吴玉祥\尚硅谷大模型项目之风控系统\旅游行业风控系统\.venv\Lib\site-packages\sqlalchemy\orm\session.py", line 2271, in _execute_internal
+    result: Result[Any] = compile_state_cls.orm_execute_statement(
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "G:\day10 吴玉祥\尚硅谷大模型项目之风控系统\旅游行业风控系统\.venv\Lib\site-packages\sqlalchemy\orm\context.py", line 306, in orm_execute_statement
+    result = conn.execute(
+             ^^^^^^^^^^^^^
+  File "G:\day10 吴玉祥\尚硅谷大模型项目之风控系统\旅游行业风控系统\.venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1421, in execute
+    return meth(
+           ^^^^^
+  File "G:\day10 吴玉祥\尚硅谷大模型项目之风控系统\旅游行业风控系统\.venv\Lib\site-packages\sqlalchemy\sql\elements.py", line 526, in _execute_on_connection
+    return connection._execute_clauseelement(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "G:\day10 吴玉祥\尚硅谷大模型项目之风控系统\旅游行业风控系统\.venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1643, in _execute_clauseelement
+    ret = self._execute_context(
+          ^^^^^^^^^^^^^^^^^^^^^^
+  File "G:\day10 吴玉祥\尚硅谷大模型项目之风控系统\旅游行业风控系统\.venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1848, in _execute_context
+    return self._exec_single_context(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "G:\day10 吴玉祥\尚硅谷大模型项目之风控系统\旅游行业风控系统\.venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1988, in _exec_single_context
+    self._handle_dbapi_exception(
+  File "G:\day10 吴玉祥\尚硅谷大模型项目之风控系统\旅游行业风控系统\.venv\Lib\site-packages\sqlalchemy\engine\base.py", line 2368, in _handle_dbapi_exception
+    raise exc_info[1].with_traceback(exc_info[2])
+  File "G:\day10 吴玉祥\尚硅谷大模型项目之风控系统\旅游行业风控系统\.venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1969, in _exec_single_context
+    self.dialect.do_execute(
+  File "G:\day10 吴玉祥\尚硅谷大模型项目之风控系统\旅游行业风控系统\.venv\Lib\site-packages\sqlalchemy\engine\default.py", line 952, in do_execute
+    cursor.execute(statement, parameters)
+  File "G:\day10 吴玉祥\尚硅谷大模型项目之风控系统\旅游行业风控系统\.venv\Lib\site-packages\sqlalchemy\connectors\asyncio.py", line 230, in execute
+    self._adapt_connection._handle_exception(error)
+  File "G:\day10 吴玉祥\尚硅谷大模型项目之风控系统\旅游行业风控系统\.venv\Lib\site-packages\sqlalchemy\connectors\asyncio.py", line 368, in _handle_exception
+    raise error.with_traceback(exc_info[2])
+  File "G:\day10 吴玉祥\尚硅谷大模型项目之风控系统\旅游行业风控系统\.venv\Lib\site-packages\sqlalchemy\connectors\asyncio.py", line 228, in execute
+    return self.await_(self._execute_async(operation, parameters))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "G:\day10 吴玉祥\尚硅谷大模型项目之风控系统\旅游行业风控系统\.venv\Lib\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 132, in await_only
+    return current.parent.switch(awaitable)  # type: ignore[no-any-return,attr-defined] # noqa: E501
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "G:\day10 吴玉祥\尚硅谷大模型项目之风控系统\旅游行业风控系统\.venv\Lib\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 196, in greenlet_spawn
+    value = await result
+            ^^^^^^^^^^^^
+  File "G:\day10 吴玉祥\尚硅谷大模型项目之风控系统\旅游行业风控系统\.venv\Lib\site-packages\sqlalchemy\connectors\asyncio.py", line 251, in _execute_async
+    result = await self._cursor.execute(operation, parameters)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "G:\day10 吴玉祥\尚硅谷大模型项目之风控系统\旅游行业风控系统\.venv\Lib\site-packages\aiomysql\cursors.py", line 239, in execute
+    await self._query(query)
+  File "G:\day10 吴玉祥\尚硅谷大模型项目之风控系统\旅游行业风控系统\.venv\Lib\site-packages\aiomysql\cursors.py", line 457, in _query
+    await conn.query(q)
+  File "G:\day10 吴玉祥\尚硅谷大模型项目之风控系统\旅游行业风控系统\.venv\Lib\site-packages\aiomysql\connection.py", line 469, in query
+    await self._read_query_result(unbuffered=unbuffered)
+  File "G:\day10 吴玉祥\尚硅谷大模型项目之风控系统\旅游行业风控系统\.venv\Lib\site-packages\aiomysql\connection.py", line 683, in _read_query_result
+    await result.read()
+  File "G:\day10 吴玉祥\尚硅谷大模型项目之风控系统\旅游行业风控系统\.venv\Lib\site-packages\aiomysql\connection.py", line 1164, in read
+    first_packet = await self.connection._read_packet()
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "G:\day10 吴玉祥\尚硅谷大模型项目之风控系统\旅游行业风控系统\.venv\Lib\site-packages\aiomysql\connection.py", line 609, in _read_packet
+    packet_header = await self._read_bytes(4)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "G:\day10 吴玉祥\尚硅谷大模型项目之风控系统\旅游行业风控系统\.venv\Lib\site-packages\aiomysql\connection.py", line 657, in _read_bytes
+    data = await self._reader.readexactly(num_bytes)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\kong\AppData\Local\Programs\Python\Python312\Lib\asyncio\streams.py", line 752, in readexactly
+    await self._wait_for_data('readexactly')
+  File "C:\Users\kong\AppData\Local\Programs\Python\Python312\Lib\asyncio\streams.py", line 545, in _wait_for_data
+    await self._waiter
+RuntimeError: Task <Task pending name='Task-72' coro=<_safe_call() running at G:\day10 吴玉祥\尚硅谷大模型项目之风控系统\旅游行业风控系统\app\agent\tools.py:43> cb=[_run_until_complete_cb() at C:\Users\kong\AppData\Local\Programs\Python\Python312\Lib\asyncio\base_events.py:181]> got Future <Future pending> attached to a different loop
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "G:\day10 吴玉祥\尚硅谷大模型项目之风控系统\旅游行业风控系统\app\agent\tools.py", line 42, in _safe_call
+    async with AsyncSessionLocal() as db:
+               ^^^^^^^^^^^^^^^^^^^
+  File "G:\day10 吴玉祥\尚硅谷大模型项目之风控系统\旅游行业风控系统\.venv\Lib\site-packages\sqlalchemy\ext\asyncio\session.py", line 1070, in __aexit__
+    await asyncio.shield(task)
+  File "G:\day10 吴玉祥\尚硅谷大模型项目之风控系统\旅游行业风控系统\.venv\Lib\site-packages\sqlalchemy\ext\asyncio\session.py", line 1015, in close
+    await greenlet_spawn(self.sync_session.close)
+  File "G:\day10 吴玉祥\尚硅谷大模型项目之风控系统\旅游行业风控系统\.venv\Lib\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 201, in greenlet_spawn
+    result = context.throw(*sys.exc_info())
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "G:\day10 吴玉祥\尚硅谷大模型项目之风控系统\旅游行业风控系统\.venv\Lib\site-packages\sqlalchemy\orm\session.py", line 2529, in close
+    self._close_impl(invalidate=False)
+  File "G:\day10 吴玉祥\尚硅谷大模型项目之风控系统\旅游行业风控系统\.venv\Lib\site-packages\sqlalchemy\orm\session.py", line 2598, in _close_impl
+    transaction.close(invalidate)
+  File "<string>", line 2, in close
+  File "G:\day10 吴玉祥\尚硅谷大模型项目之风控系统\旅游行业风控系统\.venv\Lib\site-packages\sqlalchemy\orm\state_changes.py", line 137, in _go
+    ret_value = fn(self, *arg, **kw)
+                ^^^^^^^^^^^^^^^^^^^^
+  File "G:\day10 吴玉祥\尚硅谷大模型项目之风控系统\旅游行业风控系统\.venv\Lib\site-packages\sqlalchemy\orm\session.py", line 1422, in close
+    transaction.close()
+  File "G:\day10 吴玉祥\尚硅谷大模型项目之风控系统\旅游行业风控系统\.venv\Lib\site-packages\sqlalchemy\engine\base.py", line 2599, in close
+    self._do_close()
+  File "G:\day10 吴玉祥\尚硅谷大模型项目之风控系统\旅游行业风控系统\.venv\Lib\site-packages\sqlalchemy\engine\base.py", line 2737, in _do_close
+    self._close_impl()
+  File "G:\day10 吴玉祥\尚硅谷大模型项目之风控系统\旅游行业风控系统\.venv\Lib\site-packages\sqlalchemy\engine\base.py", line 2723, in _close_impl
+    self._connection_rollback_impl()
+  File "G:\day10 吴玉祥\尚硅谷大模型项目之风控系统\旅游行业风控系统\.venv\Lib\site-packages\sqlalchemy\engine\base.py", line 2715, in _connection_rollback_impl
+    self.connection._rollback_impl()
+  File "G:\day10 吴玉祥\尚硅谷大模型项目之风控系统\旅游行业风控系统\.venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1132, in _rollback_impl
+    self._handle_dbapi_exception(e, None, None, None, None)
+  File "G:\day10 吴玉祥\尚硅谷大模型项目之风控系统\旅游行业风控系统\.venv\Lib\site-packages\sqlalchemy\engine\base.py", line 2368, in _handle_dbapi_exception
+    raise exc_info[1].with_traceback(exc_info[2])
+  File "G:\day10 吴玉祥\尚硅谷大模型项目之风控系统\旅游行业风控系统\.venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1130, in _rollback_impl
+    self.engine.dialect.do_rollback(self.connection)
+  File "G:\day10 吴玉祥\尚硅谷大模型项目之风控系统\旅游行业风控系统\.venv\Lib\site-packages\sqlalchemy\engine\default.py", line 712, in do_rollback
+    dbapi_connection.rollback()
+  File "G:\day10 吴玉祥\尚硅谷大模型项目之风控系统\旅游行业风控系统\.venv\Lib\site-packages\sqlalchemy\connectors\asyncio.py", line 374, in rollback
+    self._handle_exception(error)
+  File "G:\day10 吴玉祥\尚硅谷大模型项目之风控系统\旅游行业风控系统\.venv\Lib\site-packages\sqlalchemy\connectors\asyncio.py", line 368, in _handle_exception
+    raise error.with_traceback(exc_info[2])
+  File "G:\day10 吴玉祥\尚硅谷大模型项目之风控系统\旅游行业风控系统\.venv\Lib\site-packages\sqlalchemy\connectors\asyncio.py", line 372, in rollback
+    self.await_(self._connection.rollback())
+  File "G:\day10 吴玉祥\尚硅谷大模型项目之风控系统\旅游行业风控系统\.venv\Lib\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 132, in await_only
+    return current.parent.switch(awaitable)  # type: ignore[no-any-return,attr-defined] # noqa: E501
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "G:\day10 吴玉祥\尚硅谷大模型项目之风控系统\旅游行业风控系统\.venv\Lib\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 196, in greenlet_spawn
+    value = await result
+            ^^^^^^^^^^^^
+  File "G:\day10 吴玉祥\尚硅谷大模型项目之风控系统\旅游行业风控系统\.venv\Lib\site-packages\aiomysql\connection.py", line 399, in rollback
+    await self._read_ok_packet()
+  File "G:\day10 吴玉祥\尚硅谷大模型项目之风控系统\旅游行业风控系统\.venv\Lib\site-packages\aiomysql\connection.py", line 372, in _read_ok_packet
+    pkt = await self._read_packet()
+          ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "G:\day10 吴玉祥\尚硅谷大模型项目之风控系统\旅游行业风控系统\.venv\Lib\site-packages\aiomysql\connection.py", line 609, in _read_packet
+    packet_header = await self._read_bytes(4)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "G:\day10 吴玉祥\尚硅谷大模型项目之风控系统\旅游行业风控系统\.venv\Lib\site-packages\aiomysql\connection.py", line 657, in _read_bytes
+    data = await self._reader.readexactly(num_bytes)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\kong\AppData\Local\Programs\Python\Python312\Lib\asyncio\streams.py", line 752, in readexactly
+    await self._wait_for_data('readexactly')
+  File "C:\Users\kong\AppData\Local\Programs\Python\Python312\Lib\asyncio\streams.py", line 545, in _wait_for_data
+    await self._waiter
+RuntimeError: Task <Task pending name='Task-73' coro=<AsyncSession.close() running at G:\day10 吴玉祥\尚硅谷大模型项目之风控系统\旅游行业风控系统\.venv\Lib\site-packages\sqlalchemy\ext\asyncio\session.py:1015> cb=[shield.<locals>._inner_done_callback() at C:\Users\kong\AppData\Local\Programs\Python\Python312\Lib\asyncio\tasks.py:905]> got Future <Future pending> attached to a different loop
+2026-08-12 11:41:50 [INFO] uvicorn.access: 127.0.0.1:57537 - "GET /api/dashboard/overview HTTP/1.1" 500
+2026-08-12 11:44:11 [INFO] uvicorn.error: Shutting down
+2026-08-12 11:44:11 [INFO] uvicorn.error: Waiting for application shutdown.
+2026-08-12 11:44:11 [INFO] app.scheduler: [scheduled] 停止
+2026-08-12 11:44:11 [INFO] app.scheduler: [scheduled] stop_scheduler() 完成
+2026-08-12 11:44:11 [INFO] uvicorn.error: Application shutdown complete.
+2026-08-12 11:44:11 [INFO] uvicorn.error: Finished server process [5256]
+2026-08-12 11:44:29 [ERROR] sqlalchemy.pool.impl.AsyncAdaptedQueuePool: Exception terminating connection <AdaptedConnection <aiomysql.connection.Connection object at 0x000001D4563ED040>>
+Traceback (most recent call last):
+  File "G:\day10 吴玉祥\尚硅谷大模型项目之风控系统\旅游行业风控系统\.venv\Lib\site-packages\sqlalchemy\pool\base.py", line 373, in _close_connection
+    self._dialect.do_terminate(connection)
+  File "G:\day10 吴玉祥\尚硅谷大模型项目之风控系统\旅游行业风控系统\.venv\Lib\site-packages\sqlalchemy\dialects\mysql\aiomysql.py", line 242, in do_terminate
+    dbapi_connection.terminate()
+  File "G:\day10 吴玉祥\尚硅谷大模型项目之风控系统\旅游行业风控系统\.venv\Lib\site-packages\sqlalchemy\connectors\asyncio.py", line 398, in terminate
+    if in_greenlet():
+       ^^^^^^^^^^^^^
+  File "G:\day10 吴玉祥\尚硅谷大模型项目之风控系统\旅游行业风控系统\.venv\Lib\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 105, in in_greenlet
+    current = getcurrent()
+              ^^^^^^^^^^^^
+RuntimeError: greenlet is being finalized
+2026-08-12 11:44:29 [ERROR] sqlalchemy.pool.impl.AsyncAdaptedQueuePool: The garbage collector is trying to clean up non-checked-in connection <AdaptedConnection <aiomysql.connection.Connection object at 0x000001D4563ED040>>, which will be terminated.  Please ensure that SQLAlchemy pooled connections are returned to the pool explicitly, either by calling ``close()`` or by using appropriate context managers to manage their lifecycle.
+2026-08-12 11:44:57 [INFO] uvicorn.error: Started server process [5636]
+2026-08-12 11:44:57 [INFO] uvicorn.error: Waiting for application startup.
+2026-08-12 11:44:57 [INFO] app.scheduler: [scheduled] 启动: 间隔 15 分钟 (案件超时 + 告警检查)
+2026-08-12 11:44:57 [INFO] uvicorn.error: Application startup complete.
+2026-08-12 11:44:57 [INFO] uvicorn.error: Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+2026-08-12 11:44:57 [WARNING] app.service.alert: ALERT [P1 BUSINESS] 待审核案件积压 | 当前 61 个待审核案件, 超过阈值 50, 请及时处理 (metric=pending_case_count, value=61.0, threshold=50.0)
+2026-08-12 11:44:57 [INFO] app.scheduler: [scheduled] 本轮: 关案 0, 告警 1, 错误 0
+2026-08-12 11:45:02 [INFO] uvicorn.access: 127.0.0.1:51887 - "GET / HTTP/1.1" 200
+2026-08-12 11:45:02 [INFO] uvicorn.access: 127.0.0.1:51887 - "GET /api/dashboard/overview HTTP/1.1" 200
+2026-08-12 11:45:18 [INFO] uvicorn.access: 127.0.0.1:65512 - "GET /rules HTTP/1.1" 200
+2026-08-12 11:45:18 [INFO] uvicorn.access: 127.0.0.1:65512 - "GET /api/rules?page=1&page_size=20 HTTP/1.1" 200
+2026-08-12 11:45:19 [INFO] uvicorn.access: 127.0.0.1:65512 - "GET /cases HTTP/1.1" 200
+2026-08-12 11:45:19 [INFO] uvicorn.access: 127.0.0.1:65512 - "GET /api/cases/statistics HTTP/1.1" 200
+2026-08-12 11:45:19 [INFO] uvicorn.access: 127.0.0.1:50085 - "GET /api/cases?page=1&page_size=20&active_only=true HTTP/1.1" 200
+2026-08-12 11:45:20 [INFO] uvicorn.access: 127.0.0.1:50085 - "GET /assessments HTTP/1.1" 200
+2026-08-12 11:45:20 [INFO] uvicorn.access: 127.0.0.1:50085 - "GET /api/assessments?page=1&page_size=20 HTTP/1.1" 200
+2026-08-12 11:45:48 [INFO] uvicorn.access: 127.0.0.1:63845 - "GET /risk-check HTTP/1.1" 200
+2026-08-12 11:45:50 [INFO] uvicorn.access: 127.0.0.1:63845 - "GET /cases HTTP/1.1" 200
+2026-08-12 11:45:50 [INFO] uvicorn.access: 127.0.0.1:52627 - "GET /api/cases?page=1&page_size=20&active_only=true HTTP/1.1" 200
+2026-08-12 11:45:50 [INFO] uvicorn.access: 127.0.0.1:63845 - "GET /api/cases/statistics HTTP/1.1" 200
+2026-08-12 11:45:52 [INFO] uvicorn.access: 127.0.0.1:63845 - "GET /rules HTTP/1.1" 200
+2026-08-12 11:45:52 [INFO] uvicorn.access: 127.0.0.1:63845 - "GET /api/rules?page=1&page_size=20 HTTP/1.1" 200
+2026-08-12 11:45:56 [INFO] uvicorn.access: 127.0.0.1:63845 - "GET / HTTP/1.1" 200
+2026-08-12 11:45:57 [INFO] uvicorn.access: 127.0.0.1:63845 - "GET /api/dashboard/overview HTTP/1.1" 200
+2026-08-12 11:49:43 [INFO] uvicorn.error: Shutting down
+2026-08-12 11:49:43 [INFO] uvicorn.error: Waiting for application shutdown.
+2026-08-12 11:49:44 [INFO] app.scheduler: [scheduled] 停止
+2026-08-12 11:49:44 [INFO] app.scheduler: [scheduled] stop_scheduler() 完成
+2026-08-12 11:49:44 [INFO] uvicorn.error: Application shutdown complete.
+2026-08-12 11:49:44 [INFO] uvicorn.error: Finished server process [5636]
+2026-08-12 11:50:27 [INFO] uvicorn.error: Started server process [164]
+2026-08-12 11:50:27 [INFO] uvicorn.error: Waiting for application startup.
+2026-08-12 11:50:27 [INFO] app.scheduler: [scheduled] 启动: 间隔 15 分钟 (案件超时 + 告警检查)
+2026-08-12 11:50:27 [INFO] uvicorn.error: Application startup complete.
+2026-08-12 11:50:27 [INFO] uvicorn.error: Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+2026-08-12 11:50:27 [WARNING] app.service.alert: ALERT [P1 BUSINESS] 待审核案件积压 | 当前 61 个待审核案件, 超过阈值 50, 请及时处理 (metric=pending_case_count, value=61.0, threshold=50.0)
+2026-08-12 11:50:28 [INFO] app.scheduler: [scheduled] 本轮: 关案 0, 告警 1, 错误 0
+2026-08-12 11:50:33 [INFO] uvicorn.access: 127.0.0.1:57526 - "GET / HTTP/1.1" 200
+2026-08-12 11:50:33 [INFO] uvicorn.access: 127.0.0.1:57526 - "GET /static/app.js?v=20260808v4 HTTP/1.1" 200
+2026-08-12 11:50:33 [INFO] uvicorn.access: 127.0.0.1:57526 - "GET /api/dashboard/overview HTTP/1.1" 200
+2026-08-12 11:50:38 [INFO] uvicorn.access: 127.0.0.1:57526 - "GET /rules HTTP/1.1" 200
+2026-08-12 11:50:38 [INFO] uvicorn.access: 127.0.0.1:57526 - "GET /api/rules?page=1&page_size=20 HTTP/1.1" 200
+2026-08-12 11:50:45 [INFO] uvicorn.access: 127.0.0.1:63459 - "GET /cases HTTP/1.1" 200
+2026-08-12 11:50:45 [INFO] uvicorn.access: 127.0.0.1:63459 - "GET /api/cases/statistics HTTP/1.1" 200
+2026-08-12 11:50:45 [INFO] uvicorn.access: 127.0.0.1:62051 - "GET /api/cases?page=1&page_size=20&active_only=true HTTP/1.1" 200
+2026-08-12 11:50:55 [INFO] uvicorn.access: 127.0.0.1:56328 - "GET /assessments HTTP/1.1" 200
+2026-08-12 11:50:55 [INFO] uvicorn.access: 127.0.0.1:56328 - "GET /static/app.js?v=20260808v4 HTTP/1.1" 304
+2026-08-12 11:50:55 [INFO] uvicorn.access: 127.0.0.1:56328 - "GET /api/assessments?page=1&page_size=20 HTTP/1.1" 200
+2026-08-12 11:50:55 [INFO] uvicorn.access: 127.0.0.1:56328 - "GET /risk-check HTTP/1.1" 200
+2026-08-12 11:50:56 [INFO] uvicorn.access: 127.0.0.1:56328 - "GET /assessments HTTP/1.1" 200
+2026-08-12 11:50:56 [INFO] uvicorn.access: 127.0.0.1:56328 - "GET /api/assessments?page=1&page_size=20 HTTP/1.1" 200
+2026-08-12 11:50:57 [INFO] uvicorn.access: 127.0.0.1:56328 - "GET /cases HTTP/1.1" 200
+2026-08-12 11:50:57 [INFO] uvicorn.access: 127.0.0.1:60746 - "GET /api/cases?page=1&page_size=20&active_only=true HTTP/1.1" 200
+2026-08-12 11:50:57 [INFO] uvicorn.access: 127.0.0.1:56328 - "GET /api/cases/statistics HTTP/1.1" 200
+2026-08-12 11:51:51 [INFO] uvicorn.access: 127.0.0.1:53318 - "GET /assessments HTTP/1.1" 200
+2026-08-12 11:51:51 [INFO] uvicorn.access: 127.0.0.1:53318 - "GET /static/app.js?v=20260808v4 HTTP/1.1" 304
+2026-08-12 11:51:51 [INFO] uvicorn.access: 127.0.0.1:53318 - "GET /api/assessments?page=1&page_size=20 HTTP/1.1" 200
+2026-08-12 12:05:37 [WARNING] app.service.alert: ALERT [P1 BUSINESS] 待审核案件积压 | 当前 61 个待审核案件, 超过阈值 50, 请及时处理 (metric=pending_case_count, value=61.0, threshold=50.0)
+2026-08-12 12:05:37 [INFO] app.scheduler: [scheduled] 本轮: 关案 0, 告警 1, 错误 0
+2026-08-12 12:20:45 [WARNING] app.service.alert: ALERT [P1 BUSINESS] 待审核案件积压 | 当前 61 个待审核案件, 超过阈值 50, 请及时处理 (metric=pending_case_count, value=61.0, threshold=50.0)
+2026-08-12 12:20:45 [INFO] app.scheduler: [scheduled] 本轮: 关案 0, 告警 1, 错误 0
+2026-08-12 12:35:54 [WARNING] app.service.alert: ALERT [P1 BUSINESS] 待审核案件积压 | 当前 61 个待审核案件, 超过阈值 50, 请及时处理 (metric=pending_case_count, value=61.0, threshold=50.0)
+2026-08-12 12:35:54 [INFO] app.scheduler: [scheduled] 本轮: 关案 0, 告警 1, 错误 0
+2026-08-12 12:51:03 [WARNING] app.service.alert: ALERT [P1 BUSINESS] 待审核案件积压 | 当前 61 个待审核案件, 超过阈值 50, 请及时处理 (metric=pending_case_count, value=61.0, threshold=50.0)
+2026-08-12 12:51:03 [INFO] app.scheduler: [scheduled] 本轮: 关案 0, 告警 1, 错误 0
+2026-08-12 13:06:11 [WARNING] app.service.alert: ALERT [P1 BUSINESS] 待审核案件积压 | 当前 61 个待审核案件, 超过阈值 50, 请及时处理 (metric=pending_case_count, value=61.0, threshold=50.0)
+2026-08-12 13:06:11 [INFO] app.scheduler: [scheduled] 本轮: 关案 0, 告警 1, 错误 0
