@@ -27,21 +27,21 @@ class TestFeatureColumns:
         assert len(ml_model.FEATURE_COLUMNS) == 25
 
     def test_feature_prefixes(self):
-        """14 user_* + 8 order_* + 3 addr_* (align with feature.py naming)"""
+        """10 user_* + 8 order_* + 7 addr_* (align with feature.py naming)"""
         user = [c for c in ml_model.FEATURE_COLUMNS if c.startswith("user_")]
         order = [c for c in ml_model.FEATURE_COLUMNS if c.startswith("order_")]
         addr = [c for c in ml_model.FEATURE_COLUMNS if c.startswith("addr_")]
-        assert len(user) == 14, f"user features should be 14, got {len(user)}"
+        assert len(user) == 10, f"user features should be 10, got {len(user)}"
         assert len(order) == 8, f"order features should be 8, got {len(order)}"
-        assert len(addr) == 3, f"addr features should be 3, got {len(addr)}"
+        assert len(addr) == 7, f"addr features should be 7, got {len(addr)}"
 
     def test_features_to_array(self):
         """dict -> 1x25 ndarray, missing filled with 0, string -> float"""
         features = {
-            "user_total_orders": 10,         # 0
-            "user_orders_30d": 3,            # 1
+            "user_account_age_days": 10,      # 0
+            "user_real_name_verified": 3,     # 1
             # intentionally omit 22 middle keys -> 0
-            "addr_is_new": 0,                # 24 (last in FEATURE_COLUMNS)
+            "addr_sender_is_blacklisted": 0,  # 24 (last in FEATURE_COLUMNS)
         }
         arr = ml_model._features_to_array(features)
         assert arr.shape == (1, 25)
@@ -59,36 +59,36 @@ class TestFeatureColumns:
         causing XGBoost train/inference degraded to 0-imputation" bug (found 2026-08-07).
         If feature.py renames/reorders features, must sync this list.
         """
-        # 14 user + 8 order + 3 addr, aligned with feature.py's 3 feat_funcs dict order
+        # 10 user + 8 order + 7 addr, aligned with feature.py's 3 compute_* dict order
         expected = [
-            # --- 14 user features (compute_user_features) ---
-            "user_total_orders",
-            "user_orders_30d",
-            "user_orders_7d",
-            "user_total_amount",
-            "user_avg_order_amount",
-            "user_max_order_amount",
-            "user_refund_count",
-            "user_postsale_count",
-            "user_refund_rate",
-            "user_postsale_rate",
-            "user_refund_amount",
-            "user_cancel_count",
-            "user_complaint_count",
-            "user_address_count",
-            # --- 8 order features (compute_order_features) ---
-            "order_total_amount",
-            "order_item_count",
-            "order_sku_count",
-            "order_discount_amount",
-            "order_discount_rate",
-            "order_pay_interval_sec",
-            "order_is_night",
-            "order_category_count",
-            # --- 3 addr features (compute_address_features) ---
-            "addr_total_count",
-            "addr_province_count",
-            "addr_is_new",
+            # --- 10 user features (compute_user_features, 寄件人维度) ---
+            "user_account_age_days",
+            "user_real_name_verified",
+            "user_is_enterprise",
+            "user_total_parcel_count",
+            "user_total_parcel_count_30d",
+            "user_total_parcel_count_7d",
+            "user_avg_declared_value",
+            "user_distinct_receiver_count",
+            "user_cod_overdue_count",
+            "user_blacklist_hit_count",
+            # --- 8 order features (compute_order_features, 包裹维度) ---
+            "order_weight_kg",
+            "order_declared_value",
+            "order_value_per_kg",
+            "order_piece_count",
+            "order_is_international",
+            "order_is_dangerous_declared",
+            "order_has_cod",
+            "order_cod_amount",
+            # --- 7 addr features (compute_address_features, 地址维度) ---
+            "addr_sender_province",
+            "addr_receiver_province",
+            "addr_is_cross_province",
+            "addr_same_address_sender_count_24h",
+            "addr_address_blacklist_hit",
+            "addr_is_proxy_received",
+            "addr_sender_is_blacklisted",
         ]
         assert ml_model.FEATURE_COLUMNS == expected, (
             "FEATURE_COLUMNS not aligned with the 25 keys computed by feature.py. "
@@ -118,41 +118,40 @@ class TestModelLoad:
 
         # 2. 准备一组"正常用户"特征 (低值, 期望 → 通过/标记)
         normal_features = {
-            "user_total_orders": 5,
-            "user_orders_30d": 1,
-            "user_orders_7d": 0,
-            "user_total_amount": 2000.0,
-            "user_avg_order_amount": 400.0,
-            "user_max_order_amount": 800.0,
-            "user_refund_count": 0,
-            "user_postsale_count": 0,
-            "user_refund_rate": 0.0,
-            "user_postsale_rate": 0.0,
-            "user_refund_amount": 0,
-            "user_cancel_count": 0,
-            "user_complaint_count": 0,
-            "user_address_count": 1,
-            "order_total_amount": 200.0,
-            "order_item_count": 1,
-            "order_sku_count": 1,
-            "order_discount_amount": 0,
-            "order_discount_rate": 0.0,
-            "order_pay_interval_sec": 60,
-            "order_is_night": 0,
-            "order_category_count": 1,
-            "addr_total_count": 1,
-            "addr_province_count": 1,
-            "addr_is_new": 0,
+            # ---- 用户维度 ----
+            "user_account_age_days": 400.0, "user_real_name_verified": 1.0,
+            "user_is_enterprise": 0.0, "user_total_parcel_count": 12,
+            "user_total_parcel_count_30d": 3, "user_total_parcel_count_7d": 1,
+            "user_avg_declared_value": 350.0, "user_distinct_receiver_count": 4,
+            "user_cod_overdue_count": 0, "user_blacklist_hit_count": 0,
+            # ---- 包裹维度 ----
+            "order_weight_kg": 2.5, "order_declared_value": 800.0,
+            "order_value_per_kg": 320.0, "order_piece_count": 3,
+            "order_is_international": 0.0, "order_is_dangerous_declared": 0.0,
+            "order_has_cod": 1.0, "order_cod_amount": 800.0,
+            # ---- 地址维度 ----
+            "addr_sender_province": 11.0, "addr_receiver_province": 19.0,
+            "addr_is_cross_province": 1.0, "addr_same_address_sender_count_24h": 1.0,
+            "addr_address_blacklist_hit": 0.0, "addr_is_proxy_received": 0.0,
+            "addr_sender_is_blacklisted": 0.0,
         }
         # 3. 准备一组"高风险用户"特征 (强信号, 期望 → 人工审核/拒绝)
         risky_features = dict(normal_features)
         risky_features.update({
-            "user_total_orders": 200,
-            "user_orders_30d": 80,
-            "user_total_amount": 80000.0,
-            "user_refund_count": 150,
-            "user_refund_rate": 0.95,
-            "user_complaint_count": 10,
+            "user_account_age_days": 30.0,     # 新账号
+            "user_real_name_verified": 0.0,    # 未实名
+            "user_total_parcel_count": 500,
+            "user_total_parcel_count_30d": 200,
+            "user_cod_overdue_count": 30,      # COD 大量逾期
+            "user_blacklist_hit_count": 5,     # 多次命中黑名单
+            "order_declared_value": 30000.0,   # 大额申报
+            "order_value_per_kg": 30000.0,     # 超高单位价值 (可疑)
+            "order_is_international": 1.0,     # 国际件
+            "order_is_dangerous_declared": 1.0,  # 危险品
+            "addr_same_address_sender_count_24h": 15.0,  # 同地址大量不同寄件人
+            "addr_address_blacklist_hit": 1.0,
+            "addr_is_proxy_received": 1.0,
+            "addr_sender_is_blacklisted": 1.0,
         })
 
         # 4. 推理 + 打印
@@ -188,9 +187,9 @@ class TestPredict:
     def test_predict_normal_user(self):
         """Normal user (low 25-dim features) -> reject probability low -> decision 'pass'"""
         result = ml_model.predict({
-            "user_total_orders": 5,
-            "user_orders_30d": 0,
-            "order_total_amount": 100,
+            "user_total_parcel_count": 5,
+            "user_total_parcel_count_7d": 0,
+            "order_declared_value": 100,
         })
         assert 0.0 <= result.score <= 1.0
         # Normal user should be decided as "pass"
@@ -203,36 +202,36 @@ class TestPredict:
         之前只填 5 维 (其他 20 维默认 0), 跟训练分布偏离大, 模型预测失真.
         修法: 用全 25 维特征 + 把"高风险信号"叠加在关键特征上, 让模型能在训练分布内识别."""
         from app.engine.ml_model import FEATURE_COLUMNS
-        # 高风险用户: 25 维全部填, 高退款率/短间隔/大额/夜单
+        # 高风险用户: 25 维全部填, 高风险信号叠加 (未实名/COD逾期/大额申报/国际件/危险品/黑名单)
         risky = {
-            # 用户画像 (高退款 + 多售后)
-            "user_total_orders": 200,
-            "user_orders_30d": 100,
-            "user_orders_7d": 50,
-            "user_total_amount": 800000,       # 80w 累计
-            "user_avg_order_amount": 4000,
-            "user_max_order_amount": 50000,   # 5w 单笔
-            "user_refund_count": 180,         # 90% 退款率
-            "user_postsale_count": 120,
-            "user_refund_rate": 0.9,
-            "user_postsale_rate": 0.6,
-            "user_refund_amount": 700000,     # 退款金额也很高
-            "user_cancel_count": 50,
-            "user_complaint_count": 30,
-            "user_address_count": 8,          # 多地址 (可疑)
-            # 订单特征 (大额 + 短间隔 + 夜单 + 多品类)
-            "order_total_amount": 50000,
-            "order_item_count": 5,
-            "order_sku_count": 5,
-            "order_discount_amount": 49000,   # 几乎不打折
-            "order_discount_rate": 0.02,
-            "order_pay_interval_sec": 30,     # 30s 内支付 (极短)
-            "order_is_night": 1,              # 凌晨下单
-            "order_category_count": 5,
-            # 地址特征
-            "addr_total_count": 8,
-            "addr_province_count": 3,         # 跨省 (可疑)
-            "addr_is_new": 1,                  # 新地址
+            # ---- 用户维度 ----
+            "user_account_age_days": 30.0,       # 新账号 (可疑)
+            "user_real_name_verified": 0.0,      # 未实名
+            "user_is_enterprise": 0.0,
+            "user_total_parcel_count": 500,
+            "user_total_parcel_count_30d": 200,
+            "user_total_parcel_count_7d": 80,
+            "user_avg_declared_value": 8000.0,   # 高均额
+            "user_distinct_receiver_count": 20,  # 大量不同收件人
+            "user_cod_overdue_count": 30,        # COD 大量逾期
+            "user_blacklist_hit_count": 5,       # 多次命中黑名单
+            # ---- 包裹维度 ----
+            "order_weight_kg": 1.0,              # 轻件
+            "order_declared_value": 30000.0,     # 大额申报
+            "order_value_per_kg": 30000.0,       # 超高单位价值 (瞒报嫌疑)
+            "order_piece_count": 2.0,
+            "order_is_international": 1.0,       # 国际件
+            "order_is_dangerous_declared": 1.0,  # 危险品
+            "order_has_cod": 1.0,
+            "order_cod_amount": 30000.0,
+            # ---- 地址维度 ----
+            "addr_sender_province": 19.0,
+            "addr_receiver_province": 1.0,
+            "addr_is_cross_province": 1.0,
+            "addr_same_address_sender_count_24h": 15.0,  # 同地址大量不同寄件人
+            "addr_address_blacklist_hit": 1.0,
+            "addr_is_proxy_received": 1.0,       # 代签收
+            "addr_sender_is_blacklisted": 1.0,
         }
         # 验证 25 维都填了 (否则回退到训练分布外)
         assert set(risky.keys()) >= set(FEATURE_COLUMNS), (
@@ -244,11 +243,11 @@ class TestPredict:
         # 普通用户: 25 维都填, 都填低值
         normal = {col: 0.0 for col in FEATURE_COLUMNS}
         normal.update({
-            "user_total_orders": 5,
-            "user_orders_30d": 1,
-            "user_orders_7d": 0,
-            "user_total_amount": 500,
-            "order_total_amount": 100,
+            "user_account_age_days": 500.0,
+            "user_real_name_verified": 1.0,
+            "user_total_parcel_count": 5,
+            "user_total_parcel_count_30d": 1,
+            "order_declared_value": 100,
         })
         normal_result = ml_model.predict(normal)
         # 高风险用户应该 P(拒绝) >= 普通用户
@@ -266,7 +265,7 @@ class TestPredict:
         try:
             ml_model._LOADED = False
             ml_model._MODEL = None
-            result = ml_model.predict({"user_total_orders": 1})
+            result = ml_model.predict({"user_total_parcel_count": 1})
             assert result.score == 0.0
             assert result.decision == "\u901a\u8fc7"  # "pass"
             assert result.is_loaded is False
