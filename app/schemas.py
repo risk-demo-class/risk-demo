@@ -10,12 +10,28 @@ from pydantic import BaseModel, Field
 # ============================================================
 
 class RiskCheckRequest(BaseModel):
-    """风险检查请求"""
-    event_type: Literal["下单", "支付", "售后申请", "物流投诉"]
-    source_id: str = Field(description="关联业务ID (order_id / postsale_id 等)")
+    """风险检查请求 (物流版)
+
+    事件类型增量兼容: 保留电商 4 类 + 新增物流 4 类 (parcel_pickup 揽收 /
+    dangerous_declare 危险品申报 / cross_border_ship 跨境发运 / cod_settlement COD 结算).
+    """
+    event_type: Literal[
+        # ---- 电商旧事件 (兼容保留) ----
+        "下单", "支付", "售后申请", "物流投诉",
+        # ---- 物流事件 ----
+        "parcel_pickup", "dangerous_declare", "cross_border_ship", "cod_settlement",
+    ]
+    source_id: str = Field(description="关联业务ID (parcel_id / decl_id / cod_id 等)")
     user_id: str
+    # ---- 电商旧字段 (兼容保留) ----
     order_id: Optional[str] = None
     receive_id: Optional[str] = None
+    # ---- 物流字段 ----
+    parcel_id: Optional[str] = None
+    sender_id: Optional[str] = None
+    receiver_id: Optional[str] = None
+    decl_id: Optional[str] = None
+    cod_id: Optional[str] = None
     event_data: Optional[dict] = None
 
 
@@ -58,8 +74,14 @@ class RuleCreate(BaseModel):
     """创建规则请求"""
     rule_id: str = Field(max_length=50)
     rule_name: str = Field(max_length=100)
-    rule_category: Literal["订单欺诈", "支付风险", "账户风险", "售后滥用", "地址风险", "物流风险"]
-    event_type: Literal["下单", "支付", "售后申请", "物流投诉", "通用"] = "通用"
+    rule_category: Literal[
+        "订单欺诈", "支付风险", "账户风险", "售后滥用", "地址风险", "物流风险",
+        "寄递实名", "危险品申报", "跨境合规", "代收货款", "寄递行为",
+    ]
+    event_type: Literal[
+        "下单", "支付", "售后申请", "物流投诉", "通用",
+        "parcel_pickup", "dangerous_declare", "cross_border_ship", "cod_settlement",
+    ] = "通用"
     rule_condition: dict
     risk_level: Literal["低", "中", "高", "极高"]
     risk_score: int = Field(ge=0, le=100)
@@ -71,8 +93,14 @@ class RuleCreate(BaseModel):
 class RuleUpdate(BaseModel):
     """更新规则请求 (所有字段可选)"""
     rule_name: Optional[str] = None
-    rule_category: Optional[Literal["订单欺诈", "支付风险", "账户风险", "售后滥用", "地址风险", "物流风险"]] = None
-    event_type: Optional[Literal["下单", "支付", "售后申请", "物流投诉", "通用"]] = None
+    rule_category: Optional[Literal[
+        "订单欺诈", "支付风险", "账户风险", "售后滥用", "地址风险", "物流风险",
+        "寄递实名", "危险品申报", "跨境合规", "代收货款", "寄递行为",
+    ]] = None
+    event_type: Optional[Literal[
+        "下单", "支付", "售后申请", "物流投诉", "通用",
+        "parcel_pickup", "dangerous_declare", "cross_border_ship", "cod_settlement",
+    ]] = None
     rule_condition: Optional[dict] = None
     risk_level: Optional[Literal["低", "中", "高", "极高"]] = None
     risk_score: Optional[int] = Field(default=None, ge=0, le=100)

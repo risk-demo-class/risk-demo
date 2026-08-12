@@ -9,8 +9,8 @@ USE ecs;
 CREATE TABLE IF NOT EXISTS `risk_rule` (
     `rule_id` VARCHAR(50) NOT NULL COMMENT '规则ID',
     `rule_name` VARCHAR(100) NOT NULL COMMENT '规则名称',
-    `rule_category` ENUM('订单欺诈','支付风险','账户风险','售后滥用','地址风险','物流风险') NOT NULL COMMENT '风险场景分类',
-    `event_type` ENUM('下单','支付','售后申请','物流投诉','通用') NOT NULL DEFAULT '通用' COMMENT '适用事件类型',
+    `rule_category` ENUM('订单欺诈','支付风险','账户风险','售后滥用','地址风险','物流风险','寄递实名','危险品申报','跨境合规','代收货款','寄递行为') NOT NULL COMMENT '风险场景分类',
+    `event_type` ENUM('下单','支付','售后申请','物流投诉','通用','parcel_pickup','dangerous_declare','cross_border_ship','cod_settlement') NOT NULL DEFAULT '通用' COMMENT '适用事件类型',
     `rule_condition` JSON NOT NULL COMMENT '条件表达式',
     `risk_level` ENUM('低','中','高','极高') NOT NULL COMMENT '风险等级',
     `risk_score` INT NOT NULL COMMENT '命中分值(0-100)',
@@ -28,7 +28,7 @@ CREATE TABLE IF NOT EXISTS `risk_rule` (
 -- 2. 风控事件审计表
 CREATE TABLE IF NOT EXISTS `risk_event` (
     `event_id` VARCHAR(50) NOT NULL COMMENT '事件ID',
-    `event_type` ENUM('下单','支付','售后申请','物流投诉') NOT NULL COMMENT '事件类型',
+    `event_type` ENUM('下单','支付','售后申请','物流投诉','parcel_pickup','dangerous_declare','cross_border_ship','cod_settlement') NOT NULL COMMENT '事件类型',
     `event_source_id` VARCHAR(50) NOT NULL COMMENT '关联业务ID',
     `user_id` VARCHAR(50) NOT NULL COMMENT '用户ID',
     `event_data` JSON COMMENT '事件快照',
@@ -83,7 +83,7 @@ CREATE TABLE IF NOT EXISTS `risk_case` (
     -- 【2026-08-07 补】业务回溯字段: decision.py 写入, "重做检查" 按钮回查用
     -- 之前漏在 DDL 里, 导致 ORM 查 risk_case.source_id 时报 1054 (修复: 合并自原 migration_add_case_source_id.sql)
     `source_id` VARCHAR(50) DEFAULT NULL COMMENT '原始业务ID(订单/售后/投诉ID), 重做检查时用',
-    `event_type` ENUM('下单','支付','售后申请','物流投诉') DEFAULT NULL COMMENT '触发案件的事件类型',
+    `event_type` ENUM('下单','支付','售后申请','物流投诉','parcel_pickup','dangerous_declare','cross_border_ship','cod_settlement') DEFAULT NULL COMMENT '触发案件的事件类型',
     `reviewer` VARCHAR(50) DEFAULT NULL COMMENT '审核人',
     `review_comment` TEXT COMMENT '审核意见',
     `review_time` DATETIME DEFAULT NULL COMMENT '审核时间',

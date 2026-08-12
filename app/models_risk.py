@@ -40,11 +40,14 @@ class RiskRule(Base):
     rule_name: Mapped[str] = mapped_column(String(100), nullable=False, comment="规则名称")
     rule_category: Mapped[str] = mapped_column(
         Enum("订单欺诈", "支付风险", "账户风险", "售后滥用", "地址风险", "物流风险",
+             "寄递实名", "危险品申报", "跨境合规", "代收货款", "寄递行为",
              name="rule_category_enum"),
         nullable=False, comment="风险场景分类",
     )
     event_type: Mapped[str] = mapped_column(
-        Enum("下单", "支付", "售后申请", "物流投诉", "通用", name="rule_event_type_enum"),
+        Enum("下单", "支付", "售后申请", "物流投诉", "通用",
+             "parcel_pickup", "dangerous_declare", "cross_border_ship", "cod_settlement",
+             name="rule_event_type_enum"),
         nullable=False, server_default="通用", comment="适用事件类型",
     )
     rule_condition: Mapped[str] = mapped_column(Text, nullable=False, comment="条件表达式(JSON)")
@@ -90,7 +93,9 @@ class RiskEvent(Base):
 
     event_id: Mapped[str] = mapped_column(String(50), primary_key=True, comment="事件ID")
     event_type: Mapped[str] = mapped_column(
-        Enum("下单", "支付", "售后申请", "物流投诉", name="event_type_enum"),
+        Enum("下单", "支付", "售后申请", "物流投诉",
+             "parcel_pickup", "dangerous_declare", "cross_border_ship", "cod_settlement",
+             name="event_type_enum"),
         nullable=False, comment="事件类型",
     )
     event_source_id: Mapped[str] = mapped_column(String(50), nullable=False, comment="关联业务ID")
@@ -187,7 +192,9 @@ class RiskCase(Base):
     # --- 业务回溯字段 (重做检查时使用) ---
     source_id: Mapped[Optional[str]] = mapped_column(String(50), comment="原始业务ID(订单/售后/投诉ID)")
     event_type: Mapped[Optional[str]] = mapped_column(
-        Enum("下单", "支付", "售后申请", "物流投诉", name="case_event_type_enum"),
+        Enum("下单", "支付", "售后申请", "物流投诉",
+             "parcel_pickup", "dangerous_declare", "cross_border_ship", "cod_settlement",
+             name="case_event_type_enum"),
         comment="触发案件的事件类型",
     )
     create_time: Mapped[Optional[datetime]] = mapped_column(
