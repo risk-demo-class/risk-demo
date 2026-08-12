@@ -1,813 +1,795 @@
-generated: 2026-08-12T02:59:48.183Z
+generated: 2026-08-12 02:59:48.183000+00:00
 goalId: ud-yeel62
-goal: 实现 chaosorder010/AI-BankRisk 全部 10 个 GitHub
-  tickets（#1-#10）：把电商风控系统全量改造为银行信贷风控系统（华信银行品牌），合并 bank-migration 到 main 并推送
-doneCriteria: ① 10 个 GitHub issues（#1-#10）全部实现完成；② verifyCommand 全链通过：init_db 银行
-  17 表初始化 + gen_train_dataset PD 训练数据 + train_xgb_model PD 模型 + pytest 全绿；③
-  银行语义完整：4 事件（贷款申请/放款/还款/客户投诉）、6 规则分类、25 维银行特征（cust_/loan_/dev_）、30 条银行规则、黑名单 4
-  类（客户/手机号/地址/设备）、前端华信银行品牌；④ bank-migration 分支合并到 main（--no-ff）并推送 GitHub；⑤
-  引擎层测试（决策/规则/ML/案件/告警）保留且通过
-verifyCommand: mise exec -- cd /home/leon/projects/尚硅谷大模型项目之风控系统/3.代码/AI_Risk &&
-  DB_PORT=3307 .venv/bin/python scripts/init_db.py --yes --port 3307 &&
-  DB_PORT=3307 .venv/bin/python scripts/gen_train_dataset.py --reset &&
-  DB_PORT=3307 .venv/bin/python scripts/train_xgb_model.py && DB_PORT=3307
-  .venv/bin/python -m pytest tests/ -q
+goal: 实现 chaosorder010/AI-BankRisk 全部 10 个 GitHub tickets（#1-#10）：把电商风控系统全量改造为银行信贷风控系统（华信银行品牌），合并
+  bank-migration 到 main 并推送
+doneCriteria: ① 10 个 GitHub issues（#1-#10）全部实现完成；② verifyCommand 全链通过：init_db 银行 17
+  表初始化 + gen_train_dataset PD 训练数据 + train_xgb_model PD 模型 + pytest 全绿；③ 银行语义完整：4
+  事件（贷款申请/放款/还款/客户投诉）、6 规则分类、25 维银行特征（cust_/loan_/dev_）、30 条银行规则、黑名单 4 类（客户/手机号/地址/设备）、前端华信银行品牌；④
+  bank-migration 分支合并到 main（--no-ff）并推送 GitHub；⑤ 引擎层测试（决策/规则/ML/案件/告警）保留且通过
+verifyCommand: mise exec -- cd /home/leon/projects/尚硅谷大模型项目之风控系统/3.代码/AI_Risk && DB_PORT=3307
+  .venv/bin/python scripts/init_db.py --yes --port 3307 && DB_PORT=3307 .venv/bin/python
+  scripts/gen_train_dataset.py --reset && DB_PORT=3307 .venv/bin/python scripts/train_xgb_model.py
+  && DB_PORT=3307 .venv/bin/python -m pytest tests/ -q
 phase: refactor
 askBefore:
-  - git merge bank-migration
-  - git push origin main
-  - python scripts/init_db.py --yes（重置 ecs 数据库）
-decisionStyle: 领域语义优先于引擎便捷性；引擎层零改动；每个 ticket 内测试先行（RED→GREEN）；保持脚本名/API
-  字段名稳定以最小化 diff；每个垂直切片完成后立即验证
+- git merge bank-migration
+- git push origin main
+- python scripts/init_db.py --yes（重置 ecs 数据库）
+decisionStyle: 领域语义优先于引擎便捷性；引擎层零改动；每个 ticket 内测试先行（RED→GREEN）；保持脚本名/API 字段名稳定以最小化
+  diff；每个垂直切片完成后立即验证
 budget:
   used: 1
   max: 60
 currentTaskId: T-020
 tasks:
-  - id: T-001
-    title: BOOTSTRAP：切 bank-migration 分支 + 基线 pytest 全绿 + 固化脚本名
-    phase: bootstrap
-    status: done
-    dependencies: []
-    blocks:
-      - T-002
-      - T-004
-      - T-006
-      - T-008
-      - T-010
-      - T-012
-      - T-014
-      - T-016
-      - T-018
-    prerequisites:
-      - description: git 仓库已 init 且 main 有基线提交（fb90057 + 改名提交）
-        cleared: true
-      - description: MySQL 容器 risk-mysql 在 3307 运行
-        cleared: true
-      - description: venv 依赖已装
-        cleared: true
-    validationSteps:
-      - git checkout -b bank-migration 成功
-      - DB_PORT=3307 .venv/bin/python -m pytest tests/ -q 输出基线全绿（315 个）
-      - 确认 scripts/
-        下脚本名清单（init_db/gen_10w_data/gen_train_dataset/train_xgb_model/backfill_ml_score），作为
-        verifyCommand 固化依据
-    ciCommands:
-      - DB_PORT=3307 .venv/bin/python -m pytest tests/ -q
-    styleguideRules:
-      - 面向用户内容简体中文；代码/命令/路径保持原样（项目 AGENTS.md）
-      - 工具调用简洁，优先专用工具而非 shell 等价物
-    guardrails:
-      - 不改任何引擎层文件（rule.py/decision.py 评分逻辑/case.py 状态机/alert/scheduler）
-      - 不读 .env 内容（含密钥）
-      - MySQL 一律走 3307
-    learnings:
-      - 基线 pytest 316 passed/1 skipped，耗时 185s（比 README 估算慢，迭代需用 -k 过滤快速子集）
-    gotchas:
-      - run_app.py 自检写死 3306，改走 scripts/main.py 或环境变量
-      - xgb_model.json 已存在（7KB 基线模型），改造后需重训
-      - init_db --reset 会清空 ecs 库（含基线评估数据）
-      - 全量 pytest 约 3 分钟，RED/GREEN 阶段用针对性测试文件 + -k 过滤
-    context:
-      - path: README.md
-        why: 脚本名与启动链路权威来源
-      - url: https://github.com/chaosorder010/AI-BankRisk/issues
-        why: 10 个 tickets 正文
-  - id: T-002
-    title: RED：领域测试骨架——DDL 反射期望 17 张银行表（先行失败）
-    phase: red
-    status: done
-    dependencies:
-      - T-001
-    blocks:
-      - T-003
-    prerequisites:
-      - description: T-001 完成（分支+基线绿）
-        cleared: false
-    validationSteps:
-      - 写 tests/test_bank_ddl_sync.py：反射数据库期望 17
-        张银行表（customer_info/loan_application/loan_installment/loan_product/loan_product_category/loan_status/contact_info/overdue_record/repayment_status/overdue_reason/repayment_record/loan_repayment_rel/overdue_repayment_rel/bank_branch/region/complaint_content/complaint_record）
-      - 运行该测试确认失败（当前仍是电商表）
-      - 记录失败输出作为 RED 证据
-    ciCommands:
-      - DB_PORT=3307 .venv/bin/python -m pytest tests/test_bank_ddl_sync.py -v
-    styleguideRules:
-      - 测试命名 test_*.py 放 tests/
-      - 只测外部行为（表存在性/字段），不测内部实现
-    guardrails:
-      - RED 阶段只写测试，不写生产代码
-      - 不动现有 test_ddl_sync.py（引擎基线）
-    learnings:
-      - RED 确认：4 个 DDL 测试按预期失败（缺 customer_info 等银行表）
-    gotchas:
-      - DDL 反射测试需要真实 DB（DDL_CHECK_ENABLED=1 或直接连 3307）
-      - Foreign key 顺序影响建表顺序
-      - SQLAlchemy create_engine 默认走 mysqldb 方言需 MySQLdb；URL 需
-        replace('+aiomysql','+pymysql')
-    context:
-      - path: sql/init_business_tables.sql
-        why: 现有电商表结构参考
-      - path: app/models_business.py
-        why: 现有 ORM 参考
-  - id: T-003
-    title: GREEN：T-01 数据底座——17 张银行表 SQL+种子数据+ORM+init_db 跑通
-    phase: green
-    status: done
-    dependencies:
-      - T-002
-    blocks:
-      - T-004
-      - T-005
-      - T-006
-      - T-007
-      - T-008
-      - T-009
-      - T-010
-      - T-011
-      - T-012
-    prerequisites:
-      - description: T-002 失败测试存在且已确认失败
-        cleared: false
-    validationSteps:
-      - 重写 sql/init_business_tables.sql 为 17 张银行表（按外键依赖顺序）
-      - 种子数据：客户/产品类别/贷款产品/状态表/网点/地区/投诉对照/逾期原因
-      - 重写 app/models_business.py 为 17 张银行表 ORM
-      - DB_PORT=3307 .venv/bin/python scripts/init_db.py --yes --port 3307 跑通
-      - 运行 T-002 测试转绿
-      - mysql 查询验证 key 表存在
-    ciCommands:
-      - DB_PORT=3307 .venv/bin/python scripts/init_db.py --yes --port 3307
-      - DB_PORT=3307 .venv/bin/python -m pytest tests/test_bank_ddl_sync.py -v
-    styleguideRules:
-      - SQL 保留 utf8mb4 + 外键 + COMMENT
-      - ORM 字段与 SQL 严格一致（test_ddl_sync 模式）
-      - 文件 ≤200 LOC，超则拆
-    guardrails:
-      - 不删 region 表（引擎黑名单地址维度引用）
-      - 保留 risk_* 风控表不动
-      - 表名/字段名与 CONTEXT.md 术语一致
-    learnings:
-      - init_db --drop 成功重建 26 表；aiomysql 在脚本退出时事件循环已关闭会打印警告，不影响功能
-    gotchas:
-      - postsale→overdue_record 等多对一映射要保持外键引用完整性
-      - loan_application 时间线字段（申请/审批/放款/到期）对应原订单 4 时间
-      - init_db --yes 会重置 ecs 库，属 ask-before 已覆盖
-    context:
-      - path: docs/bank_risk_plan.md
-        why: 17 表映射权威来源
-      - path: CONTEXT.md
-        why: 术语表
-  - id: T-004
-    title: RED：特征测试——25 维银行特征名 + FEATURE_COLUMNS 对齐（先行失败）
-    phase: red
-    status: done
-    dependencies:
-      - T-003
-    blocks:
-      - T-005
-    prerequisites:
-      - description: T-003 完成（银行表已建）
-        cleared: false
-    validationSteps:
-      - 写特征名对齐测试：期望 25 个银行特征名（cust_*×14/loan_*×8/dev_*×3）与
-        ml_model.FEATURE_COLUMNS 一致
-      - 写特征计算测试：给定银行表数据，断言 cust_total_loans 等取值正确
-      - 运行确认失败（当前仍是电商特征）
-    ciCommands:
-      - DB_PORT=3307 .venv/bin/python -m pytest tests/ -k feature -v
-    styleguideRules:
-      - 特征命名规范：cust_/loan_/dev_ 前缀
-      - 只测外部行为（特征名/取值）
-    guardrails:
-      - 不改 ml_model.py 的 FEATURE_COLUMNS（那是 GREEN 阶段的事）
-      - RED 阶段只写测试
-    learnings:
-      - RED 确认：3/4 特征测试失败；app/models.py 从 models_business 导入旧电商模型报
-        ImportError（T-007 将处理）
-    gotchas:
-      - 特征名与 FEATURE_COLUMNS 顺序必须一一对应（防 XGBoost 特征错位）
-      - 派生特征（逾期率/履约率）避免重复 SQL 查询
-    context:
-      - path: app/engine/feature.py
-        why: 现有 25 维特征实现参考
-      - path: app/engine/ml_model.py
-        why: FEATURE_COLUMNS 定义
-  - id: T-005
-    title: GREEN：T-02 特征工程——feature.py 银行化 + FEATURE_COLUMNS 对齐
-    phase: green
-    status: done
-    dependencies:
-      - T-004
-    blocks:
-      - T-006
-      - T-007
-      - T-008
-      - T-010
-    prerequisites:
-      - description: T-004 失败测试存在
-        cleared: false
-    validationSteps:
-      - 重写 app/engine/feature.py：cust_*×14（多头借贷/逾期率/履约率/被拒史等）+
-        loan_*×8（金额/期限/负债率/收入负债比等）+ dev_*×3（设备数/IP跨省/新设备）
-      - 同步 app/engine/ml_model.py FEATURE_COLUMNS
-      - python app/engine/feature.py 演示输出 25 维银行特征
-      - T-004 测试转绿
-    ciCommands:
-      - DB_PORT=3307 .venv/bin/python -m pytest tests/ -k feature -v
-      - DB_PORT=3307 .venv/bin/python -m pytest
-        tests/test_xgboost.py::test_feature_columns_align -v
-    styleguideRules:
-      - 文件 ≤200 LOC，函数 ≤30 LOC，单职责
-      - 收益：cust_* 14 个独立+派生特征复用避免重复 SQL（沿用 P5 优化模式）
-    guardrails:
-      - compute_all_features 签名不变（decision.py 调用点）
-      - 特征 dict key 名与 FEATURE_COLUMNS 完全一致
-    learnings:
-      - 动态验证通过：25 维特征全部正确输出（demo 数据 2 条申请验证
-        cust_total_loans=2/dev_ip_province_count=2/loan_debt_ratio=0.16 等）
-    gotchas:
-      - 负债率/收入负债比需要收入字段（contact_info 或 loan_application 加 annual_income 字段）——涉及
-        T-003 表结构，若缺需补字段
-      - dev_* 特征需要设备表——若 17 表无设备表，需在 contact_info 或新增 device 表承载
-      - docker exec mysql 客户端需 --default-character-set=utf8mb4 否则中文 WHERE 查}
-      - docker exec mysql 客户端需 --default-character-set=utf8mb4 否则中文 WHERE
-        查询无结果/外键失败
-    context:
-      - path: docs/bank_risk_plan.md
-        why: 25 维特征设计表
-      - path: CONTEXT.md
-        why: 特征域术语
-  - id: T-006
-    title: RED：契约测试——4 银行事件/6 规则分类/客户归属校验（先行失败）
-    phase: red
-    status: done
-    dependencies:
-      - T-005
-    blocks:
-      - T-007
-    prerequisites:
-      - description: T-005 完成（特征就绪）
-        cleared: false
-    validationSteps:
-      - 写 schema 测试：RiskCheckRequest 接受 4 个银行事件（贷款申请/放款/还款/客户投诉），拒绝非法值
-      - 写规则分类测试：RuleCreate 接受 6 类（欺诈风险/信用风险/反洗钱/账户风险/贷后风险/合规风险）
-      - 写归属校验测试：客户-贷款申请归属不一致被拒绝
-      - 运行确认失败（当前仍是电商字面量）
-    ciCommands:
-      - DB_PORT=3307 .venv/bin/python -m pytest tests/test_schemas.py -v
-    styleguideRules:
-      - 只测外部契约（字面量/校验行为）
-    guardrails:
-      - 不改引擎评分逻辑
-      - request 字段名 order_id/receive_id 保留（D5）
-    learnings:
-      - RED 确认：8 个契约测试按预期失败（电商字面量）
-    gotchas:
-      - event_type 字面量改动会连锁影响 api.py/routers/前端——RED 阶段只写测试
-      - 黑名单类型加'设备'影响 risk_blacklist 枚举与前端 tab
-    context:
-      - path: app/schemas.py
-        why: 当前字面量
-      - path: app/service/event.py
-        why: 当前校验逻辑
-  - id: T-007
-    title: GREEN：T-03 契约——schemas/event 校验/decision 上下文银行化
-    phase: green
-    status: done
-    dependencies:
-      - T-006
-    blocks:
-      - T-008
-      - T-010
-      - T-011
-      - T-012
-      - T-013
-      - T-014
-      - T-015
-      - T-016
-    prerequisites:
-      - description: T-006 失败测试存在
-        cleared: false
-    validationSteps:
-      - app/schemas.py：event_type Literal 4 银行事件、RuleCreate/Update category 6
-        类、UserProfileResponse
-        字段银行化（total_loans/overdue_count/overdue_rate/avg_loan_amount/contact_count）
-      - app/service/event.py：校验实体换银行（客户/贷款申请/还款归属）
-      - app/engine/decision.py：_build_context
-        事件映射（贷款申请/放款→loan_id=source_id；还款→repayment_id；投诉→complaint_id）+
-        _update_user_profile 字段银行化
-      - 黑名单类型加'设备'（models_risk/schema/service）
-      - T-006 测试转绿
-    ciCommands:
-      - DB_PORT=3307 .venv/bin/python -m pytest tests/test_schemas.py -v
-      - DB_PORT=3307 .venv/bin/python -m pytest tests/test_risk_decision.py -v
-    styleguideRules:
-      - decision.py 只改 _build_context/_update_user_profile，评分/融合/veto 逻辑零改动
-      - 文件 ≤200 LOC
-    guardrails:
-      - 引擎 7 步流水线结构不动
-      - 字段名 order_id/receive_id 保留
-    learnings:
-      - 决策链端到端跑通：贷款申请→校验→特征→规则→评分→响应；XGBoost 旧模型不匹配走兜底（T-013 重训）
-    gotchas:
-      - _update_user_profile 引用特征 key 名，需与 T-005 新特征名同步
-      - 黑名单's设备'联动 risk_blacklist 表 enum + 黑名单 API + 前端 tab
-      - risk_event/risk_feature/risk_case 的 event_type/entity_type 也是 ENUM 列，需与
-        schema 同步改否则 INSERT 报 Data truncated
-    context:
-      - path: app/engine/decision.py
-        why: _build_context/_update_user_profile 改点
-      - path: app/models_risk.py
-        why: risk_user_profile/risk_blacklist 字段
-  - id: T-008
-    title: RED：规则测试——银行规则命中（多头借贷等，先行失败）
-    phase: red
-    status: done
-    dependencies:
-      - T-007
-    blocks:
-      - T-009
-    prerequisites:
-      - description: T-007 完成（契约就绪）
-        cleared: false
-    validationSteps:
-      - 写规则命中测试：构造多头借贷特征（cust_loans_7d≥3）命中对应规则
-      - 写一票否决测试：极高规则（如负债率极端）强制拒绝
-      - 运行确认失败（当前规则库还是电商 30 条）
-    ciCommands:
-      - DB_PORT=3307 .venv/bin/python -m pytest tests/test_rule_engine.py
-        tests/test_match_rules.py -v
-    styleguideRules:
-      - 沿用现有规则测试模式（构造特征 dict → match_rules）
-    guardrails:
-      - 不改 rule.py 匹配引擎
-    learnings:
-      - RED 确认：DB 集成测试失败（规则库空的预期）；纯函数命中测试通过
-    gotchas:
-      - 规则条件引用特征名必须是 T-005 的新特征名
-      - 30 条规则 SQL 在 init_risk_data.sql（GREEN 改）
-    context:
-      - path: sql/init_risk_data.sql
-        why: 现有 30 条电商规则
-      - path: app/engine/rule.py
-        why: 规则匹配引擎（不动）
-  - id: T-009
-    title: GREEN：T-04 规则——30 条银行规则 SQL（6 大场景）
-    phase: green
-    status: done
-    dependencies:
-      - T-008
-    blocks:
-      - T-010
-      - T-011
-      - T-014
-    prerequisites:
-      - description: T-008 失败测试存在
-        cleared: false
-    validationSteps:
-      - 重写 sql/init_risk_data.sql：欺诈 6/信用 6/反洗钱 4/账户 5/贷后 5/合规 4 = 30 条
-      - 规则条件用新特征名（cust_loans_7d/loan_debt_ratio/cust_overdue_rate 等）
-      - init_db 后 risk_rule 30 条
-      - T-008 测试转绿
-    ciCommands:
-      - DB_PORT=3307 .venv/bin/python scripts/init_db.py --yes --port 3307
-      - DB_PORT=3307 .venv/bin/python -m pytest tests/test_rule_engine.py
-        tests/test_match_rules.py -v
-    styleguideRules:
-      - 规则 JSON 条件结构不变（field/op/value、and/or 嵌套）
-      - 极高规则保留 2-3 条（一票否决演示）
-    guardrails:
-      - rule_category 枚举与 T-007 的 6 类一致
-      - event_type 与 4 银行事件一致
-    learnings:
-      - 30 条规则入库（6 分类各 6/6/4/5/5/4）；多头借贷场景端到端命中 R101/R303/R403
-    gotchas:
-      - 规则 SQL 里 ENUM
-        类型（risk_rule.rule_category/event_type）需要同步改表结构——init_risk_tables.sql 的
-        ENUM 定义也要改
-      - init_risk_data 会 TRUNCATE risk_rule + risk_action_log
-      - init_db split_sql_statements 对 SQL 语句很敏感——R103 漏写 ')'
-        导致整条语句被吞并污染下一条；aiomysql 全局 engine 跨 asyncio.run loop 需 dispose
-    context:
-      - path: sql/init_risk_tables.sql
-        why: risk_rule 表 ENUM 定义（需同步改）
-  - id: T-010
-    title: RED：生成器测试——画像分布 80/15/5 + 银行字段（先行失败）
-    phase: red
-    status: done
-    dependencies:
-      - T-009
-    blocks:
-      - T-011
-    prerequisites:
-      - description: T-009 完成（规则就绪）
-        cleared: false
-    validationSteps:
-      - 写生成器测试：gen 后客户画像分布 80 正常/15 中/5 高
-      - 写字段测试：贷款申请表有申请/审批/放款/到期时间线字段
-      - 运行确认失败（当前 gen_10w_data 生成电商数据）
-    ciCommands:
-      - DB_PORT=3307 .venv/bin/python -m pytest tests/test_gen_10w_data.py -v
-    styleguideRules:
-      - 沿用现有 gen 脚本测试模式（参数→输出断言）
-    guardrails:
-      - 脚本名保持 gen_10w_data.py（verifyCommand 依赖）
-    learnings:
-      - RED 确认：4 个生成器测试按预期失败（模块仍为电商版）
-    gotchas:
-      - 风险画像注入：高风险客户=多头+逾期+被拒史（PD 训练正例来源）
-      - 设备/IP 数据需要生成（dev_* 特征依赖）
-    context:
-      - path: scripts/gen_10w_data.py
-        why: 现有生成器参考
-      - path: scripts/gen_risky_users.py
-        why: 高风险样本生成参考
-  - id: T-011
-    title: GREEN：T-05 生成器——gen_10w_data 银行化 + 风险画像注入
-    phase: green
-    status: done
-    dependencies:
-      - T-010
-    blocks:
-      - T-012
-      - T-013
-      - T-015
-      - T-017
-    prerequisites:
-      - description: T-010 失败测试存在
-        cleared: false
-    validationSteps:
-      - gen_10w_data.py 银行化：5000 客户（80/15/5 画像）+ 3 万贷款申请 + 还款/逾期/投诉记录 + 设备/联系信息
-      - 配套脚本（gen_risky_users/gen_risk_data_with_dates）同步银行化
-      - 运行生成，T-010 测试转绿
-      - 验证特征工程可查询生成数据
-    ciCommands:
-      - DB_PORT=3307 .venv/bin/python scripts/gen_10w_data.py
-      - DB_PORT=3307 .venv/bin/python -m pytest tests/ -k gen -v
-    styleguideRules:
-      - 文件 ≤200 LOC，生成逻辑函数 ≤30 LOC
-      - faker 生成中文银行数据（姓名/手机号/身份证/统一社会信用代码）
-    guardrails:
-      - 脚本名保持 gen_10w_data.py
-      - --users/--orders 参数语义保留（客户数/申请数）
-    learnings:
-      - 全量生成成功：5000 客户/3 万申请/65 万分期/50951 还款/1139 逾期（279 逾期客户）/923
-        投诉；gen_risky_users 等旧脚本标记 DEPRECATED
-    gotchas:
-      - 5000 客户 3 万申请生成时间需控制（演示流畅）
-      - 高风险客户 5% = 250 人，逾期记录要覆盖足够 PD 正例
-      - contact 区划 FK 需从 region 表读取；SQLAlchemy 空 list execute 报 bind 缺失需 if
-        保护；路径中文时 PYTHONPATH 必须显式设置
-    context:
-      - path: docs/bank_risk_plan.md
-        why: 数据规模 5000/3 万
-      - path: CONTEXT.md
-        why: 画像分布 80/15/5
-  - id: T-012
-    title: RED：训练测试——PD 标签（逾期客户=1，先行失败）
-    phase: red
-    status: done
-    dependencies:
-      - T-011
-    blocks:
-      - T-013
-    prerequisites:
-      - description: T-011 完成（银行数据可生成）
-        cleared: false
-    validationSteps:
-      - 写训练数据测试：无逾期记录客户标签=0，有逾期记录客户标签=1
-      - 写 gen_train_dataset 输出校验测试（条数/正例占比/字段）
-      - 运行确认失败（当前标签是'通过/拒绝'语义）
-    ciCommands:
-      - DB_PORT=3307 .venv/bin/python -m pytest
-        tests/test_train_data_validation.py -v
-    styleguideRules:
-      - 沿用现有训练数据校验测试模式
-    guardrails:
-      - 不改 ml_model.py predict/_prob_to_decision（语义由数据保证）
-    learnings:
-      - RED 确认：4 个训练测试按预期失败（电商语义）
-    gotchas:
-      - 现有 test_train_data_purity/gen_train_dataset 测试断言'决策标签'，需重写为'逾期标签'
-      - train_xgb_model.py 拉取评估数据的 SQL 条件（ml_score IS NULL）保持
-    context:
-      - path: scripts/gen_train_dataset.py
-        why: 训练数据生成器改点
-      - path: scripts/train_xgb_model.py
-        why: 训练脚本（标签从 dataset 来）
-  - id: T-013
-    title: GREEN：T-06 PD 训练——gen_train_dataset + train_xgb + backfill
-    phase: green
-    status: done
-    dependencies:
-      - T-012
-    blocks:
-      - T-014
-      - T-015
-      - T-016
-      - T-018
-    prerequisites:
-      - description: T-012 失败测试存在
-        cleared: false
-    validationSteps:
-      - gen_train_dataset.py 改 PD 标签：正例=有逾期记录的客户申请，负例=正常履约
-      - train_xgb_model.py 保持（特征源接新特征名）
-      - backfill_ml_score.py 回填
-      - 运行训练成功，输出 AUC/F1
-      - T-012 测试转绿
-    ciCommands:
-      - DB_PORT=3307 .venv/bin/python scripts/gen_train_dataset.py --reset
-      - DB_PORT=3307 .venv/bin/python scripts/train_xgb_model.py
-      - DB_PORT=3307 .venv/bin/python scripts/backfill_ml_score.py
-    styleguideRules:
-      - 训练脚本输出指标格式保持（AUC/F1/特征重要性）
-    guardrails:
-      - 模型文件路径 app/engine/xgb_model.json 不变
-      - XGB_ENABLED 降级逻辑不动
-    learnings:
-      - PD 模型训练成功：2500 样本 AUC=0.967/F1=0.83；backfill 正负分离度
-        0.376；逾期客户被一票否决拒绝（ml=0.14 真实推理）
-    gotchas:
-      - 新特征名下旧模型文件失效——训练前删除或覆盖 xgb_model.json
-      - 训练样本下限 1250（25 维×50），3 万申请足够
-      - backfill_ml_score.py 引用 risk_event 旧列(order_id/receive_id)与旧特征签名，需同步改
-    context:
-      - path: scripts/gen_train_dataset.py
-        why: PD 标签改造
-      - path: scripts/train_xgb_model.py
-        why: 训练脚本
-  - id: T-014
-    title: RED：页面断言——仪表盘/风险检查/规则页银行文案（先行失败）
-    phase: red
-    status: done
-    dependencies:
-      - T-013
-    blocks:
-      - T-015
-    prerequisites:
-      - description: T-013 完成（后端银行语义就绪）
-        cleared: false
-    validationSteps:
-      - 写页面文案测试：dashboard.html 含'贷款申请'或'华信银行'，不含'订单'
-      - 写风险检查页测试：表单含 4 个银行事件
-      - 写规则页测试：卡片含 6 银行分类
-      - 运行确认失败（当前仍是电商文案）
-    ciCommands:
-      - DB_PORT=3307 .venv/bin/python -m pytest tests/test_base_layout.py
-        tests/test_risk_check_page.py -v
-    styleguideRules:
-      - 页面文案断言用子串匹配（防脆弱）
-    guardrails:
-      - RED 阶段只写测试
-    learnings:
-      - RED 确认：4 个页面测试按预期失败（前端仍电商文案）
-    gotchas:
-      - base.html 品牌栏/标题也要改（华信银行）
-      - static/app.js 里 API 文案/事件类型常量同步
-    context:
-      - path: templates/dashboard.html
-        why: 仪表盘模板
-      - path: templates/base.html
-        why: 品牌栏
-  - id: T-015
-    title: GREEN：T-07 前端核心页——华信银行品牌（仪表盘/风险检查/规则管理）
-    phase: green
-    status: done
-    dependencies:
-      - T-014
-    blocks:
-      - T-020
-    prerequisites:
-      - description: T-014 失败测试存在
-        cleared: false
-    validationSteps:
-      - base.html：华信银行品牌栏/标题
-      - dashboard.html：今日申请量/风险分布/决策分布/逾期率等银行指标
-      - risk_check.html：4 银行事件表单 + 银行特征展示
-      - rules.html：6 银行分类
-      - static/app.js 同步文案/事件常量
-      - T-014 测试转绿
-    ciCommands:
-      - DB_PORT=3307 .venv/bin/python -m pytest tests/test_base_layout.py
-        tests/test_risk_check_page.py -v
-      - DB_PORT=3307 .venv/bin/python -m pytest tests/test_pagination.py -v
-    styleguideRules:
-      - Jinja2 模板结构/分页/布局不回退
-      - 中文文案贯穿
-    guardrails:
-      - 页面结构/分页/粘底特性保留
-      - URL 路由不变
-    learnings:
-      - 前端核心页银行化完成；app.js 仅 ML 文案需改（P(拒绝)→PD违约概率）
-    gotchas:
-      - dashboard 指标来自 API（routers/dashboard.py 的 SQL 聚合）——需同步改后端聚合字段
-      - 评估历史/画像页在 T-017
-    context:
-      - path: app/routers/dashboard.py
-        why: 仪表盘聚合 API
-      - path: templates/
-        why: 全部模板
-  - id: T-016
-    title: RED：页面断言——案件/黑名单/画像/评估/Agent 页（先行失败）
-    phase: red
-    status: done
-    dependencies:
-      - T-015
-    blocks:
-      - T-017
-    prerequisites:
-      - description: T-015 完成（核心页已银行化）
-        cleared: false
-    validationSteps:
-      - 写断言：cases.html 含贷款申请/事件类型银行语义
-      - 写断言：blacklist.html 含设备 tab
-      - 写断言：profile.html 含逾期率/多头借贷
-      - 写断言：assessments.html/chat.html 银行文案
-      - 运行确认失败
-    ciCommands:
-      - DB_PORT=3307 .venv/bin/python -m pytest tests/ -k 'page or layout or
-        blacklist' -v
-    styleguideRules:
-      - 子串断言防脆弱
-    guardrails:
-      - RED 只写测试
-    learnings:
-      - RED 确认：4 个业务页测试按预期失败
-    gotchas:
-      - user_profile API 响应字段已银行化（T-007），页面渲染字段同步
-    context:
-      - path: templates/cases.html
-        why: 案件模板
-      - path: templates/blacklist.html
-        why: 黑名单模板
-  - id: T-017
-    title: GREEN：T-08 前端业务页——案件/黑名单(4类)/画像/评估/Agent 页
-    phase: green
-    status: done
-    dependencies:
-      - T-016
-    blocks:
-      - T-020
-    prerequisites:
-      - description: T-016 失败测试存在
-        cleared: false
-    validationSteps:
-      - cases.html：贷款申请/放款/还款/投诉事件 + 状态机银行语义
-      - blacklist.html：4 tab（客户/手机号/地址/设备）
-      - profile.html：多头借贷/逾期率/履约率/被拒史
-      - assessments.html：评估历史银行字段
-      - chat.html：Agent 提示词银行化
-      - T-016 测试转绿
-    ciCommands:
-      - DB_PORT=3307 .venv/bin/python -m pytest tests/ -k 'page or layout or
-        blacklist' -v
-    styleguideRules:
-      - 中文文案+银行术语统一
-    guardrails:
-      - 页面结构/分页保留
-    learnings:
-      - 业务页银行化完成：8 个页面测试全绿；blacklist 4 类含设备
-    gotchas:
-      - blacklist tab 新增设备需同步黑名单 API 类型校验（T-007 已加）
-      - 画像 API (service/case.py get_user_profile) 同步映射新字段，否则 UserProfileResponse
-        构造报错
-    context:
-      - path: templates/
-        why: 全部模板
-      - path: static/app.js
-        why: 前端逻辑
-  - id: T-018
-    title: RED：Agent 工具测试——银行查询语义（先行失败）
-    phase: red
-    status: done
-    dependencies:
-      - T-017
-    blocks:
-      - T-019
-    prerequisites:
-      - description: T-017 完成（业务页就绪）
-        cleared: false
-    validationSteps:
-      - 写 Agent 工具测试：查客户画像/贷款申请/规则/案件/黑名单/逾期/投诉/评估 8 个工具返回银行语义字段
-      - 运行确认失败（当前工具查电商实体）
-    ciCommands:
-      - DB_PORT=3307 .venv/bin/python -m pytest tests/test_agent_session_lock.py
-        -v
-    styleguideRules:
-      - 工具函数签名（tool 名/参数）尽量保持
-    guardrails:
-      - 不改 agent/chat.py 会话锁逻辑
-    learnings:
-      - RED 确认：tools.py 导入失败（OrderDetail 不存在）
-    gotchas:
-      - Agent 工具需要 LLM_API_KEY 才能完整对话，测试可只验工具函数本身
-      - tools.py 引用 ORM 实体——同步 T-003 新模型
-    context:
-      - path: app/agent/tools.py
-        why: 8 个工具定义
-  - id: T-019
-    title: GREEN：T-09 Agent 8 工具银行化
-    phase: green
-    status: done
-    dependencies:
-      - T-018
-    blocks:
-      - T-020
-    prerequisites:
-      - description: T-018 失败测试存在
-        cleared: false
-    validationSteps:
-      - tools.py 8 个工具查询语义换银行实体（客户画像/申请/规则/案件/黑名单/逾期/投诉/评估）
-      - chat.py 提示词银行化
-      - T-018 测试转绿
-    ciCommands:
-      - DB_PORT=3307 .venv/bin/python -m pytest tests/test_agent_session_lock.py
-        -v
-    styleguideRules:
-      - 工具 ≤30 LOC，单职责
-    guardrails:
-      - 不引入新依赖
-    learnings:
-      - Agent 工具端到端验证：query_business_data 返回银行字段（loan_id/loan_status/loan_amount）
-    gotchas:
-      - 工具返回 dict 字段名与前端/文档一致
-      - "@tool 包装对象无源码，inspect.getsource 会 TypeError；dispatch key
-        保留原名（user_orders 等）语义切换"
-    context:
-      - path: app/agent/tools.py
-        why: 工具定义
-      - path: app/agent/chat.py
-        why: 对话逻辑
-  - id: T-020
-    title: CLEANUP：T-10 收尾——领域测试整理+引擎回归+README/述职文档+清理调试残留
-    phase: refactor
-    status: in_progress
-    dependencies:
-      - T-015
-      - T-017
-      - T-019
-    blocks:
-      - T-021
-    prerequisites:
-      - description: T-015/T-017/T-019 完成
-        cleared: false
-    validationSteps:
-      - 重写/整理领域层测试（DDL/特征/schema/生成器/训练数据/页面），删除过时电商断言
-      - 引擎层测试全量回归确认绿
-      - README 更新为银行信贷风控系统启动文档
-      - docs/bank_risk_plan.md 完善述职材料（领域映射/特征/规则/面试叙事）
-      - 清理调试打印/临时文件/TODO
-      - 全量 pytest 预跑（verifyCommand 不含的遗留项）
-    ciCommands:
-      - DB_PORT=3307 .venv/bin/python -m pytest tests/ -q
-    styleguideRules:
-      - diff 生产形态：无调试残留、无 scratch 文件
-      - 文档中文面向用户
-    guardrails:
-      - 不删引擎层测试
-      - 不提交 .env/logs/缓存
-    learnings: []
-    gotchas:
-      - README 大量引用旧脚本/表名，需系统性替换
-      - test_risk_decision/test_case_* 等引擎测试若引用电商词需检查是否领域耦合
-    context:
-      - path: README.md
-        why: 启动文档重写
-      - path: docs/bank_risk_plan.md
-        why: 述职文档完善
-  - id: T-021
-    title: VERIFY：跑 verifyCommand 全链 + 合并推送 + complete
-    phase: none
-    status: pending
-    dependencies:
-      - T-020
-    blocks: []
-    prerequisites:
-      - description: T-020 完成
-        cleared: false
-    validationSteps:
-      - 运行 verifyCommand 全链，引用完整输出
-      - 逐条核对 done-criteria（10 issues/银行语义/引擎测试）
-      - git merge bank-migration --no-ff（ask-before）
-      - git push origin main（ask-before）
-      - git push origin bank-migration
-      - grep 代码确认无电商残留（order_info/postsale/物流 等）
-      - until_done_complete 引用输出
-    ciCommands:
-      - bash -c 'cd /home/leon/projects/尚硅谷大模型项目之风控系统/3.代码/AI_Risk &&
-        DB_PORT=3307 .venv/bin/python scripts/init_db.py --yes --port 3307 &&
-        DB_PORT=3307 .venv/bin/python scripts/gen_train_dataset.py --reset &&
-        DB_PORT=3307 .venv/bin/python scripts/train_xgb_model.py && DB_PORT=3307
-        .venv/bin/python -m pytest tests/ -q'
-    styleguideRules:
-      - 证据必须引用命令原始输出
-    guardrails:
-      - merge/push 前必须 ask-before 确认
-      - verifyCommand 未过不 complete
-    learnings: []
-    gotchas:
-      - merge 前确认 main 无他人提交（单用户仓库）
-      - push 用 SSH（gh 已配）
-    context:
-      - url: https://github.com/chaosorder010/AI-BankRisk
-        why: 推送目标
+- id: T-001
+  title: BOOTSTRAP：切 bank-migration 分支 + 基线 pytest 全绿 + 固化脚本名
+  phase: bootstrap
+  status: done
+  dependencies: []
+  blocks:
+  - T-002
+  - T-004
+  - T-006
+  - T-008
+  - T-010
+  - T-012
+  - T-014
+  - T-016
+  - T-018
+  prerequisites:
+  - description: git 仓库已 init 且 main 有基线提交（fb90057 + 改名提交）
+    cleared: true
+  - description: MySQL 容器 risk-mysql 在 3307 运行
+    cleared: true
+  - description: venv 依赖已装
+    cleared: true
+  validationSteps:
+  - git checkout -b bank-migration 成功
+  - DB_PORT=3307 .venv/bin/python -m pytest tests/ -q 输出基线全绿（315 个）
+  - 确认 scripts/ 下脚本名清单（init_db/gen_10w_data/gen_train_dataset/train_xgb_model/backfill_ml_score），作为
+    verifyCommand 固化依据
+  ciCommands:
+  - DB_PORT=3307 .venv/bin/python -m pytest tests/ -q
+  styleguideRules:
+  - 面向用户内容简体中文；代码/命令/路径保持原样（项目 AGENTS.md）
+  - 工具调用简洁，优先专用工具而非 shell 等价物
+  guardrails:
+  - 不改任何引擎层文件（rule.py/decision.py 评分逻辑/case.py 状态机/alert/scheduler）
+  - 不读 .env 内容（含密钥）
+  - MySQL 一律走 3307
+  learnings:
+  - 基线 pytest 316 passed/1 skipped，耗时 185s（比 README 估算慢，迭代需用 -k 过滤快速子集）
+  gotchas:
+  - run_app.py 自检写死 3306，改走 scripts/main.py 或环境变量
+  - xgb_model.json 已存在（7KB 基线模型），改造后需重训
+  - init_db --reset 会清空 ecs 库（含基线评估数据）
+  - 全量 pytest 约 3 分钟，RED/GREEN 阶段用针对性测试文件 + -k 过滤
+  context:
+  - path: README.md
+    why: 脚本名与启动链路权威来源
+  - url: https://github.com/chaosorder010/AI-BankRisk/issues
+    why: 10 个 tickets 正文
+- id: T-002
+  title: RED：领域测试骨架——DDL 反射期望 17 张银行表（先行失败）
+  phase: red
+  status: done
+  dependencies:
+  - T-001
+  blocks:
+  - T-003
+  prerequisites:
+  - description: T-001 完成（分支+基线绿）
+    cleared: false
+  validationSteps:
+  - 写 tests/test_bank_ddl_sync.py：反射数据库期望 17 张银行表（customer_info/loan_application/loan_installment/loan_product/loan_product_category/loan_status/contact_info/overdue_record/repayment_status/overdue_reason/repayment_record/loan_repayment_rel/overdue_repayment_rel/bank_branch/region/complaint_content/complaint_record）
+  - 运行该测试确认失败（当前仍是电商表）
+  - 记录失败输出作为 RED 证据
+  ciCommands:
+  - DB_PORT=3307 .venv/bin/python -m pytest tests/test_bank_ddl_sync.py -v
+  styleguideRules:
+  - 测试命名 test_*.py 放 tests/
+  - 只测外部行为（表存在性/字段），不测内部实现
+  guardrails:
+  - RED 阶段只写测试，不写生产代码
+  - 不动现有 test_ddl_sync.py（引擎基线）
+  learnings:
+  - RED 确认：4 个 DDL 测试按预期失败（缺 customer_info 等银行表）
+  gotchas:
+  - DDL 反射测试需要真实 DB（DDL_CHECK_ENABLED=1 或直接连 3307）
+  - Foreign key 顺序影响建表顺序
+  - SQLAlchemy create_engine 默认走 mysqldb 方言需 MySQLdb；URL 需 replace('+aiomysql','+pymysql')
+  context:
+  - path: sql/init_business_tables.sql
+    why: 现有电商表结构参考
+  - path: app/models_business.py
+    why: 现有 ORM 参考
+- id: T-003
+  title: GREEN：T-01 数据底座——17 张银行表 SQL+种子数据+ORM+init_db 跑通
+  phase: green
+  status: done
+  dependencies:
+  - T-002
+  blocks:
+  - T-004
+  - T-005
+  - T-006
+  - T-007
+  - T-008
+  - T-009
+  - T-010
+  - T-011
+  - T-012
+  prerequisites:
+  - description: T-002 失败测试存在且已确认失败
+    cleared: false
+  validationSteps:
+  - 重写 sql/init_business_tables.sql 为 17 张银行表（按外键依赖顺序）
+  - 种子数据：客户/产品类别/贷款产品/状态表/网点/地区/投诉对照/逾期原因
+  - 重写 app/models_business.py 为 17 张银行表 ORM
+  - DB_PORT=3307 .venv/bin/python scripts/init_db.py --yes --port 3307 跑通
+  - 运行 T-002 测试转绿
+  - mysql 查询验证 key 表存在
+  ciCommands:
+  - DB_PORT=3307 .venv/bin/python scripts/init_db.py --yes --port 3307
+  - DB_PORT=3307 .venv/bin/python -m pytest tests/test_bank_ddl_sync.py -v
+  styleguideRules:
+  - SQL 保留 utf8mb4 + 外键 + COMMENT
+  - ORM 字段与 SQL 严格一致（test_ddl_sync 模式）
+  - 文件 ≤200 LOC，超则拆
+  guardrails:
+  - 不删 region 表（引擎黑名单地址维度引用）
+  - 保留 risk_* 风控表不动
+  - 表名/字段名与 CONTEXT.md 术语一致
+  learnings:
+  - init_db --drop 成功重建 26 表；aiomysql 在脚本退出时事件循环已关闭会打印警告，不影响功能
+  gotchas:
+  - postsale→overdue_record 等多对一映射要保持外键引用完整性
+  - loan_application 时间线字段（申请/审批/放款/到期）对应原订单 4 时间
+  - init_db --yes 会重置 ecs 库，属 ask-before 已覆盖
+  context:
+  - path: docs/bank_risk_plan.md
+    why: 17 表映射权威来源
+  - path: CONTEXT.md
+    why: 术语表
+- id: T-004
+  title: RED：特征测试——25 维银行特征名 + FEATURE_COLUMNS 对齐（先行失败）
+  phase: red
+  status: done
+  dependencies:
+  - T-003
+  blocks:
+  - T-005
+  prerequisites:
+  - description: T-003 完成（银行表已建）
+    cleared: false
+  validationSteps:
+  - 写特征名对齐测试：期望 25 个银行特征名（cust_*×14/loan_*×8/dev_*×3）与 ml_model.FEATURE_COLUMNS 一致
+  - 写特征计算测试：给定银行表数据，断言 cust_total_loans 等取值正确
+  - 运行确认失败（当前仍是电商特征）
+  ciCommands:
+  - DB_PORT=3307 .venv/bin/python -m pytest tests/ -k feature -v
+  styleguideRules:
+  - 特征命名规范：cust_/loan_/dev_ 前缀
+  - 只测外部行为（特征名/取值）
+  guardrails:
+  - 不改 ml_model.py 的 FEATURE_COLUMNS（那是 GREEN 阶段的事）
+  - RED 阶段只写测试
+  learnings:
+  - RED 确认：3/4 特征测试失败；app/models.py 从 models_business 导入旧电商模型报 ImportError（T-007 将处理）
+  gotchas:
+  - 特征名与 FEATURE_COLUMNS 顺序必须一一对应（防 XGBoost 特征错位）
+  - 派生特征（逾期率/履约率）避免重复 SQL 查询
+  context:
+  - path: app/engine/feature.py
+    why: 现有 25 维特征实现参考
+  - path: app/engine/ml_model.py
+    why: FEATURE_COLUMNS 定义
+- id: T-005
+  title: GREEN：T-02 特征工程——feature.py 银行化 + FEATURE_COLUMNS 对齐
+  phase: green
+  status: done
+  dependencies:
+  - T-004
+  blocks:
+  - T-006
+  - T-007
+  - T-008
+  - T-010
+  prerequisites:
+  - description: T-004 失败测试存在
+    cleared: false
+  validationSteps:
+  - 重写 app/engine/feature.py：cust_*×14（多头借贷/逾期率/履约率/被拒史等）+ loan_*×8（金额/期限/负债率/收入负债比等）+
+    dev_*×3（设备数/IP跨省/新设备）
+  - 同步 app/engine/ml_model.py FEATURE_COLUMNS
+  - python app/engine/feature.py 演示输出 25 维银行特征
+  - T-004 测试转绿
+  ciCommands:
+  - DB_PORT=3307 .venv/bin/python -m pytest tests/ -k feature -v
+  - DB_PORT=3307 .venv/bin/python -m pytest tests/test_xgboost.py::test_feature_columns_align
+    -v
+  styleguideRules:
+  - 文件 ≤200 LOC，函数 ≤30 LOC，单职责
+  - 收益：cust_* 14 个独立+派生特征复用避免重复 SQL（沿用 P5 优化模式）
+  guardrails:
+  - compute_all_features 签名不变（decision.py 调用点）
+  - 特征 dict key 名与 FEATURE_COLUMNS 完全一致
+  learnings:
+  - 动态验证通过：25 维特征全部正确输出（demo 数据 2 条申请验证 cust_total_loans=2/dev_ip_province_count=2/loan_debt_ratio=0.16
+    等）
+  gotchas:
+  - 负债率/收入负债比需要收入字段（contact_info 或 loan_application 加 annual_income 字段）——涉及 T-003
+    表结构，若缺需补字段
+  - dev_* 特征需要设备表——若 17 表无设备表，需在 contact_info 或新增 device 表承载
+  - docker exec mysql 客户端需 --default-character-set=utf8mb4 否则中文 WHERE 查}
+  - docker exec mysql 客户端需 --default-character-set=utf8mb4 否则中文 WHERE 查询无结果/外键失败
+  context:
+  - path: docs/bank_risk_plan.md
+    why: 25 维特征设计表
+  - path: CONTEXT.md
+    why: 特征域术语
+- id: T-006
+  title: RED：契约测试——4 银行事件/6 规则分类/客户归属校验（先行失败）
+  phase: red
+  status: done
+  dependencies:
+  - T-005
+  blocks:
+  - T-007
+  prerequisites:
+  - description: T-005 完成（特征就绪）
+    cleared: false
+  validationSteps:
+  - 写 schema 测试：RiskCheckRequest 接受 4 个银行事件（贷款申请/放款/还款/客户投诉），拒绝非法值
+  - 写规则分类测试：RuleCreate 接受 6 类（欺诈风险/信用风险/反洗钱/账户风险/贷后风险/合规风险）
+  - 写归属校验测试：客户-贷款申请归属不一致被拒绝
+  - 运行确认失败（当前仍是电商字面量）
+  ciCommands:
+  - DB_PORT=3307 .venv/bin/python -m pytest tests/test_schemas.py -v
+  styleguideRules:
+  - 只测外部契约（字面量/校验行为）
+  guardrails:
+  - 不改引擎评分逻辑
+  - request 字段名 order_id/receive_id 保留（D5）
+  learnings:
+  - RED 确认：8 个契约测试按预期失败（电商字面量）
+  gotchas:
+  - event_type 字面量改动会连锁影响 api.py/routers/前端——RED 阶段只写测试
+  - 黑名单类型加'设备'影响 risk_blacklist 枚举与前端 tab
+  context:
+  - path: app/schemas.py
+    why: 当前字面量
+  - path: app/service/event.py
+    why: 当前校验逻辑
+- id: T-007
+  title: GREEN：T-03 契约——schemas/event 校验/decision 上下文银行化
+  phase: green
+  status: done
+  dependencies:
+  - T-006
+  blocks:
+  - T-008
+  - T-010
+  - T-011
+  - T-012
+  - T-013
+  - T-014
+  - T-015
+  - T-016
+  prerequisites:
+  - description: T-006 失败测试存在
+    cleared: false
+  validationSteps:
+  - app/schemas.py：event_type Literal 4 银行事件、RuleCreate/Update category 6 类、UserProfileResponse
+    字段银行化（total_loans/overdue_count/overdue_rate/avg_loan_amount/contact_count）
+  - app/service/event.py：校验实体换银行（客户/贷款申请/还款归属）
+  - app/engine/decision.py：_build_context 事件映射（贷款申请/放款→loan_id=source_id；还款→repayment_id；投诉→complaint_id）+
+    _update_user_profile 字段银行化
+  - 黑名单类型加'设备'（models_risk/schema/service）
+  - T-006 测试转绿
+  ciCommands:
+  - DB_PORT=3307 .venv/bin/python -m pytest tests/test_schemas.py -v
+  - DB_PORT=3307 .venv/bin/python -m pytest tests/test_risk_decision.py -v
+  styleguideRules:
+  - decision.py 只改 _build_context/_update_user_profile，评分/融合/veto 逻辑零改动
+  - 文件 ≤200 LOC
+  guardrails:
+  - 引擎 7 步流水线结构不动
+  - 字段名 order_id/receive_id 保留
+  learnings:
+  - 决策链端到端跑通：贷款申请→校验→特征→规则→评分→响应；XGBoost 旧模型不匹配走兜底（T-013 重训）
+  gotchas:
+  - _update_user_profile 引用特征 key 名，需与 T-005 新特征名同步
+  - 黑名单's设备'联动 risk_blacklist 表 enum + 黑名单 API + 前端 tab
+  - risk_event/risk_feature/risk_case 的 event_type/entity_type 也是 ENUM 列，需与 schema
+    同步改否则 INSERT 报 Data truncated
+  context:
+  - path: app/engine/decision.py
+    why: _build_context/_update_user_profile 改点
+  - path: app/models_risk.py
+    why: risk_user_profile/risk_blacklist 字段
+- id: T-008
+  title: RED：规则测试——银行规则命中（多头借贷等，先行失败）
+  phase: red
+  status: done
+  dependencies:
+  - T-007
+  blocks:
+  - T-009
+  prerequisites:
+  - description: T-007 完成（契约就绪）
+    cleared: false
+  validationSteps:
+  - 写规则命中测试：构造多头借贷特征（cust_loans_7d≥3）命中对应规则
+  - 写一票否决测试：极高规则（如负债率极端）强制拒绝
+  - 运行确认失败（当前规则库还是电商 30 条）
+  ciCommands:
+  - DB_PORT=3307 .venv/bin/python -m pytest tests/test_rule_engine.py tests/test_match_rules.py
+    -v
+  styleguideRules:
+  - 沿用现有规则测试模式（构造特征 dict → match_rules）
+  guardrails:
+  - 不改 rule.py 匹配引擎
+  learnings:
+  - RED 确认：DB 集成测试失败（规则库空的预期）；纯函数命中测试通过
+  gotchas:
+  - 规则条件引用特征名必须是 T-005 的新特征名
+  - 30 条规则 SQL 在 init_risk_data.sql（GREEN 改）
+  context:
+  - path: sql/init_risk_data.sql
+    why: 现有 30 条电商规则
+  - path: app/engine/rule.py
+    why: 规则匹配引擎（不动）
+- id: T-009
+  title: GREEN：T-04 规则——30 条银行规则 SQL（6 大场景）
+  phase: green
+  status: done
+  dependencies:
+  - T-008
+  blocks:
+  - T-010
+  - T-011
+  - T-014
+  prerequisites:
+  - description: T-008 失败测试存在
+    cleared: false
+  validationSteps:
+  - 重写 sql/init_risk_data.sql：欺诈 6/信用 6/反洗钱 4/账户 5/贷后 5/合规 4 = 30 条
+  - 规则条件用新特征名（cust_loans_7d/loan_debt_ratio/cust_overdue_rate 等）
+  - init_db 后 risk_rule 30 条
+  - T-008 测试转绿
+  ciCommands:
+  - DB_PORT=3307 .venv/bin/python scripts/init_db.py --yes --port 3307
+  - DB_PORT=3307 .venv/bin/python -m pytest tests/test_rule_engine.py tests/test_match_rules.py
+    -v
+  styleguideRules:
+  - 规则 JSON 条件结构不变（field/op/value、and/or 嵌套）
+  - 极高规则保留 2-3 条（一票否决演示）
+  guardrails:
+  - rule_category 枚举与 T-007 的 6 类一致
+  - event_type 与 4 银行事件一致
+  learnings:
+  - 30 条规则入库（6 分类各 6/6/4/5/5/4）；多头借贷场景端到端命中 R101/R303/R403
+  gotchas:
+  - 规则 SQL 里 ENUM 类型（risk_rule.rule_category/event_type）需要同步改表结构——init_risk_tables.sql
+    的 ENUM 定义也要改
+  - init_risk_data 会 TRUNCATE risk_rule + risk_action_log
+  - init_db split_sql_statements 对 SQL 语句很敏感——R103 漏写 ')' 导致整条语句被吞并污染下一条；aiomysql
+    全局 engine 跨 asyncio.run loop 需 dispose
+  context:
+  - path: sql/init_risk_tables.sql
+    why: risk_rule 表 ENUM 定义（需同步改）
+- id: T-010
+  title: RED：生成器测试——画像分布 80/15/5 + 银行字段（先行失败）
+  phase: red
+  status: done
+  dependencies:
+  - T-009
+  blocks:
+  - T-011
+  prerequisites:
+  - description: T-009 完成（规则就绪）
+    cleared: false
+  validationSteps:
+  - 写生成器测试：gen 后客户画像分布 80 正常/15 中/5 高
+  - 写字段测试：贷款申请表有申请/审批/放款/到期时间线字段
+  - 运行确认失败（当前 gen_10w_data 生成电商数据）
+  ciCommands:
+  - DB_PORT=3307 .venv/bin/python -m pytest tests/test_gen_10w_data.py -v
+  styleguideRules:
+  - 沿用现有 gen 脚本测试模式（参数→输出断言）
+  guardrails:
+  - 脚本名保持 gen_10w_data.py（verifyCommand 依赖）
+  learnings:
+  - RED 确认：4 个生成器测试按预期失败（模块仍为电商版）
+  gotchas:
+  - 风险画像注入：高风险客户=多头+逾期+被拒史（PD 训练正例来源）
+  - 设备/IP 数据需要生成（dev_* 特征依赖）
+  context:
+  - path: scripts/gen_10w_data.py
+    why: 现有生成器参考
+  - path: scripts/gen_risky_users.py
+    why: 高风险样本生成参考
+- id: T-011
+  title: GREEN：T-05 生成器——gen_10w_data 银行化 + 风险画像注入
+  phase: green
+  status: done
+  dependencies:
+  - T-010
+  blocks:
+  - T-012
+  - T-013
+  - T-015
+  - T-017
+  prerequisites:
+  - description: T-010 失败测试存在
+    cleared: false
+  validationSteps:
+  - gen_10w_data.py 银行化：5000 客户（80/15/5 画像）+ 3 万贷款申请 + 还款/逾期/投诉记录 + 设备/联系信息
+  - 配套脚本（gen_risky_users/gen_risk_data_with_dates）同步银行化
+  - 运行生成，T-010 测试转绿
+  - 验证特征工程可查询生成数据
+  ciCommands:
+  - DB_PORT=3307 .venv/bin/python scripts/gen_10w_data.py
+  - DB_PORT=3307 .venv/bin/python -m pytest tests/ -k gen -v
+  styleguideRules:
+  - 文件 ≤200 LOC，生成逻辑函数 ≤30 LOC
+  - faker 生成中文银行数据（姓名/手机号/身份证/统一社会信用代码）
+  guardrails:
+  - 脚本名保持 gen_10w_data.py
+  - --users/--orders 参数语义保留（客户数/申请数）
+  learnings:
+  - 全量生成成功：5000 客户/3 万申请/65 万分期/50951 还款/1139 逾期（279 逾期客户）/923 投诉；gen_risky_users
+    等旧脚本标记 DEPRECATED
+  gotchas:
+  - 5000 客户 3 万申请生成时间需控制（演示流畅）
+  - 高风险客户 5% = 250 人，逾期记录要覆盖足够 PD 正例
+  - contact 区划 FK 需从 region 表读取；SQLAlchemy 空 list execute 报 bind 缺失需 if 保护；路径中文时 PYTHONPATH
+    必须显式设置
+  context:
+  - path: docs/bank_risk_plan.md
+    why: 数据规模 5000/3 万
+  - path: CONTEXT.md
+    why: 画像分布 80/15/5
+- id: T-012
+  title: RED：训练测试——PD 标签（逾期客户=1，先行失败）
+  phase: red
+  status: done
+  dependencies:
+  - T-011
+  blocks:
+  - T-013
+  prerequisites:
+  - description: T-011 完成（银行数据可生成）
+    cleared: false
+  validationSteps:
+  - 写训练数据测试：无逾期记录客户标签=0，有逾期记录客户标签=1
+  - 写 gen_train_dataset 输出校验测试（条数/正例占比/字段）
+  - 运行确认失败（当前标签是'通过/拒绝'语义）
+  ciCommands:
+  - DB_PORT=3307 .venv/bin/python -m pytest tests/test_train_data_validation.py -v
+  styleguideRules:
+  - 沿用现有训练数据校验测试模式
+  guardrails:
+  - 不改 ml_model.py predict/_prob_to_decision（语义由数据保证）
+  learnings:
+  - RED 确认：4 个训练测试按预期失败（电商语义）
+  gotchas:
+  - 现有 test_train_data_purity/gen_train_dataset 测试断言'决策标签'，需重写为'逾期标签'
+  - train_xgb_model.py 拉取评估数据的 SQL 条件（ml_score IS NULL）保持
+  context:
+  - path: scripts/gen_train_dataset.py
+    why: 训练数据生成器改点
+  - path: scripts/train_xgb_model.py
+    why: 训练脚本（标签从 dataset 来）
+- id: T-013
+  title: GREEN：T-06 PD 训练——gen_train_dataset + train_xgb + backfill
+  phase: green
+  status: done
+  dependencies:
+  - T-012
+  blocks:
+  - T-014
+  - T-015
+  - T-016
+  - T-018
+  prerequisites:
+  - description: T-012 失败测试存在
+    cleared: false
+  validationSteps:
+  - gen_train_dataset.py 改 PD 标签：正例=有逾期记录的客户申请，负例=正常履约
+  - train_xgb_model.py 保持（特征源接新特征名）
+  - backfill_ml_score.py 回填
+  - 运行训练成功，输出 AUC/F1
+  - T-012 测试转绿
+  ciCommands:
+  - DB_PORT=3307 .venv/bin/python scripts/gen_train_dataset.py --reset
+  - DB_PORT=3307 .venv/bin/python scripts/train_xgb_model.py
+  - DB_PORT=3307 .venv/bin/python scripts/backfill_ml_score.py
+  styleguideRules:
+  - 训练脚本输出指标格式保持（AUC/F1/特征重要性）
+  guardrails:
+  - 模型文件路径 app/engine/xgb_model.json 不变
+  - XGB_ENABLED 降级逻辑不动
+  learnings:
+  - PD 模型训练成功：2500 样本 AUC=0.967/F1=0.83；backfill 正负分离度 0.376；逾期客户被一票否决拒绝（ml=0.14 真实推理）
+  gotchas:
+  - 新特征名下旧模型文件失效——训练前删除或覆盖 xgb_model.json
+  - 训练样本下限 1250（25 维×50），3 万申请足够
+  - backfill_ml_score.py 引用 risk_event 旧列(order_id/receive_id)与旧特征签名，需同步改
+  context:
+  - path: scripts/gen_train_dataset.py
+    why: PD 标签改造
+  - path: scripts/train_xgb_model.py
+    why: 训练脚本
+- id: T-014
+  title: RED：页面断言——仪表盘/风险检查/规则页银行文案（先行失败）
+  phase: red
+  status: done
+  dependencies:
+  - T-013
+  blocks:
+  - T-015
+  prerequisites:
+  - description: T-013 完成（后端银行语义就绪）
+    cleared: false
+  validationSteps:
+  - 写页面文案测试：dashboard.html 含'贷款申请'或'华信银行'，不含'订单'
+  - 写风险检查页测试：表单含 4 个银行事件
+  - 写规则页测试：卡片含 6 银行分类
+  - 运行确认失败（当前仍是电商文案）
+  ciCommands:
+  - DB_PORT=3307 .venv/bin/python -m pytest tests/test_base_layout.py tests/test_risk_check_page.py
+    -v
+  styleguideRules:
+  - 页面文案断言用子串匹配（防脆弱）
+  guardrails:
+  - RED 阶段只写测试
+  learnings:
+  - RED 确认：4 个页面测试按预期失败（前端仍电商文案）
+  gotchas:
+  - base.html 品牌栏/标题也要改（华信银行）
+  - static/app.js 里 API 文案/事件类型常量同步
+  context:
+  - path: templates/dashboard.html
+    why: 仪表盘模板
+  - path: templates/base.html
+    why: 品牌栏
+- id: T-015
+  title: GREEN：T-07 前端核心页——华信银行品牌（仪表盘/风险检查/规则管理）
+  phase: green
+  status: done
+  dependencies:
+  - T-014
+  blocks:
+  - T-020
+  prerequisites:
+  - description: T-014 失败测试存在
+    cleared: false
+  validationSteps:
+  - base.html：华信银行品牌栏/标题
+  - dashboard.html：今日申请量/风险分布/决策分布/逾期率等银行指标
+  - risk_check.html：4 银行事件表单 + 银行特征展示
+  - rules.html：6 银行分类
+  - static/app.js 同步文案/事件常量
+  - T-014 测试转绿
+  ciCommands:
+  - DB_PORT=3307 .venv/bin/python -m pytest tests/test_base_layout.py tests/test_risk_check_page.py
+    -v
+  - DB_PORT=3307 .venv/bin/python -m pytest tests/test_pagination.py -v
+  styleguideRules:
+  - Jinja2 模板结构/分页/布局不回退
+  - 中文文案贯穿
+  guardrails:
+  - 页面结构/分页/粘底特性保留
+  - URL 路由不变
+  learnings:
+  - 前端核心页银行化完成；app.js 仅 ML 文案需改（P(拒绝)→PD违约概率）
+  gotchas:
+  - dashboard 指标来自 API（routers/dashboard.py 的 SQL 聚合）——需同步改后端聚合字段
+  - 评估历史/画像页在 T-017
+  context:
+  - path: app/routers/dashboard.py
+    why: 仪表盘聚合 API
+  - path: templates/
+    why: 全部模板
+- id: T-016
+  title: RED：页面断言——案件/黑名单/画像/评估/Agent 页（先行失败）
+  phase: red
+  status: done
+  dependencies:
+  - T-015
+  blocks:
+  - T-017
+  prerequisites:
+  - description: T-015 完成（核心页已银行化）
+    cleared: false
+  validationSteps:
+  - 写断言：cases.html 含贷款申请/事件类型银行语义
+  - 写断言：blacklist.html 含设备 tab
+  - 写断言：profile.html 含逾期率/多头借贷
+  - 写断言：assessments.html/chat.html 银行文案
+  - 运行确认失败
+  ciCommands:
+  - DB_PORT=3307 .venv/bin/python -m pytest tests/ -k 'page or layout or blacklist'
+    -v
+  styleguideRules:
+  - 子串断言防脆弱
+  guardrails:
+  - RED 只写测试
+  learnings:
+  - RED 确认：4 个业务页测试按预期失败
+  gotchas:
+  - user_profile API 响应字段已银行化（T-007），页面渲染字段同步
+  context:
+  - path: templates/cases.html
+    why: 案件模板
+  - path: templates/blacklist.html
+    why: 黑名单模板
+- id: T-017
+  title: GREEN：T-08 前端业务页——案件/黑名单(4类)/画像/评估/Agent 页
+  phase: green
+  status: done
+  dependencies:
+  - T-016
+  blocks:
+  - T-020
+  prerequisites:
+  - description: T-016 失败测试存在
+    cleared: false
+  validationSteps:
+  - cases.html：贷款申请/放款/还款/投诉事件 + 状态机银行语义
+  - blacklist.html：4 tab（客户/手机号/地址/设备）
+  - profile.html：多头借贷/逾期率/履约率/被拒史
+  - assessments.html：评估历史银行字段
+  - chat.html：Agent 提示词银行化
+  - T-016 测试转绿
+  ciCommands:
+  - DB_PORT=3307 .venv/bin/python -m pytest tests/ -k 'page or layout or blacklist'
+    -v
+  styleguideRules:
+  - 中文文案+银行术语统一
+  guardrails:
+  - 页面结构/分页保留
+  learnings:
+  - 业务页银行化完成：8 个页面测试全绿；blacklist 4 类含设备
+  gotchas:
+  - blacklist tab 新增设备需同步黑名单 API 类型校验（T-007 已加）
+  - 画像 API (service/case.py get_user_profile) 同步映射新字段，否则 UserProfileResponse 构造报错
+  context:
+  - path: templates/
+    why: 全部模板
+  - path: static/app.js
+    why: 前端逻辑
+- id: T-018
+  title: RED：Agent 工具测试——银行查询语义（先行失败）
+  phase: red
+  status: done
+  dependencies:
+  - T-017
+  blocks:
+  - T-019
+  prerequisites:
+  - description: T-017 完成（业务页就绪）
+    cleared: false
+  validationSteps:
+  - 写 Agent 工具测试：查客户画像/贷款申请/规则/案件/黑名单/逾期/投诉/评估 8 个工具返回银行语义字段
+  - 运行确认失败（当前工具查电商实体）
+  ciCommands:
+  - DB_PORT=3307 .venv/bin/python -m pytest tests/test_agent_session_lock.py -v
+  styleguideRules:
+  - 工具函数签名（tool 名/参数）尽量保持
+  guardrails:
+  - 不改 agent/chat.py 会话锁逻辑
+  learnings:
+  - RED 确认：tools.py 导入失败（OrderDetail 不存在）
+  gotchas:
+  - Agent 工具需要 LLM_API_KEY 才能完整对话，测试可只验工具函数本身
+  - tools.py 引用 ORM 实体——同步 T-003 新模型
+  context:
+  - path: app/agent/tools.py
+    why: 8 个工具定义
+- id: T-019
+  title: GREEN：T-09 Agent 8 工具银行化
+  phase: green
+  status: done
+  dependencies:
+  - T-018
+  blocks:
+  - T-020
+  prerequisites:
+  - description: T-018 失败测试存在
+    cleared: false
+  validationSteps:
+  - tools.py 8 个工具查询语义换银行实体（客户画像/申请/规则/案件/黑名单/逾期/投诉/评估）
+  - chat.py 提示词银行化
+  - T-018 测试转绿
+  ciCommands:
+  - DB_PORT=3307 .venv/bin/python -m pytest tests/test_agent_session_lock.py -v
+  styleguideRules:
+  - 工具 ≤30 LOC，单职责
+  guardrails:
+  - 不引入新依赖
+  learnings:
+  - Agent 工具端到端验证：query_business_data 返回银行字段（loan_id/loan_status/loan_amount）
+  gotchas:
+  - 工具返回 dict 字段名与前端/文档一致
+  - '@tool 包装对象无源码，inspect.getsource 会 TypeError；dispatch key 保留原名（user_orders 等）语义切换'
+  context:
+  - path: app/agent/tools.py
+    why: 工具定义
+  - path: app/agent/chat.py
+    why: 对话逻辑
+- id: T-020
+  title: CLEANUP：T-10 收尾——领域测试整理+引擎回归+README/述职文档+清理调试残留
+  phase: refactor
+  status: done
+  dependencies:
+  - T-015
+  - T-017
+  - T-019
+  blocks:
+  - T-021
+  prerequisites:
+  - description: T-015/T-017/T-019 完成
+    cleared: false
+  validationSteps:
+  - 重写/整理领域层测试（DDL/特征/schema/生成器/训练数据/页面），删除过时电商断言
+  - 引擎层测试全量回归确认绿
+  - README 更新为银行信贷风控系统启动文档
+  - docs/bank_risk_plan.md 完善述职材料（领域映射/特征/规则/面试叙事）
+  - 清理调试打印/临时文件/TODO
+  - 全量 pytest 预跑（verifyCommand 不含的遗留项）
+  ciCommands:
+  - DB_PORT=3307 .venv/bin/python -m pytest tests/ -q
+  styleguideRules:
+  - diff 生产形态：无调试残留、无 scratch 文件
+  - 文档中文面向用户
+  guardrails:
+  - 不删引擎层测试
+  - 不提交 .env/logs/缓存
+  learnings: []
+  gotchas:
+  - README 大量引用旧脚本/表名，需系统性替换
+  - test_risk_decision/test_case_* 等引擎测试若引用电商词需检查是否领域耦合
+  context:
+  - path: README.md
+    why: 启动文档重写
+  - path: docs/bank_risk_plan.md
+    why: 述职文档完善
+- id: T-021
+  title: VERIFY：跑 verifyCommand 全链 + 合并推送 + complete
+  phase: none
+  status: pending
+  dependencies:
+  - T-020
+  blocks: []
+  prerequisites:
+  - description: T-020 完成
+    cleared: false
+  validationSteps:
+  - 运行 verifyCommand 全链，引用完整输出
+  - 逐条核对 done-criteria（10 issues/银行语义/引擎测试）
+  - git merge bank-migration --no-ff（ask-before）
+  - git push origin main（ask-before）
+  - git push origin bank-migration
+  - grep 代码确认无电商残留（order_info/postsale/物流 等）
+  - until_done_complete 引用输出
+  ciCommands:
+  - bash -c 'cd /home/leon/projects/尚硅谷大模型项目之风控系统/3.代码/AI_Risk && DB_PORT=3307 .venv/bin/python
+    scripts/init_db.py --yes --port 3307 && DB_PORT=3307 .venv/bin/python scripts/gen_train_dataset.py
+    --reset && DB_PORT=3307 .venv/bin/python scripts/train_xgb_model.py && DB_PORT=3307
+    .venv/bin/python -m pytest tests/ -q'
+  styleguideRules:
+  - 证据必须引用命令原始输出
+  guardrails:
+  - merge/push 前必须 ask-before 确认
+  - verifyCommand 未过不 complete
+  learnings: []
+  gotchas:
+  - merge 前确认 main 无他人提交（单用户仓库）
+  - push 用 SSH（gh 已配）
+  context:
+  - url: https://github.com/chaosorder010/AI-BankRisk
+    why: 推送目标
