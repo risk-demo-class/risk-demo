@@ -1,0 +1,8 @@
+INFO:     127.0.0.1:14426 - "GET /api/blacklist/statistics HTTP/1.1" 200 OK
+INFO:     127.0.0.1:14426 - "GET /api/blacklist?blacklist_type=ip HTTP/1.1" 200 OK
+INFO:     127.0.0.1:7872 - "GET /api/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:10378 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:10378 - "GET /assets/index-tlX4Rd7-.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:2968 - "GET /assets/index-CbyndjyB.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:10378 - "GET /api/blacklist?page=1&page_size=20 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:2968 - "GET /api/blacklist/statistics HTTP/1.1" 200 OK
