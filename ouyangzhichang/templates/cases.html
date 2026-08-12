@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}案件管理 - 电商风控系统{% endblock %}
+{% block title %}案件管理 - 物流寄递风控系统{% endblock %}
 {% block content %}
 <h4 class="mb-4">案件管理</h4>
 
@@ -38,7 +38,7 @@
     <div class="table-responsive">
         <table class="table table-hover mb-0">
             <thead class="table-light">
-                <tr><th>案件ID</th><th>用户ID</th><th>分类</th><th>评分</th><th>等级</th><th>状态</th><th>创建时间</th><th>操作</th></tr>
+                <tr><th>案件ID</th><th>寄件人ID</th><th>分类</th><th>评分</th><th>等级</th><th>状态</th><th>创建时间</th><th>操作</th></tr>
             </thead>
             <tbody id="cases-table"></tbody>
         </table>
@@ -135,7 +135,7 @@ async function loadCases(page) {
                     <button class="btn btn-outline-primary btn-sm" onclick="viewCase('${c.case_id}')">详情</button>
                     ${c.source_id ? `<button class="btn btn-outline-warning btn-sm"
                         title="用 ${c.source_id} 重新执行风控检查"
-                        onclick="recheckCase('${c.case_id}','${c.source_id}','${c.user_id}','${c.event_type || '下单'}')">
+                        onclick="recheckCase('${c.case_id}','${c.source_id}','${c.user_id}','${c.event_type || '寄件下单'}')">
                         <i class="bi bi-arrow-repeat"></i> 重做检查
                     </button>` : '<span class="text-muted small" title="老案件未记录业务ID, 需手动填写">无 source_id</span>'}
                 </td>
@@ -158,7 +158,7 @@ async function viewCase(caseId) {
                 <h6>基本信息</h6>
                 <table class="table table-sm">
                     <tr><td class="text-muted">案件ID</td><td>${c.case_id}</td></tr>
-                    <tr><td class="text-muted">用户ID</td><td>${c.user_id}</td></tr>
+                    <tr><td class="text-muted">寄件人ID</td><td>${c.user_id}</td></tr>
                     <tr><td class="text-muted">评分</td><td><strong>${c.final_score ?? '-'}</strong></td></tr>
                     <tr><td class="text-muted">等级</td><td>${riskBadge(c.risk_level || '低')}</td></tr>
                     <tr><td class="text-muted">决策</td><td>${c.decision || '-'}</td></tr>
@@ -182,12 +182,12 @@ async function viewCase(caseId) {
                     <thead><tr><th>规则</th><th>等级</th><th>分值</th></tr></thead>
                     <tbody>${c.triggered_rules.map(r => `<tr><td>${r.rule_name}</td><td>${riskBadge(r.risk_level)}</td><td>${r.risk_score}</td></tr>`).join('')}</tbody>
                 </table>` : '<p class="text-muted">无命中规则</p>'}
-                ${c.user_profile ? `<h6 class="mt-3">用户画像</h6>
+                ${c.user_profile ? `<h6 class="mt-3">寄件人画像</h6>
                 <table class="table table-sm">
                     <tr><td class="text-muted">风险评分</td><td>${c.user_profile.risk_score}</td></tr>
-                    <tr><td class="text-muted">总订单</td><td>${c.user_profile.total_orders}</td></tr>
-                    <tr><td class="text-muted">退款率</td><td>${(c.user_profile.refund_rate * 100).toFixed(1)}%</td></tr>
-                    <tr><td class="text-muted">投诉次数</td><td>${c.user_profile.complaint_count}</td></tr>
+                    <tr><td class="text-muted">总运单</td><td>${c.user_profile.total_orders}</td></tr>
+                    <tr><td class="text-muted">COD拒收率</td><td>${(c.user_profile.refund_rate * 100).toFixed(1)}%</td></tr>
+                    <tr><td class="text-muted">危险品异常次数</td><td>${c.user_profile.complaint_count}</td></tr>
                 </table>` : ''}
             </div>
         </div>
@@ -252,7 +252,7 @@ function recheckCase(caseId, sourceId, userId, eventType) {
     }
     sessionStorage.setItem('risk_check_prefill', JSON.stringify({
         case_id: caseId,
-        event_type: eventType || '下单',
+        event_type: eventType || '寄件下单',
         user_id: userId,
         source_id: sourceId,
     }));

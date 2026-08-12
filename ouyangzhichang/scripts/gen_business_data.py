@@ -45,7 +45,7 @@ async def generate(count:int=200, seed:int=42):
             db.add(shipment)
             danger=risky and i%3==0
             db.add(ShipmentItem(item_id=f"I{i:06d}",shipment_id=shipment.shipment_id,
-                item_name="锂电池" if danger else "服装",item_category="电池" if danger else "普通商品",
+                item_name="锂电池" if danger else "服装",item_category="电池" if danger else "普通物品",
                 quantity=1,declared_dangerous=0,battery_flag=int(danger),chemical_flag=0,liquid_flag=0,
                 security_check_result="疑似危险品" if danger else "通过"))
             if cross:

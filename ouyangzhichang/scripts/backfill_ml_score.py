@@ -1,8 +1,8 @@
 """
-电商风控系统 - XGBoost ml_score 字段回填脚本 (P4-L4 2026-08-08)
+物流寄递风控系统 - XGBoost ml_score 字段回填脚本
 
 【目的】
-  gen_train_dataset.py 造训练数据时强制 ml_score=NULL (避免"未训练模型"推理垃圾值).
+  风险评估生成阶段保持 ml_score=NULL，训练完成后再回填模型评分。
   训完基础模型后, 用本脚本回填 ml_score 字段:
     - 用训好的 XGBoost 推理 1500 条 risk_assessment
     - 写回 ml_score (P(拒绝) ∈ [0,1]) + ml_decision (4 档决策)

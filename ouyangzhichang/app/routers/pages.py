@@ -39,11 +39,6 @@ async def risk_check_page(request: Request):
     return templates.TemplateResponse(request, "risk_check.html")
 
 
-@page_router.get("/chat", response_class=HTMLResponse)
-async def chat_page(request: Request):
-    return templates.TemplateResponse(request, "chat.html")
-
-
 @page_router.get("/blacklist", response_class=HTMLResponse)
 async def blacklist_page(request: Request):
     return templates.TemplateResponse(request, "blacklist.html")

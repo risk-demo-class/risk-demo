@@ -1,167 +1,59 @@
 {% extends "base.html" %}
-{% block title %}风险检查 - 电商风控系统{% endblock %}
+{% block title %}风险检查 - 物流寄递风控系统{% endblock %}
 {% block content %}
-<h4 class="mb-4">风险检查</h4>
-
-<div class="row">
-    <!-- 左侧: 检查表单 -->
-    <div class="col-md-5">
-        <div class="card stat-card p-4">
-            <h6>发起风控检查</h6>
-            <form id="checkForm">
-                <div class="mb-3">
-                    <label class="form-label"><span class="text-danger">*</span> 事件类型</label>
-                    <select class="form-select" id="ck_event_type" required>
-                        <option value="下单">下单</option>
-                        <option value="支付">支付</option>
-                        <option value="售后申请">售后申请</option>
-                        <option value="物流投诉">物流投诉</option>
-                    </select>
-                </div>
-                <div class="mb-3">
-                    <label class="form-label"><span class="text-danger">*</span> 用户ID</label>
-                    <input type="text" class="form-control" id="ck_user_id" placeholder="如: 1001" required>
-                </div>
-                <div class="mb-3">
-                    <label class="form-label"><span class="text-danger">*</span> 业务ID (订单号/售后ID)</label>
-                    <input type="text" class="form-control" id="ck_source_id" placeholder="如: ord05a5ac8c8cfe4f51" required>
-                </div>
-                <div class="mb-3">
-                    <label class="form-label">订单ID (可选, 下单/支付时自动填充)</label>
-                    <input type="text" class="form-control" id="ck_order_id">
-                </div>
-                <button type="submit" class="btn btn-primary w-100" id="checkBtn">
-                    <i class="bi bi-search"></i> 执行检查
-                </button>
-            </form>
-        </div>
+<h4 class="mb-3"><i class="bi bi-search"></i> 物流风险检查</h4>
+<div class="card stat-card mb-4"><div class="card-body">
+  <form id="riskCheckForm" class="row g-3">
+    <div class="col-md-4"><label class="form-label">事件类型</label>
+      <select class="form-select" id="ck_event_type" required>
+        <option value="寄件下单">寄件下单</option><option value="安检申报">安检申报</option>
+        <option value="跨境申报">跨境申报</option><option value="签收处理">签收处理</option>
+        <option value="代收货款结算">代收货款结算</option>
+      </select>
     </div>
-
-    <!-- 右侧: 检查结果 -->
-    <div class="col-md-7">
-        <div class="card stat-card p-4" id="resultPanel" style="display:none;">
-            <h6>检查结果</h6>
-            <div id="resultContent"></div>
-        </div>
-        <div class="card stat-card p-4" id="emptyPanel">
-            <div class="text-center text-muted py-5">
-                <i class="bi bi-shield-check" style="font-size:48px;"></i>
-                <p class="mt-3">请在左侧填写信息并发起风控检查</p>
-            </div>
-        </div>
+    <div class="col-md-4"><label class="form-label">业务来源ID</label>
+      <input class="form-control" id="ck_source_id" required placeholder="运单S... / 申报D... / 签收R...">
     </div>
-</div>
+    <div class="col-md-4"><label class="form-label">寄件人ID</label>
+      <input class="form-control" id="ck_user_id" required placeholder="如 U0000">
+    </div>
+    <div class="col-12"><div class="alert alert-info py-2 mb-0" id="sourceHelp"></div></div>
+    <div class="col-12"><label class="form-label">事件补充数据（JSON，可选）</label>
+      <textarea class="form-control" id="ck_event_data" rows="3" placeholder='{"channel":"课堂演示"}'></textarea>
+    </div>
+    <div class="col-12"><button class="btn btn-primary" type="submit" id="submitBtn"><i class="bi bi-shield-check"></i> 执行风险检查</button></div>
+  </form>
+</div></div>
+<div id="errorBox" class="alert alert-danger d-none"></div>
+<div id="resultCard" class="card stat-card d-none"><div class="card-body" id="resultBody"></div></div>
 {% endblock %}
-
 {% block extra_js %}
 <script>
-function riskBadge(level) {
-    const cls = {'低':'badge-risk-low','中':'badge-risk-mid','高':'badge-risk-high','极高':'badge-risk-critical'}[level] || 'bg-secondary';
-    return `<span class="badge ${cls}">${level}</span>`;
-}
-
-function decisionBadge(d) {
-    const cls = {'通过':'bg-success','标记':'bg-info','人工审核':'bg-warning','拒绝':'bg-danger'}[d] || 'bg-secondary';
-    return `<span class="badge ${cls}">${d}</span>`;
-}
-
-// 接收从案件列表跳过来的预填数据 (重做检查功能)
-(function prefillFromCase() {
-    const raw = sessionStorage.getItem('risk_check_prefill');
-    if (!raw) return;
-    try {
-        const data = JSON.parse(raw);
-        const setVal = (id, v) => { const el = document.getElementById(id); if (el && v) el.value = v; };
-        setVal('ck_event_type', data.event_type);
-        setVal('ck_user_id', data.user_id);
-        setVal('ck_source_id', data.source_id);
-        // 顶部加个提示横幅
-        const form = document.getElementById('checkForm');
-        if (form && data.case_id) {
-            const banner = document.createElement('div');
-            banner.className = 'alert alert-info py-2 mb-3';
-            banner.innerHTML = `<i class="bi bi-info-circle"></i> 来自案件 <code>${data.case_id}</code> 的重做检查, 已自动填充业务参数`;
-            form.parentNode.insertBefore(banner, form);
-        }
-    } catch (e) {
-        console.warn('预填数据解析失败:', e);
-    } finally {
-        sessionStorage.removeItem('risk_check_prefill');
-    }
-})();
-
-document.getElementById('checkForm').addEventListener('submit', async function(e) {
-    e.preventDefault();
-    const btn = document.getElementById('checkBtn');
-    btn.disabled = true;
-    btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> 检查中...';
-
-    const data = {
-        event_type: document.getElementById('ck_event_type').value,
-        user_id: document.getElementById('ck_user_id').value,
-        source_id: document.getElementById('ck_source_id').value,
-        order_id: document.getElementById('ck_order_id').value || null,
-    };
-
-    try {
-        const res = await fetch('/api/risk/check', {
-            method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(data)
-        });
-        const result = await res.json();
-
-        if (!res.ok) {
-            document.getElementById('resultContent').innerHTML = `<div class="alert alert-danger">${result.detail || '检查失败'}</div>`;
-        } else {
-            const decisionColor = {'通过':'success','标记':'warning','人工审核':'info','拒绝':'danger'}[result.decision] || 'secondary';
-            document.getElementById('resultContent').innerHTML = `
-                <div class="alert alert-${decisionColor} mb-3">
-                    <strong>决策: ${result.decision}</strong> | 评分: <strong>${result.final_score}</strong> | 等级: ${riskBadge(result.risk_level)}
-                </div>
-                <div class="row mb-3">
-                    <div class="col-md-6">
-                        <small class="text-muted">评估ID</small><br><code>${result.assessment_id}</code>
-                    </div>
-                    <div class="col-md-6">
-                        <small class="text-muted">命中规则数</small><br><strong>${result.rule_count}</strong>
-                    </div>
-                </div>
-                ${result.triggered_rules.length > 0 ? `
-                <h6 class="mt-3">命中规则</h6>
-                <table class="table table-sm">
-                    <thead><tr><th>规则</th><th>分类</th><th>等级</th><th>分值</th><th>动作</th></tr></thead>
-                    <tbody>${result.triggered_rules.map(r => `
-                        <tr>
-                            <td>${r.rule_name}</td>
-                            <td><span class="badge bg-info">${r.rule_category}</span></td>
-                            <td>${riskBadge(r.risk_level)}</td>
-                            <td>${r.risk_score}</td>
-                            <td>${r.action}</td>
-                        </tr>
-                    `).join('')}</tbody>
-                </table>` : '<p class="text-success mt-3">未命中任何规则</p>'}
-                <!-- 【P4-L4 2026-08-08】ML 评分 (XGBoost): P(拒绝) + 风险分(sigmoid 校准) + ML 决策, 模型未加载时显示提示 -->
-                <h6 class="mt-3">ML 评分 <small class="text-muted">(XGBoost)</small></h6>
-                <div class="ml-score-block p-2 bg-light rounded">
-                    ${result.ml_score != null
-                        ? renderMLScoreBlock(result.ml_score, result.ml_decision)
-                        : '<span class="text-muted">未加载模型</span>'}
-                </div>
-                <details class="mt-3">
-                    <summary class="text-muted">特征详情</summary>
-                    <pre class="mt-2 bg-light p-2 rounded" style="max-height:300px;overflow:auto;">${JSON.stringify(result.features, null, 2)}</pre>
-                </details>
-            `;
-        }
-        document.getElementById('resultPanel').style.display = 'block';
-        document.getElementById('emptyPanel').style.display = 'none';
-    } catch(e) {
-        document.getElementById('resultContent').innerHTML = `<div class="alert alert-danger">请求失败: ${e.message}</div>`;
-        document.getElementById('resultPanel').style.display = 'block';
-        document.getElementById('emptyPanel').style.display = 'none';
-    } finally {
-        btn.disabled = false;
-        btn.innerHTML = '<i class="bi bi-search"></i> 执行检查';
-    }
+const help = {
+ '寄件下单':'source_id 填 shipment_id，例如 S000001', '安检申报':'source_id 填 shipment_id，例如 S000000',
+ '跨境申报':'source_id 填 declaration_id，例如 D000000', '签收处理':'source_id 填 delivery_id，例如 R000000',
+ '代收货款结算':'source_id 填货到付款运单的 shipment_id'
+};
+function updateHelp(){ sourceHelp.textContent=help[ck_event_type.value]; }
+ck_event_type.addEventListener('change',updateHelp); updateHelp();
+const prefill=sessionStorage.getItem('risk_check_prefill');
+if(prefill){ try{const p=JSON.parse(prefill); ck_event_type.value=p.event_type||'寄件下单'; ck_source_id.value=p.source_id||''; ck_user_id.value=p.user_id||''; updateHelp();}finally{sessionStorage.removeItem('risk_check_prefill');}}
+riskCheckForm.addEventListener('submit',async(e)=>{
+ e.preventDefault(); errorBox.classList.add('d-none'); resultCard.classList.add('d-none'); submitBtn.disabled=true;
+ let eventData={}; const raw=ck_event_data.value.trim();
+ try{if(raw) eventData=JSON.parse(raw);}catch(_){errorBox.textContent='事件补充数据不是有效JSON';errorBox.classList.remove('d-none');submitBtn.disabled=false;return;}
+ try{
+  const res=await fetch('/api/risk/check',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({event_type:ck_event_type.value,source_id:ck_source_id.value.trim(),user_id:ck_user_id.value.trim(),event_data:eventData})});
+  const result=await res.json(); if(!res.ok) throw new Error(result.detail ? (typeof result.detail==='string'?result.detail:JSON.stringify(result.detail)) : `HTTP ${res.status}`);
+  const rules=(result.triggered_rules||[]).map(r=>`<tr><td>${r.rule_id}</td><td>${r.rule_name}</td><td>${r.risk_level}</td><td>${r.action}</td></tr>`).join('');
+  const mlBlock=result.ml_score != null ? renderMLScoreBlock(result.ml_score,result.ml_decision) : '<span class="text-muted">模型未加载，当前为纯规则模式</span>';
+  resultBody.innerHTML=`<h5>检查结果：<span class="badge ${result.decision==='拒绝'?'bg-danger':result.decision==='人工审核'?'bg-warning':'bg-success'}">${result.decision}</span></h5>
+   <div class="row mt-3"><div class="col-md-4">最终评分：<strong>${result.final_score}</strong></div><div class="col-md-4">风险等级：${result.risk_level}</div><div class="col-md-4">规则命中：${result.rule_count}</div></div>
+   <h6 class="mt-4">命中规则</h6>${rules?`<table class="table table-sm"><thead><tr><th>ID</th><th>名称</th><th>等级</th><th>动作</th></tr></thead><tbody>${rules}</tbody></table>`:'<p class="text-muted">无规则命中</p>'}
+   <h6 class="mt-4">ML 评分 <small class="text-muted">(XGBoost P(拒绝)，风险分使用 sigmoid 校准)</small></h6>${mlBlock}
+   <details class="mt-4"><summary>特征详情（25维物流特征）</summary><pre class="mt-2">${JSON.stringify(result.features||{},null,2)}</pre></details>`;
+  resultCard.classList.remove('d-none');
+ }catch(err){errorBox.textContent=`检查失败：${err.message}`;errorBox.classList.remove('d-none');}finally{submitBtn.disabled=false;}
 });
 </script>
 {% endblock %}

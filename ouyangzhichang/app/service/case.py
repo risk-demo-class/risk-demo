@@ -366,7 +366,7 @@ async def review_case(
         if request.blacklist_expire_hours and request.blacklist_expire_hours > 0:
             expire_time = datetime.now() + timedelta(hours=request.blacklist_expire_hours)
         await add_blacklist(db, BlacklistCreate(
-            blacklist_type="用户",
+            blacklist_type="寄件人",
             blacklist_value=case.user_id,
             reason=f"案件审核拒绝: {case.case_id}",
             expire_time=expire_time,
@@ -454,7 +454,7 @@ async def list_assessments(
     筛选维度 (可选):
       - decision: 通过 / 标记 / 人工审核 / 拒绝
       - risk_level: 低 / 中 / 高 / 极高
-      - event_type: 下单 / 支付 / 售后申请 / 物流投诉 (JOIN risk_event)
+      - event_type: 五类物流事件 (JOIN risk_event)
       - user_id: 精确匹配
 
     注: risk_assessment 表没有 event_type 字段, 要 JOIN risk_event 拿.
@@ -643,7 +643,7 @@ if __name__ == "__main__":
             elif self.call_count == 2:
                 return _R([("待审核", 10), ("审核中", 5), ("已通过", 8), ("已拒绝", 1), ("已关闭", 1)])
             elif self.call_count == 3:
-                return _R([("订单欺诈", 12), ("支付风险", 8), ("账户风险", 5)])
+                return _R([("危险品风险", 12), ("跨境申报风险", 8), ("地址风险", 5)])
             else:
                 return _R([])
 

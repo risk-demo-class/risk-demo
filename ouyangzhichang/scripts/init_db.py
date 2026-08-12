@@ -1,5 +1,5 @@
 """
-电商风控系统 - 一键数据库初始化脚本 (异步)
+物流寄递风控系统 - 一键数据库初始化脚本 (异步)
 按顺序执行所有 SQL 脚本: 创建数据库 → 业务表 → 业务数据 → 风控表 → 风控规则
 
 总表数: 17 业务 + 9 风控 = 26 张 (2026-08-07 含 P4 2 张: risk_action_log + risk_alert)
@@ -20,10 +20,10 @@ SQL_DIR = os.path.join(BASE_DIR, "sql")
 
 # SQL 脚本执行顺序
 SQL_FILES = [
-    ("init_business_tables.sql", "创建 17 张业务表"),
-    ("init_business_data.sql", "导入业务测试数据"),
+    ("init_business_tables.sql", "创建 7 张物流业务表"),
+    ("init_business_data.sql", "业务数据由可重复造数脚本生成"),
     ("init_risk_tables.sql", "创建 9 张风控表 (7 原 + 2 P4 系统管理表)"),
-    ("init_risk_data.sql", "导入 30 条预置风控规则 (R001-R030)"),
+    ("init_risk_data.sql", "导入 8 条物流风控规则 (L001-L008)"),
 ]
 
 # 默认连接配置 (与 .env 一致)
@@ -176,7 +176,7 @@ def split_sql_statements(sql_text):
 
 async def main():
     parser = argparse.ArgumentParser(
-        description="电商风控系统 - 一键数据库初始化 (异步). 默认 --reset 重置整个数据库",
+        description="物流寄递风控系统 - 一键数据库初始化 (异步). 默认 --reset 重置整个数据库",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 用法:
@@ -217,7 +217,7 @@ async def main():
         args.reset = True
 
     print("=" * 60)
-    print("电商风控系统 - 数据库初始化 (异步)")
+    print("物流寄递风控系统 - 数据库初始化 (异步)")
     print(f"目标: {args.user}@{args.host}:{args.port}/{args.db}")
     print(f"模式: {'[RESET] 先删后建' if args.reset else '[KEEP-DATA] 保留数据, 只补表'}")
     print("=" * 60)

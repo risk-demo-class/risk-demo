@@ -1,5 +1,5 @@
 """
-电商风控系统 - XGBoost 训练脚本 (一次性, 跑完即可)
+物流寄递风控系统 - XGBoost 训练脚本
 数据源: MySQL risk_event + risk_feature + risk_assessment
 步骤:
   1. 拉历史评估 (decision 不为空的, 排除掉 None)
@@ -36,7 +36,7 @@ logger = logging.getLogger(__name__)
 # 数据查询 SQL (2 步: 1 拉评估, 2 拉特征宽表)
 # 【P4-L3 2026-08-08 第二轮】5000 改用配置 settings.XGB_TRAIN_DATA_LIMIT
 # 【P4-L4 2026-08-08 训练数据严格化】显式 WHERE ml_score IS NULL: 训练只取"无 ml 痕迹"数据
-#   原因: gen_train_dataset.py 造训练数据时强制 ml_score=NULL (避免"未训练模型"垃圾值),
+#   原因: 训练数据生成阶段保持 ml_score=NULL，避免标签泄漏，
 #         backfill_ml_score.py 训完回填 ml_score. 显式过滤保证训练数据 100% 干净.
 SQL_FETCH_ASSESSMENTS = """
 SELECT assessment_id, event_id, decision
@@ -109,7 +109,7 @@ def _load_data_from_mysql() -> tuple[np.ndarray, np.ndarray]:
             if len(rows) < settings.XGB_TRAIN_DATA_LIMIT * 0.8:
                 logger.warning(
                     "⚠️  DB 实际只加载 %d 条 (< LIMIT %d 的 80%%), DB 总 %d 条. "
-                    "建议先 init_db.py --reset --yes 清空, 再 gen_risky_users.py + gen_risk_data_with_dates.py 重新造",
+                    "建议先初始化物流数据库，再运行 gen_business_data.py 和 gen_risk_data.py 重新造数",
                     len(rows), settings.XGB_TRAIN_DATA_LIMIT, db_total,
                 )
             # 校验 2: DB 时间跨度 < 1 天 (说明数据全是同一天造的, 极可能 reset 后没重造)
@@ -117,7 +117,7 @@ def _load_data_from_mysql() -> tuple[np.ndarray, np.ndarray]:
                 logger.warning(
                     "⚠️  DB 评估数据 create_time 跨度 < 1 天 (%s ~ %s, %d 条). "
                     "说明数据全是同一天造的, 极可能 init_db.py --reset 后没重造. "
-                    "建议: gen_risk_data_with_dates.py --days 30 --per-day 200 --clean",
+                    "建议增加 gen_business_data.py 的数据量并多次生成物流评估",
                     db_min_time, db_max_time, db_total,
                 )
             if not rows:
@@ -174,7 +174,7 @@ def _load_data_from_mysql() -> tuple[np.ndarray, np.ndarray]:
                 logger.warning(
                     "⚠️  正例比例仅 %.1f%% < 推荐 15%% (DB 总正例: %d / %d = %.1f%%). "
                     "模型学不到 '正例模式', 会假收敛. "
-                    "建议: gen_risky_users.py --count 30 + gen_risk_data_with_dates.py --days 30 --per-day 200",
+                    "建议运行 gen_business_data.py --count 2000 后生成足量物流评估",
                     100 * pos_ratio, db_total_pos, db_total, 100 * db_total_pos / max(1, db_total),
                 )
             elif len(y) > 0 and pos_ratio < 0.25:

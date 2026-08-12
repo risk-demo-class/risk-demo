@@ -178,17 +178,16 @@ class TestBaseLayout:
             )
 
     def test_sidebar_html_structure(self, base_html):
-        """侧边栏 HTML 必含 7 个 nav-link (仪表盘/规则/案件/评估/风险检查/AI/黑名单)"""
+        """侧边栏包含六个物流风控功能入口。"""
         nav_block = re.search(
             r'<nav class="nav flex-column[^"]*">(.*?)</nav>', base_html, re.DOTALL,
         )
         assert nav_block, "找不到侧边栏 <nav>"
         nav_html = nav_block.group(1)
-        # 7 个 nav-link
-        assert nav_html.count('class="nav-link') == 7, \
-            f"侧边栏应有 7 个 nav-link, 实际 {nav_html.count('class=\"nav-link')}"
+        assert nav_html.count('class="nav-link') == 6, \
+            f"侧边栏应有 6 个物流功能入口, 实际 {nav_html.count('class=\"nav-link')}"
         # 关键页面
-        for path in ["/", "/rules", "/cases", "/assessments", "/risk-check", "/chat", "/blacklist"]:
+        for path in ["/", "/rules", "/cases", "/assessments", "/risk-check", "/blacklist"]:
             assert f'href="{path}"' in nav_html, f"侧边栏应含 {path} 链接"
 
     def test_main_content_html_structure(self, base_html):

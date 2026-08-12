@@ -107,7 +107,3 @@ class BlacklistExtra(Base):
     reason: Mapped[Optional[str]]=mapped_column(Text)
     expire_at: Mapped[Optional[datetime]]=mapped_column(DateTime)
     source: Mapped[str]=mapped_column(String(50),default="物流业务")
-
-OrderInfo=Shipment
-ReceiveInfo=Address
-OrderDetail=ShipmentItem

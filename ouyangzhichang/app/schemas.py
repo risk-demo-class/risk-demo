@@ -45,7 +45,7 @@ class RiskCheckResponse(BaseModel):
     # XGBoost 评分: None = 模型未加载
     ml_score: Optional[float] = None
     ml_decision: Optional[str] = None
-    # 【P1-S9】被哪种黑名单撞了: None=没撞黑, "用户"/"地址"/"手机号" 三选一.
+    # 命中的物流黑名单类型；None表示未命中。
     # 撞黑时 decision="拒绝" 但不走 7 步决策, 用此字段区分"业务拒绝" vs "黑名单拒绝"
     blocked_by: Optional[str] = None
 
@@ -308,9 +308,8 @@ if __name__ == "__main__":
 
     # 1. RiskCheckRequest — 入口 (前端"风险检查"页触发)
     req = RiskCheckRequest(
-        event_type="下单", source_id="ord_demo_001", user_id="U0001",
-        order_id="ord_demo_001", receive_id="rec_001",
-        event_data={"amount": 5000, "category": "电子产品"},
+        event_type="安检申报", source_id="S000000", user_id="U0000",
+        event_data={"channel": "课堂演示"},
     )
     print("\n[1] RiskCheckRequest (入口):")
     print(req.model_dump_json(indent=2))
@@ -318,22 +317,22 @@ if __name__ == "__main__":
     # 2. RuleHitInfo + RiskCheckResponse — 7 步流水线返回
     hits = [
         RuleHitInfo(
-            rule_id="R002", rule_name="单笔极端高额订单",
-            rule_category="订单欺诈", risk_level="极高",
-            risk_score=95, action="拒绝",
-            description="单笔订单实付金额≥10000元, 一票否决",
+            rule_id="L001", rule_name="危险品瞒报",
+            rule_category="危险品风险", risk_level="极高",
+            risk_score=100, action="拒绝",
+            description="危险物品未如实申报，一票否决",
         ),
         RuleHitInfo(
-            rule_id="R005", rule_name="高折扣率订单",
-            rule_category="订单欺诈", risk_level="高",
-            risk_score=65, action="人工审核",
+            rule_id="L002", rule_name="跨境重量异常",
+            rule_category="跨境申报风险", risk_level="高",
+            risk_score=75, action="人工审核",
         ),
     ]
     resp = RiskCheckResponse(
         assessment_id="ast_demo_xxx", event_id="evt_demo_xxx",
         user_id="U0001", final_score=95, risk_level="极高", decision="拒绝",
         rule_count=2, triggered_rules=hits,
-        features={"user_total_orders": 3, "order_total_amount": 15000},
+        features={"sender_total_shipments": 3, "shipment_declaration_mismatch": 1},
         create_time=datetime.now(),
         ml_score=0.92, ml_decision="拒绝",
     )
@@ -349,12 +348,12 @@ if __name__ == "__main__":
     # 3. AssessmentDetailResponse (P3-S9) — 评估历史详情
     detail = AssessmentDetailResponse(
         assessment_id="ast_demo_xxx", event_id="evt_demo_xxx",
-        user_id="U0001", event_type="下单", event_source_id="ord_demo_001",
+        user_id="U0000", event_type="安检申报", event_source_id="S000000",
         final_score=95, risk_level="极高", decision="拒绝",
         rule_count=2, triggered_rules=hits,
         create_time=datetime.now(),
         ml_score=0.92, ml_decision="拒绝",
-        event_data=json.dumps({"amount": 5000}, ensure_ascii=False),
+        event_data=json.dumps({"channel": "课堂演示"}, ensure_ascii=False),
     )
     print("\n[3] AssessmentDetailResponse (P3-S9 评估历史详情):")
     print(f"  event_source_id = {detail.event_source_id}")

@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}黑名单管理 - 电商风控系统{% endblock %}
+{% block title %}黑名单管理 - 物流寄递风控系统{% endblock %}
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h4 class="mb-0">黑名单管理</h4>
@@ -12,7 +12,7 @@
 <div class="row mb-4" id="bl-stats">
     <div class="col-md-3">
         <div class="card stat-card p-3 text-center">
-            <div class="text-muted small">用户黑名单</div>
+            <div class="text-muted small">寄件人黑名单</div>
             <div class="stat-value text-primary" id="bl-stat-user">-</div>
         </div>
     </div>
@@ -40,9 +40,10 @@
 <div class="mb-3 d-flex gap-2 align-items-center">
     <select class="form-select form-select-sm w-auto" id="filterType" onchange="loadList(1)">
         <option value="">全部类型</option>
-        <option value="用户">用户</option>
+        <option value="寄件人">寄件人</option><option value="收件人">收件人</option>
         <option value="地址">地址</option>
         <option value="手机号">手机号</option>
+        <option value="证件号">证件号</option><option value="设备指纹">设备指纹</option><option value="跨境收件方">跨境收件方</option>
     </select>
     <span class="text-muted small">每页</span>
     <select class="form-select form-select-sm w-auto" id="pageSize" onchange="onPageSizeChange()">
@@ -89,11 +90,12 @@
                 <div class="mb-3">
                     <label class="form-label">类型 <span class="text-danger">*</span></label>
                     <select class="form-select" id="addType">
-                        <option value="用户">用户 (user_id)</option>
-                        <option value="地址">地址 (收货地址)</option>
+                        <option value="寄件人">寄件人 (user_id)</option><option value="收件人">收件人</option>
+                        <option value="地址">地址 (address_id)</option>
                         <option value="手机号">手机号</option>
+                        <option value="证件号">证件号哈希</option><option value="设备指纹">设备指纹</option><option value="跨境收件方">跨境收件方</option>
                     </select>
-                    <div class="form-text">用户 = user_id; 地址 = 收货地址字符串; 手机号 = 11位手机号</div>
+                    <div class="form-text">请填写系统中实际保存的ID、哈希、手机号或设备指纹。</div>
                 </div>
                 <div class="mb-3">
                     <label class="form-label">值 <span class="text-danger">*</span></label>
@@ -101,7 +103,7 @@
                 </div>
                 <div class="mb-3">
                     <label class="form-label">原因</label>
-                    <input type="text" class="form-control" id="addReason" placeholder="例如: 多次退货骗保 / 关联欺诈用户">
+                    <input type="text" class="form-control" id="addReason" placeholder="例如: 危险品瞒报 / COD恶意拒收">
                 </div>
                 <div class="mb-3">
                     <label class="form-label">过期时间 (留空 = 永久)</label>
@@ -134,9 +136,9 @@ function onPageSizeChange() {
     loadList(1);
 }
 
-// 类型徽章颜色: 用户=蓝 / 地址=黄 / 手机号=红
+// 物流黑名单类型徽章
 function typeBadge(t) {
-    const cls = {'用户':'bg-primary','地址':'bg-warning text-dark','手机号':'bg-danger'}[t] || 'bg-secondary';
+    const cls = {'寄件人':'bg-primary','收件人':'bg-info','地址':'bg-warning text-dark','手机号':'bg-danger','证件号':'bg-dark','设备指纹':'bg-secondary','跨境收件方':'bg-success'}[t] || 'bg-secondary';
     return `<span class="badge ${cls}">${t}</span>`;
 }
 
@@ -144,9 +146,9 @@ function typeBadge(t) {
 async function loadStats() {
     const res = await fetch('/api/blacklist?page=1&page_size=100');
     const data = await res.json();
-    const cnt = {用户: 0, 地址: 0, 手机号: 0};
+    const cnt = {寄件人: 0, 收件人: 0, 地址: 0, 手机号: 0, 证件号: 0, 设备指纹: 0, 跨境收件方: 0};
     data.items.forEach(it => { if (cnt[it.blacklist_type] !== undefined) cnt[it.blacklist_type]++; });
-    document.getElementById('bl-stat-user').textContent = cnt.用户;
+    document.getElementById('bl-stat-user').textContent = cnt.寄件人;
     document.getElementById('bl-stat-address').textContent = cnt.地址;
     document.getElementById('bl-stat-phone').textContent = cnt.手机号;
     document.getElementById('bl-stat-total').textContent = data.total;
@@ -193,7 +195,7 @@ async function loadList(page) {
 
 // 新增模态框
 function showAddModal() {
-    document.getElementById('addType').value = '用户';
+    document.getElementById('addType').value = '寄件人';
     document.getElementById('addValue').value = '';
     document.getElementById('addReason').value = '';
     document.getElementById('addExpire').value = '';

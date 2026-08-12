@@ -6,6 +6,8 @@ XGBoost 模型管理: 加载 / 推理 / 训练 / 兜底.
   - 标签二分类: 0=通过/标记, 1=人工审核/拒绝
   - 概率输出: predict_proba[:, 1] 即 P(拒绝)
 """
+from __future__ import annotations
+
 import asyncio
 import logging
 import os
@@ -14,7 +16,10 @@ from pathlib import Path
 from typing import Optional
 
 import numpy as np
-import xgboost as xgb
+try:
+    import xgboost as xgb
+except ImportError:  # 未安装模型依赖时，页面与规则引擎仍可正常启动
+    xgb = None
 from sklearn.metrics import f1_score, roc_auc_score
 from sklearn.model_selection import train_test_split
 
@@ -71,6 +76,11 @@ def is_model_loaded() -> bool:
 def load_model(model_path: Optional[str] = None) -> bool:
     """启动时加载 XGBoost 模型. 兜底: 文件不存在/加载失败 → 业务仍可运行."""
     global _MODEL, _LOADED
+    if xgb is None:
+        logger.warning("未安装 xgboost，已降级为纯规则物流风控模式")
+        _MODEL = None
+        _LOADED = False
+        return False
     if not settings.XGB_ENABLED:
         logger.info("XGBoost 已关闭 (XGB_ENABLED=False), 决策走纯规则模式")
         return False
@@ -88,6 +98,11 @@ def load_model(model_path: Optional[str] = None) -> bool:
     try:
         _MODEL = xgb.Booster()
         _MODEL.load_model(path)
+        if _MODEL.feature_names != FEATURE_COLUMNS:
+            logger.error("模型特征与物流25维特征不匹配，禁用旧模型并降级为纯规则模式")
+            _MODEL = None
+            _LOADED = False
+            return False
         _LOADED = True
         logger.info("XGBoost 模型加载成功: %s, features=%d", path, _MODEL.num_features())
         return True
@@ -162,6 +177,9 @@ def train_and_save(
     时打印 warning, 不阻断训练 (教学场景允许小样本试跑). 早停用 sklearn 拆 80/20 (stratify
     保持正负比) + XGBoost early_stopping_rounds=N (验证集 logloss 连续 N 轮不降就停).
     """
+    if xgb is None:
+        raise RuntimeError("训练物流风控模型前请先安装 xgboost")
+
     n = len(y)
     n_pos = int(np.sum(y == 1))
     n_neg = int(np.sum(y == 0))
@@ -406,18 +424,9 @@ if __name__ == "__main__":
     # 2. 特征向量化 (25 维 dict → numpy 数组)
     print("\n[2] 25 维特征 → numpy 数组 (_features_to_array):")
     print(f"  FEATURE_COLUMNS 长度 = {len(FEATURE_COLUMNS)}  (必须是 25, 跟 feature.py 对齐)")
-    sample = {
-        "user_total_orders": 3, "user_orders_30d": 1, "user_orders_7d": 0,
-        "user_total_amount": 5000, "user_avg_order_amount": 1666.67,
-        "user_max_order_amount": 3000,
-        "user_refund_count": 0, "user_refund_rate": 0.0, "user_refund_amount": 0,
-        "user_postsale_count": 0, "user_postsale_rate": 0.0,
-        "user_cancel_count": 0, "user_complaint_count": 0, "user_address_count": 1,
-        "order_total_amount": 1500, "order_item_count": 1, "order_sku_count": 1,
-        "order_discount_amount": 0, "order_discount_rate": 0.0,
-        "order_pay_interval": 30, "order_is_night": 0, "order_category_count": 1,
-        "addr_total_count": 1, "addr_province_count": 1, "addr_is_new": 0,
-    }
+    sample = {name: 0.0 for name in FEATURE_COLUMNS}
+    sample.update({"sender_total_shipments": 3, "shipment_declared_value": 1500,
+                   "shipment_actual_weight": 2.5, "address_is_new": 0})
     arr = _features_to_array(sample)
     print(f"  shape           = {arr.shape}  (期望 (1, 25))")
     print(f"  缺失字段数      = {sum(1 for c in FEATURE_COLUMNS if c not in sample)}")
@@ -445,7 +454,7 @@ if __name__ == "__main__":
     # 造 300 条, 200 负 100 正 (不均衡, 触发 scale_pos_weight)
     X_demo = np.random.uniform(0, 1, size=(300, 25)).astype(np.float32)
     y_demo = (np.random.rand(300) > 0.66).astype(np.int32)  # 约 100 正
-    # 让 user_total_orders (FEATURE_COLUMNS[0]) 强相关 y, 方便看特征重要性
+    # 让累计运单数（FEATURE_COLUMNS[0]）与标签强相关，便于演示特征重要性
     X_demo[:, 0] = y_demo.astype(np.float32) * 8 + np.random.randn(300) * 0.5
     print(f"  合成数据: n={len(y_demo)}, pos={int(y_demo.sum())} ({100*y_demo.mean():.1f}%)")
     # 用 tmp path 避免覆盖真实模型文件
@@ -463,5 +472,5 @@ if __name__ == "__main__":
 
     print("\n" + "=" * 60)
     print("总结: 25 维特征对齐 / 模型加载 / predict 兜底 / 概率阈值, 4 个核心能力演示完成")
-    print("训练数据准备: python scripts/gen_risk_data_with_dates.py --days 30 --per-day 50")
+    print("训练数据准备: 先运行 gen_business_data.py，再运行 gen_risk_data.py")
     print("正式训练:     python scripts/train_xgb_model.py")

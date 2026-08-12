@@ -29,9 +29,7 @@ from app.config import settings
 from app.engine.feature import compute_all_features
 from app.engine.ml_model import is_model_loaded, predict
 from app.engine.rule import RuleHitResult, load_enabled_rules, match_rules
-from app.models import (
-    OrderInfo, RiskAssessment, RiskCase, RiskEvent, RiskFeature, RiskUserProfile,
-)
+from app.models import Shipment, RiskAssessment, RiskCase, RiskEvent, RiskFeature, RiskUserProfile
 from app.schemas import RiskCheckRequest, RiskCheckResponse, RuleHitInfo
 
 logger = logging.getLogger(__name__)
@@ -97,7 +95,7 @@ def calculate_final_score(hits: list[RuleHitResult]) -> int:
 def check_veto(hits: list[RuleHitResult]) -> bool:
     """一票否决: 任意 1 条 risk_level="极高" 就 True, 短路返回.
 (待优化)
-    当前项目"极高"级别 3 条规则: R002 (单笔 10000+) / R007 (30 天 30 单) / R015 (退款率 80%+).
+    物流项目中极高规则包括危险品瞒报和COD高拒收。
     """
     return any(h.risk_level == "极高" for h in hits)
 
@@ -117,15 +115,9 @@ class _RiskCheckContext:
 
 
 def _build_context(request: RiskCheckRequest) -> _RiskCheckContext:
-    """步骤 1b: 请求 → Context, 顺便补全 order_id.
-
-    业务规则:
-      - "下单" / "支付" 事件: source_id 就是 order_id
-      - "售后申请" 事件: source_id 是 postsale_id, order_id 要从 request 传
-      - "物流投诉" 事件: source_id 是 complaints_id
-    """
+    """步骤1b：请求转上下文。validator已将内部order_id映射为shipment_id。"""
     order_id = request.order_id
-    if not order_id and request.event_type in ("下单", "支付"):
+    if not order_id and request.event_type in ("寄件下单", "安检申报", "代收货款结算"):
         order_id = request.source_id
     return _RiskCheckContext(
         request=request,
@@ -136,17 +128,17 @@ def _build_context(request: RiskCheckRequest) -> _RiskCheckContext:
 
 
 async def _enrich_receive_id(db: AsyncSession, ctx: _RiskCheckContext) -> None:
-    """步骤 1c: 从订单里补全 receive_id (地址 ID).
+    """步骤1c：从运单补全地址兼容ID。
 
-    退出条件 (任一满足就不补): 已有 receive_id / 没有 order_id (售后/物流投诉场景).
+    退出条件：已有地址兼容ID或没有运单兼容ID。
     """
     if ctx.receive_id or not ctx.order_id:
         return
     row = (await db.execute(
-        select(OrderInfo.receive_id).where(OrderInfo.order_id == ctx.order_id)
+        select(Shipment.receiver_address_id).where(Shipment.shipment_id == ctx.order_id)
     )).first()
     if row:
-        ctx.receive_id = row.receive_id
+        ctx.receive_id = row.receiver_address_id
 
 
 # ============================================================
@@ -173,22 +165,24 @@ def _create_event_record(db: AsyncSession, ctx: _RiskCheckContext) -> str:
 # ============================================================
 
 async def _compute_features(db: AsyncSession, ctx: _RiskCheckContext) -> dict:
-    """步骤 3: 调 feature.py 计算 25 个风控特征 (用户/订单/地址 3 类)"""
+    """步骤3：计算25个物流风控特征（寄件人/运单/地址三类）。"""
     return await compute_all_features(
         db,
         user_id=ctx.user_id,
-        order_id=ctx.order_id,        # 可能 None (售后场景只算用户+地址)
+        order_id=ctx.order_id,        # 核心兼容参数，物流语义为shipment_id
         receive_id=ctx.receive_id,
     )
 
 
 def _classify_feature_entity(feature_name: str) -> tuple[str, str]:
-    """特征名前缀 → 实体类型. user_* → 用户, order_* → 订单, 其他 → 地址"""
-    if feature_name.startswith("user_"):
-        return "用户", feature_name
-    if feature_name.startswith("order_"):
-        return "订单", feature_name
-    return "地址", feature_name
+    """物流特征名前缀映射到核心表的通用实体类型。"""
+    if feature_name.startswith("sender_"):
+        return "寄件人", feature_name
+    if feature_name.startswith("shipment_"):
+        return "运单", feature_name
+    if feature_name.startswith("address_"):
+        return "地址", feature_name
+    raise ValueError(f"无法识别物流特征实体: {feature_name}")
 
 
 def _save_feature_snapshot(
@@ -199,15 +193,15 @@ def _save_feature_snapshot(
     """步骤 4: 把 25 个特征落库到 risk_feature (审计回溯).
 
     entity_id 填充规则 (按 entity_type):
-      - 用户特征 → ctx.user_id
-      - 订单特征 → ctx.order_id (缺失用 source_id 顶替)
+      - 寄件人特征 → ctx.user_id
+      - 运单特征 → ctx.order_id (缺失用 source_id 顶替)
       - 地址特征 → ctx.receive_id (缺失用 user_id 顶替)
     """
     for fname, fval in features.items():
         entity_type, _ = _classify_feature_entity(fname)
-        if entity_type == "用户":
+        if entity_type == "寄件人":
             entity_id = ctx.user_id
-        elif entity_type == "订单":
+        elif entity_type == "运单":
             entity_id = ctx.order_id or ctx.request.source_id
         else:  # 地址
             entity_id = ctx.receive_id or ctx.user_id
@@ -467,17 +461,13 @@ async def _update_user_profile(
 
     profile.risk_score = final_score
     profile.risk_level = risk_level
-    profile.total_orders = int(features.get("user_total_orders", 0))
-    profile.total_refunds = int(features.get("user_refund_count", 0))
-    # 退款率 = 退款次数 / 总订单数, 防 0 除
-    total_orders = features.get("user_total_orders", 0)
-    profile.refund_rate = (
-        round(features.get("user_refund_count", 0) / total_orders, 4)
-        if total_orders > 0 else 0
-    )
-    profile.avg_order_amount = features.get("user_avg_order_amount", 0)
-    profile.address_count = int(features.get("user_address_count", 0))
-    profile.complaint_count = int(features.get("user_complaint_count", 0))
+    # 核心表字段名保持不变，物流语义分别为运单数、COD拒收数/率、申报价值、地址数和危险品异常数。
+    profile.total_orders = int(features.get("sender_total_shipments", 0))
+    profile.total_refunds = int(features.get("sender_cod_refuse_count_90d", 0))
+    profile.refund_rate = round(features.get("sender_cod_refuse_rate_90d", 0), 4)
+    profile.avg_order_amount = features.get("shipment_declared_value", 0)
+    profile.address_count = int(features.get("sender_address_count_30d", 0))
+    profile.complaint_count = int(features.get("sender_dangerous_item_hits_90d", 0))
     # 累计评估次数 +1 (or 0 兜底, 防止新建时 None)
     profile.assessment_count = (profile.assessment_count or 0) + 1
     profile.last_assessment_time = datetime.now()

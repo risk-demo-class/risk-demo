@@ -80,7 +80,7 @@ if __name__ == "__main__":
         """模拟 SQLAlchemy ORM 对象, 含 _sa_instance_state 内部状态"""
         def __init__(self):
             self.rule_id = "R001"
-            self.rule_name = "单笔极端高额订单"
+            self.rule_name = "危险品瞒报"
             self.risk_score = 95
             self._sa_instance_state = "<SQLAlchemy 内部状态, 不应暴露>"
 
@@ -116,7 +116,7 @@ if __name__ == "__main__":
             db, operator="admin", action_type="CREATE_RULE",
             target_type="rule", target_id="R025",
             before_value=None,
-            after_value={"rule_name": "极小金额订单", "risk_score": 50},
+            after_value={"rule_name": "跨境低价申报", "risk_score": 50},
             remark="新增 R025",
         )
         await record_action(

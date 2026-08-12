@@ -1,5 +1,5 @@
 -- ============================================
--- 电商风控系统 - 风控表 DDL 初始化脚本
+-- 物流寄递风控系统 - 风控表 DDL 初始化脚本
 -- 在 ecs 数据库中创建 7 张新增风控表
 -- ============================================
 
@@ -9,8 +9,8 @@ USE ecs;
 CREATE TABLE IF NOT EXISTS `risk_rule` (
     `rule_id` VARCHAR(50) NOT NULL COMMENT '规则ID',
     `rule_name` VARCHAR(100) NOT NULL COMMENT '规则名称',
-    `rule_category` ENUM('订单欺诈','支付风险','账户风险','售后滥用','地址风险','物流风险') NOT NULL COMMENT '风险场景分类',
-    `event_type` ENUM('下单','支付','售后申请','物流投诉','通用') NOT NULL DEFAULT '通用' COMMENT '适用事件类型',
+    `rule_category` ENUM('实名风险','危险品风险','跨境申报风险','代收货款风险','地址风险','寄件行为风险') NOT NULL COMMENT '风险场景分类',
+    `event_type` ENUM('寄件下单','安检申报','跨境申报','签收处理','代收货款结算','通用') NOT NULL DEFAULT '通用' COMMENT '适用事件类型',
     `rule_condition` JSON NOT NULL COMMENT '条件表达式',
     `risk_level` ENUM('低','中','高','极高') NOT NULL COMMENT '风险等级',
     `risk_score` INT NOT NULL COMMENT '命中分值(0-100)',
@@ -28,9 +28,9 @@ CREATE TABLE IF NOT EXISTS `risk_rule` (
 -- 2. 风控事件审计表
 CREATE TABLE IF NOT EXISTS `risk_event` (
     `event_id` VARCHAR(50) NOT NULL COMMENT '事件ID',
-    `event_type` ENUM('下单','支付','售后申请','物流投诉') NOT NULL COMMENT '事件类型',
+    `event_type` ENUM('寄件下单','安检申报','跨境申报','签收处理','代收货款结算') NOT NULL COMMENT '事件类型',
     `event_source_id` VARCHAR(50) NOT NULL COMMENT '关联业务ID',
-    `user_id` VARCHAR(50) NOT NULL COMMENT '用户ID',
+    `user_id` VARCHAR(50) NOT NULL COMMENT '寄件人ID',
     `event_data` JSON COMMENT '事件快照',
     `create_time` TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     PRIMARY KEY (`event_id`),
@@ -42,7 +42,7 @@ CREATE TABLE IF NOT EXISTS `risk_event` (
 CREATE TABLE IF NOT EXISTS `risk_feature` (
     `feature_id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '特征ID',
     `event_id` VARCHAR(50) NOT NULL COMMENT '关联事件ID',
-    `entity_type` ENUM('用户','订单','地址') NOT NULL COMMENT '实体类型',
+    `entity_type` ENUM('寄件人','运单','地址') NOT NULL COMMENT '实体类型',
     `entity_id` VARCHAR(50) NOT NULL COMMENT '实体ID',
     `feature_name` VARCHAR(100) NOT NULL COMMENT '特征名称',
     `feature_value` DECIMAL(15,4) COMMENT '特征值',
@@ -56,7 +56,7 @@ CREATE TABLE IF NOT EXISTS `risk_feature` (
 CREATE TABLE IF NOT EXISTS `risk_assessment` (
     `assessment_id` VARCHAR(50) NOT NULL COMMENT '评估ID',
     `event_id` VARCHAR(50) NOT NULL COMMENT '关联事件ID',
-    `user_id` VARCHAR(50) NOT NULL COMMENT '用户ID',
+    `user_id` VARCHAR(50) NOT NULL COMMENT '寄件人ID',
     `rule_results` JSON COMMENT '规则结果',
     `rule_count` INT DEFAULT 0 COMMENT '命中规则数',
     `final_score` INT NOT NULL COMMENT '最终评分(0-100)',
@@ -76,14 +76,14 @@ CREATE TABLE IF NOT EXISTS `risk_assessment` (
 CREATE TABLE IF NOT EXISTS `risk_case` (
     `case_id` VARCHAR(50) NOT NULL COMMENT '案件ID',
     `assessment_id` VARCHAR(50) NOT NULL COMMENT '关联评估ID',
-    `user_id` VARCHAR(50) NOT NULL COMMENT '用户ID',
+    `user_id` VARCHAR(50) NOT NULL COMMENT '寄件人ID',
     `case_status` ENUM('待审核','审核中','已通过','已拒绝','已关闭') NOT NULL DEFAULT '待审核' COMMENT '案件状态',
     `case_category` VARCHAR(50) DEFAULT NULL COMMENT '案件分类',
     `risk_detail` JSON COMMENT '风险详情',
     -- 【2026-08-07 补】业务回溯字段: decision.py 写入, "重做检查" 按钮回查用
     -- 之前漏在 DDL 里, 导致 ORM 查 risk_case.source_id 时报 1054 (修复: 合并自原 migration_add_case_source_id.sql)
-    `source_id` VARCHAR(50) DEFAULT NULL COMMENT '原始业务ID(订单/售后/投诉ID), 重做检查时用',
-    `event_type` ENUM('下单','支付','售后申请','物流投诉') DEFAULT NULL COMMENT '触发案件的事件类型',
+    `source_id` VARCHAR(50) DEFAULT NULL COMMENT '原始业务ID(运单/申报/签收ID), 重做检查时用',
+    `event_type` ENUM('寄件下单','安检申报','跨境申报','签收处理','代收货款结算') DEFAULT NULL COMMENT '触发案件的事件类型',
     `reviewer` VARCHAR(50) DEFAULT NULL COMMENT '审核人',
     `review_comment` TEXT COMMENT '审核意见',
     `review_time` DATETIME DEFAULT NULL COMMENT '审核时间',
@@ -98,7 +98,7 @@ CREATE TABLE IF NOT EXISTS `risk_case` (
 -- 6. 风控黑名单表
 CREATE TABLE IF NOT EXISTS `risk_blacklist` (
     `blacklist_id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '黑名单ID',
-    `blacklist_type` ENUM('用户','地址','手机号') NOT NULL COMMENT '黑名单类型',
+    `blacklist_type` ENUM('寄件人','收件人','手机号','证件号','地址','设备指纹','跨境收件方') NOT NULL COMMENT '黑名单类型',
     `blacklist_value` VARCHAR(200) NOT NULL COMMENT '黑名单值',
     `reason` TEXT COMMENT '加入原因',
     `expire_time` DATETIME DEFAULT NULL COMMENT '过期时间(NULL=永久)',
@@ -111,13 +111,13 @@ CREATE TABLE IF NOT EXISTS `risk_blacklist` (
 
 -- 7. 用户风险画像表
 CREATE TABLE IF NOT EXISTS `risk_user_profile` (
-    `user_id` VARCHAR(50) NOT NULL COMMENT '用户ID',
+    `user_id` VARCHAR(50) NOT NULL COMMENT '寄件人ID',
     `risk_score` INT DEFAULT 0 COMMENT '综合风险评分(0-100)',
     `risk_level` ENUM('低','中','高','极高') DEFAULT '低' COMMENT '风险等级',
-    `total_orders` INT DEFAULT 0 COMMENT '总订单数',
-    `total_refunds` INT DEFAULT 0 COMMENT '退款次数',
-    `refund_rate` DECIMAL(5,4) DEFAULT 0 COMMENT '退款率',
-    `avg_order_amount` DECIMAL(10,2) DEFAULT 0 COMMENT '平均订单金额',
+    `total_orders` INT DEFAULT 0 COMMENT '总运单数(核心兼容字段)',
+    `total_refunds` INT DEFAULT 0 COMMENT 'COD拒收次数(核心兼容字段)',
+    `refund_rate` DECIMAL(5,4) DEFAULT 0 COMMENT 'COD拒收率(核心兼容字段)',
+    `avg_order_amount` DECIMAL(10,2) DEFAULT 0 COMMENT '申报价值(核心兼容字段)',
     `address_count` INT DEFAULT 0 COMMENT '地址数量',
     `complaint_count` INT DEFAULT 0 COMMENT '投诉次数',
     `assessment_count` INT DEFAULT 0 COMMENT '评估次数',
