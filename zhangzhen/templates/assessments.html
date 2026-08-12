@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-intro"><div><h2>全量评估历史</h2><p>通过、标记、人工审核和拒绝都在这里完整回溯</p></div></div>
+<div class="toolbar">
+  <input id="filter-user" class="input" placeholder="客户ID">
+  <select id="filter-event" class="select"><option value="">全部事件</option><option>登录</option><option>转账</option><option>信用卡交易</option><option>贷款申请</option></select>
+  <select id="filter-level" class="select"><option value="">全部等级</option><option>低</option><option>中</option><option>高</option><option>极高</option></select>
+  <select id="filter-decision" class="select"><option value="">全部决策</option><option>通过</option><option>标记</option><option>人工审核</option><option>拒绝</option></select>
+  <button class="btn btn-primary" onclick="loadAssessments(1)">查询</button>
+</div>
+<section class="card"><div class="table-wrap"><table><thead><tr><th>评估ID</th><th>客户/来源</th><th>事件</th><th>评分</th><th>等级</th><th>决策</th><th>规则数</th><th>时间</th><th>操作</th></tr></thead><tbody id="assessment-body"><tr><td colspan="9" class="empty">加载中…</td></tr></tbody></table></div><div id="assessment-pages" class="pagination"></div></section>
+<div id="assessment-modal" class="modal-backdrop"><div class="modal"><div class="modal-header"><h3>评估详情</h3><button class="close" data-close-modal="assessment-modal">×</button></div><div id="assessment-detail" class="modal-body"></div></div></div>
+{% endblock %}
+{% block scripts %}
+<script>
+let assessmentPage=1; const assessmentPageSize=20;
+async function loadAssessments(page=1){
+  assessmentPage=page;
+  try{
+    const qs=App.query({user_id:document.getElementById('filter-user').value.trim(),event_type:document.getElementById('filter-event').value,risk_level:document.getElementById('filter-level').value,decision:document.getElementById('filter-decision').value,page,page_size:assessmentPageSize});
+    const data=await App.api(`/api/assessments?${qs}`); const body=document.getElementById('assessment-body');
+    body.innerHTML=data.items.length?data.items.map(item=>`<tr><td><code>${App.escapeHtml(item.assessment_id.slice(0,14))}…</code></td><td><b>${App.escapeHtml(item.user_id)}</b><br><small>${App.escapeHtml(item.event_source_id)}</small></td><td>${App.escapeHtml(item.event_type)}</td><td><b>${item.final_score}</b></td><td>${App.badge(item.risk_level)}</td><td>${App.badge(item.decision)}</td><td>${item.rule_count}</td><td>${App.formatDate(item.create_time)}</td><td><button class="btn btn-secondary btn-sm" onclick="showAssessment('${item.assessment_id}')">详情</button></td></tr>`).join(''):'<tr><td colspan="9" class="empty">暂无评估记录，请先执行风险检查</td></tr>';
+    App.pageControls(document.getElementById('assessment-pages'),{page:data.page,pageSize:data.page_size,total:data.total,onPage:loadAssessments});
+  }catch(error){App.toast(error.message,true)}
+}
+async function showAssessment(id){
+  try{const d=await App.api(`/api/assessments/${id}`); const rules=d.triggered_rules||[]; const features=Object.entries(d.features||{});
+    document.getElementById('assessment-detail').innerHTML=`<div class="detail-grid"><div class="detail-item"><small>客户/来源</small><b>${App.escapeHtml(d.user_id)} / ${App.escapeHtml(d.event_source_id)}</b></div><div class="detail-item"><small>最终结果</small>${App.badge(d.risk_level)} ${App.badge(d.decision)}</div><div class="detail-item"><small>评分与模型</small><b>${d.final_score}</b> / ${d.ml_score??'未加载'}</div></div><h4>命中规则（${rules.length}）</h4>${rules.length?rules.map(r=>`<div class="rule-hit"><b>${App.escapeHtml(r.rule_id)} ${App.escapeHtml(r.rule_name)}</b><div class="help">${App.escapeHtml(JSON.stringify(r.actual_values||{}))}</div></div>`).join(''):'<div class="empty">未命中规则</div>'}<h4>特征快照（${features.length}维）</h4><div class="feature-grid">${features.map(([k,v])=>`<div class="feature"><span>${App.escapeHtml(k)}</span><b>${v}</b></div>`).join('')}</div><h4>事件快照</h4><pre class="json">${App.escapeHtml(App.pretty(d.event_data))}</pre>`; App.openModal('assessment-modal');
+  }catch(error){App.toast(error.message,true)}
+}
+loadAssessments();
+</script>
+{% endblock %}

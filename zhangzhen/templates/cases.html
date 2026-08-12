@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-intro"><div><h2>风险案件工作台</h2><p>默认显示待审核与审核中案件，状态流转和加黑在同一事务完成</p></div></div>
+<section class="stats-grid">
+  <div class="card stat-card"><div class="stat-label">全部案件</div><div id="case-total" class="stat-value blue">-</div></div>
+  <div class="card stat-card"><div class="stat-label">待审核</div><div id="case-pending" class="stat-value orange">-</div></div>
+  <div class="card stat-card"><div class="stat-label">审核中</div><div id="case-reviewing" class="stat-value orange">-</div></div>
+  <div class="card stat-card"><div class="stat-label">已拒绝</div><div id="case-rejected" class="stat-value red">-</div></div>
+</section>
+<div class="toolbar">
+  <input id="case-user" class="input" placeholder="客户ID">
+  <select id="case-status" class="select"><option value="">全部状态</option><option>待审核</option><option>审核中</option><option>已通过</option><option>已拒绝</option><option>已关闭</option></select>
+  <label><input id="case-active" type="checkbox" checked> 只看待办</label>
+  <button class="btn btn-primary" onclick="loadCases(1)">查询</button>
+</div>
+<section class="card"><div class="table-wrap"><table><thead><tr><th>案件ID</th><th>客户/来源</th><th>事件</th><th>评分</th><th>等级</th><th>状态</th><th>审核人</th><th>时间</th><th>操作</th></tr></thead><tbody id="case-body"><tr><td colspan="9" class="empty">加载中…</td></tr></tbody></table></div><div id="case-pages" class="pagination"></div></section>
+<div id="case-detail-modal" class="modal-backdrop"><div class="modal"><div class="modal-header"><h3>案件详情</h3><button class="close" data-close-modal="case-detail-modal">×</button></div><div id="case-detail" class="modal-body"></div><div class="modal-footer"><button id="case-review-button" class="btn btn-primary" onclick="openReview()">审核案件</button><button class="btn btn-secondary" data-close-modal="case-detail-modal">关闭</button></div></div></div>
+<div id="case-review-modal" class="modal-backdrop"><div class="modal modal-sm"><div class="modal-header"><h3>人工审核</h3><button class="close" data-close-modal="case-review-modal">×</button></div><div class="modal-body"><div class="form-grid">
+  <div class="field"><label>目标状态</label><select id="review-status" class="select"><option>审核中</option><option>已通过</option><option>已拒绝</option><option>已关闭</option></select></div>
+  <div class="field"><label>审核人</label><input id="reviewer" class="input" value="auditor1"></div>
+  <div class="field full"><label>审核意见</label><textarea id="review-comment" class="textarea" placeholder="必须填写审核依据"></textarea></div>
+  <div class="field full"><label><input id="review-blacklist" type="checkbox"> 拒绝时同时加入黑名单</label></div>
+  <div class="field"><label>黑名单类型</label><select id="review-bl-type" class="select"><option>用户</option><option>身份证</option><option>银行账户</option><option>银行卡</option><option>收款账户</option><option>设备指纹</option><option>IP</option><option>手机号</option></select></div>
+  <div class="field"><label>黑名单值</label><input id="review-bl-value" class="input" placeholder="用户类型可留空"></div>
+</div></div><div class="modal-footer"><button class="btn btn-secondary" data-close-modal="case-review-modal">取消</button><button class="btn btn-primary" onclick="submitReview()">提交审核</button></div></div></div>
+{% endblock %}
+{% block scripts %}
+<script>
+let casePage=1,currentCase=null;const casePageSize=20;
+async function loadStats(){try{const s=await App.api('/api/cases/statistics');['total','pending','reviewing','rejected'].forEach(k=>document.getElementById(`case-${k}`).textContent=s[k])}catch(e){App.toast(e.message,true)}}
+async function loadCases(page=1){casePage=page;try{const qs=App.query({status:document.getElementById('case-status').value,user_id:document.getElementById('case-user').value.trim(),active_only:document.getElementById('case-active').checked,page,page_size:casePageSize});const data=await App.api(`/api/cases?${qs}`);document.getElementById('case-body').innerHTML=data.items.length?data.items.map(c=>`<tr><td><code>${App.escapeHtml(c.case_id.slice(0,14))}…</code></td><td><b>${App.escapeHtml(c.user_id)}</b><br><small>${App.escapeHtml(c.source_id||'-')}</small></td><td>${App.escapeHtml(c.event_type||'-')}</td><td><b>${c.final_score}</b></td><td>${App.badge(c.risk_level)}</td><td>${App.badge(c.case_status)}</td><td>${App.escapeHtml(c.reviewer||'-')}</td><td>${App.formatDate(c.create_time)}</td><td><button class="btn btn-secondary btn-sm" onclick="showCase('${c.case_id}')">详情</button></td></tr>`).join(''):'<tr><td colspan="9" class="empty">暂无待办案件；取消“只看待办”可查看系统拒绝案件</td></tr>';App.pageControls(document.getElementById('case-pages'),{page:data.page,pageSize:data.page_size,total:data.total,onPage:loadCases})}catch(e){App.toast(e.message,true)}}
+async function showCase(id){try{currentCase=await App.api(`/api/cases/${id}`);const rules=currentCase.triggered_rules||[],features=Object.entries(currentCase.features||{});document.getElementById('case-detail').innerHTML=`<div class="detail-grid"><div class="detail-item"><small>客户/业务来源</small><b>${App.escapeHtml(currentCase.user_id)} / ${App.escapeHtml(currentCase.source_id||'-')}</b></div><div class="detail-item"><small>状态</small>${App.badge(currentCase.case_status)}</div><div class="detail-item"><small>评分</small><b>${currentCase.final_score}</b> ${App.badge(currentCase.risk_level)}</div><div class="detail-item"><small>审核人</small>${App.escapeHtml(currentCase.reviewer||'-')}</div><div class="detail-item"><small>审核意见</small>${App.escapeHtml(currentCase.review_comment||'-')}</div><div class="detail-item"><small>模型分</small>${currentCase.ml_score??'模型未加载'}</div></div><h4>命中规则（${rules.length}）</h4>${rules.map(r=>`<div class="rule-hit"><b>${App.escapeHtml(r.rule_id)} ${App.escapeHtml(r.rule_name)}</b><div class="help">实际值 ${App.escapeHtml(JSON.stringify(r.actual_values||{}))}</div></div>`).join('')||'<div class="empty">无命中规则</div>'}<h4>25维特征</h4><div class="feature-grid">${features.map(([k,v])=>`<div class="feature"><span>${App.escapeHtml(k)}</span><b>${v}</b></div>`).join('')}</div>`;document.getElementById('case-review-button').style.display=['待审核','审核中'].includes(currentCase.case_status)?'inline-flex':'none';App.openModal('case-detail-modal')}catch(e){App.toast(e.message,true)}}
+function openReview(){if(!currentCase)return;App.closeModal('case-detail-modal');document.getElementById('review-status').value=currentCase.case_status==='待审核'?'审核中':'已通过';document.getElementById('review-comment').value='';document.getElementById('review-blacklist').checked=false;App.openModal('case-review-modal')}
+async function submitReview(){try{const body={new_status:document.getElementById('review-status').value,reviewer:document.getElementById('reviewer').value.trim(),review_comment:document.getElementById('review-comment').value.trim(),add_to_blacklist:document.getElementById('review-blacklist').checked,blacklist_type:document.getElementById('review-bl-type').value,blacklist_value:document.getElementById('review-bl-value').value.trim()||null,blacklist_expire_time:null};await App.api(`/api/cases/${currentCase.case_id}/review`,{method:'POST',body:JSON.stringify(body)});App.closeModal('case-review-modal');App.toast('案件状态、可选黑名单和审计已原子提交');await loadCases(casePage);await loadStats()}catch(e){App.toast(e.message,true)}}
+loadStats();loadCases();
+</script>
+{% endblock %}

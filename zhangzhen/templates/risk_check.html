@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-intro"><div><h2>实时风险检查</h2><p>通过业务主键查询权威数据，执行黑名单、25维特征、规则和决策</p></div></div>
+<section class="grid-2" style="align-items:start">
+  <div class="card">
+    <div class="card-header"><h3>检查参数</h3><a class="btn btn-secondary btn-sm" href="/docs" target="_blank">打开 Swagger</a></div>
+    <div class="card-body">
+      <div class="form-grid">
+        <div class="field"><label>事件类型</label><select id="event-type" class="select"><option>登录</option><option selected>转账</option><option>信用卡交易</option><option>贷款申请</option></select></div>
+        <div class="field"><label>客户ID</label><input id="user-id" class="input" value="U10001"></div>
+        <div class="field full"><label>业务来源ID</label><input id="source-id" class="input" value="T10001"><small class="help">后端根据该ID查询业务表，不信任前端传入的金额等关键事实</small></div>
+        <div class="field full"><label>补充事件数据（JSON）</label><textarea id="event-data" class="textarea">{"request_id":"REQ-PAGE-001"}</textarea></div>
+      </div>
+      <div class="actions" style="margin-top:15px">
+        <button class="btn btn-primary" id="submit-check" onclick="submitCheck()">执行风险检查</button>
+        <button class="btn btn-secondary btn-sm" onclick="useDemo('normal')">正常转账</button>
+        <button class="btn btn-danger btn-sm" onclick="useDemo('risk')">极端转账</button>
+        <button class="btn btn-secondary btn-sm" onclick="useDemo('blacklist')">黑名单转账</button>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-header"><h3>请求链路</h3></div>
+    <div class="card-body kv-list">
+      <div class="kv-row"><span>1. Router</span><strong>接收四字段契约</strong></div>
+      <div class="kv-row"><span>2. Validator</span><strong>实体、归属、状态校验</strong></div>
+      <div class="kv-row"><span>3. Blacklist</span><strong>八类黑名单前置短路</strong></div>
+      <div class="kv-row"><span>4. Feature</span><strong>计算固定25维特征</strong></div>
+      <div class="kv-row"><span>5. Rule / ML</span><strong>规则、模型降级、一票否决</strong></div>
+      <div class="kv-row"><span>6. Persistence</span><strong>事件、特征、评估、案件、画像</strong></div>
+    </div>
+  </div>
+</section>
+<section id="result-card" class="card" style="display:none">
+  <div class="card-header"><h3>风险检查结果</h3><button class="btn btn-secondary btn-sm" onclick="showRaw()">查看完整 JSON</button></div>
+  <div class="card-body">
+    <div class="result-hero"><div id="result-score" class="score-circle">0</div><div><h2 id="result-decision" style="margin:0 0 7px">-</h2><div id="result-meta" class="help"></div><p id="result-message"></p></div></div>
+    <div class="grid-2">
+      <div><h3>命中规则</h3><div id="result-rules"></div></div>
+      <div><h3>25维特征</h3><div id="result-features" class="feature-grid"></div></div>
+    </div>
+  </div>
+</section>
+<div id="raw-modal" class="modal-backdrop"><div class="modal"><div class="modal-header"><h3>完整响应 JSON</h3><button class="close" data-close-modal="raw-modal">×</button></div><div class="modal-body"><pre id="raw-json" class="json"></pre></div></div></div>
+{% endblock %}
+{% block scripts %}
+<script>
+let lastResult = null;
+const demos = {
+  normal: ['转账','U10001','T10001','REQ-NORMAL-PAGE'],
+  risk: ['转账','U90001','T90001','REQ-RISK-PAGE'],
+  blacklist: ['转账','U10001','T10003','REQ-BLACKLIST-PAGE']
+};
+function useDemo(name) {
+  const [type,user,source,request] = demos[name];
+  document.getElementById('event-type').value=type; document.getElementById('user-id').value=user;
+  document.getElementById('source-id').value=source; document.getElementById('event-data').value=JSON.stringify({request_id:request});
+}
+function showRaw() { document.getElementById('raw-json').textContent=App.pretty(lastResult); App.openModal('raw-modal'); }
+async function submitCheck() {
+  const button=document.getElementById('submit-check'); button.disabled=true; button.textContent='检查中…';
+  try {
+    let eventData; try { eventData=JSON.parse(document.getElementById('event-data').value || '{}'); }
+    catch { throw new Error('补充事件数据不是合法 JSON'); }
+    const body={event_type:document.getElementById('event-type').value,source_id:document.getElementById('source-id').value.trim(),user_id:document.getElementById('user-id').value.trim(),event_data:eventData};
+    lastResult=await App.api('/api/risk/check',{method:'POST',body:JSON.stringify(body)});
+    document.getElementById('result-card').style.display='block';
+    const score=document.getElementById('result-score'); score.textContent=lastResult.final_score;
+    score.style.background=lastResult.final_score>=85?'#f05252':lastResult.final_score>=60?'#fa8c16':lastResult.final_score>=30?'#e6a400':'#22b07d';
+    document.getElementById('result-decision').innerHTML=`${App.badge(lastResult.risk_level)}　${App.badge(lastResult.decision)}`;
+    document.getElementById('result-meta').textContent=`事件 ${lastResult.event_id || '-'}　评估 ${lastResult.assessment_id || '-'}　命中 ${lastResult.rule_count} 条规则`;
+    document.getElementById('result-message').textContent=lastResult.blocked_by?`黑名单前置拦截：${lastResult.blocked_by}`:(lastResult.message||'规则与模型融合决策完成');
+    document.getElementById('result-rules').innerHTML=lastResult.triggered_rules.length?lastResult.triggered_rules.map(rule=>`<div class="rule-hit"><strong><span>${App.escapeHtml(rule.rule_id)} ${App.escapeHtml(rule.rule_name)}</span><span>${rule.risk_score}分</span></strong><div class="help">实际值：${App.escapeHtml(JSON.stringify(rule.actual_values))}</div></div>`).join(''):'<div class="empty">未命中规则</div>';
+    const features=Object.entries(lastResult.features||{}); document.getElementById('result-features').innerHTML=features.length?features.map(([key,val])=>`<div class="feature"><span>${App.escapeHtml(key)}</span><b>${Number(val).toFixed(Number.isInteger(val)?0:4)}</b></div>`).join(''):'<div class="empty">黑名单短路，未计算特征</div>';
+    document.getElementById('result-card').scrollIntoView({behavior:'smooth'});
+  } catch(error) { App.toast(error.message,true); }
+  finally { button.disabled=false; button.textContent='执行风险检查'; }
+}
+</script>
+{% endblock %}

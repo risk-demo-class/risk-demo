@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-intro"><div><h2>AI 风控助手</h2><p>默认只读；核心风控决策不依赖大模型</p></div><span class="badge badge-medium">第四阶段接入模型</span></div>
+<section class="card">
+  <div id="chat-box" class="chat-box"><div class="message bot">你好，我是银行风控助手页面。目前主决策、仪表盘、规则、案件、评估和黑名单已经可用。
+
+真实 Agent 工具将在第四阶段接入。在此之前，我不会伪造模型回答，也不会直接执行规则变更、案件审核或黑名单写操作。</div></div>
+  <div class="chat-input"><input id="chat-message" class="input" placeholder="例如：帮我查看今天的风险趋势" onkeydown="if(event.key==='Enter')sendMessage()"><button class="btn btn-primary" onclick="sendMessage()">发送</button></div>
+</section>
+<div class="toolbar" style="margin-top:15px"><span class="help">快捷入口：</span><a class="btn btn-secondary btn-sm" href="/">今日统计</a><a class="btn btn-secondary btn-sm" href="/cases">待审案件</a><a class="btn btn-secondary btn-sm" href="/assessments">评估历史</a><a class="btn btn-secondary btn-sm" href="/rules">规则效果</a></div>
+{% endblock %}
+{% block scripts %}
+<script>
+async function sendMessage(){const input=document.getElementById('chat-message'),message=input.value.trim();if(!message)return;const box=document.getElementById('chat-box');box.insertAdjacentHTML('beforeend',`<div class="message user">${App.escapeHtml(message)}</div>`);input.value='';try{const data=await App.api('/api/agent/chat',{method:'POST',body:JSON.stringify({message})});box.insertAdjacentHTML('beforeend',`<div class="message bot">${App.escapeHtml(data.reply)}</div>`)}catch(e){box.insertAdjacentHTML('beforeend',`<div class="message bot">请求失败：${App.escapeHtml(e.message)}</div>`)}box.scrollTop=box.scrollHeight}
+</script>
+{% endblock %}

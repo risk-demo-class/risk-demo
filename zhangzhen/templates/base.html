@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ page_title }} - 银行业智能风控系统</title>
+  <link rel="stylesheet" href="{{ url_for('static', path='/app.css') }}">
+  {% block head %}{% endblock %}
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar">
+    <a class="brand" href="/">
+      <div class="brand-mark">♢</div>
+      <div><strong>风控中心</strong><small>Bank-Risk 控制台</small></div>
+    </a>
+    <nav class="nav">
+      <a href="/" class="{% if active_page == 'dashboard' %}active{% endif %}"><span class="nav-icon">◉</span><span class="nav-label">风控仪表盘</span></a>
+      <a href="/rules" class="{% if active_page == 'rules' %}active{% endif %}"><span class="nav-icon">☷</span><span class="nav-label">规则管理</span></a>
+      <a href="/cases" class="{% if active_page == 'cases' %}active{% endif %}"><span class="nav-icon">▣</span><span class="nav-label">案件管理</span></a>
+      <a href="/assessments" class="{% if active_page == 'assessments' %}active{% endif %}"><span class="nav-icon">▥</span><span class="nav-label">评估历史</span></a>
+      <a href="/risk-check" class="{% if active_page == 'risk-check' %}active{% endif %}"><span class="nav-icon">⚗</span><span class="nav-label">风险检查</span></a>
+      <a href="/chat" class="{% if active_page == 'chat' %}active{% endif %}"><span class="nav-icon">▤</span><span class="nav-label">AI 风控助手</span></a>
+      <a href="/blacklist" class="{% if active_page == 'blacklist' %}active{% endif %}"><span class="nav-icon">⊘</span><span class="nav-label">黑名单</span></a>
+    </nav>
+  </aside>
+  <main class="main">
+    <header class="topbar">
+      <h1>{{ page_title }}</h1>
+      <div class="engine-status"><span class="status-dot"></span>实时决策引擎</div>
+    </header>
+    <div class="content">{% block content %}{% endblock %}</div>
+  </main>
+</div>
+<script src="{{ url_for('static', path='/app.js') }}"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

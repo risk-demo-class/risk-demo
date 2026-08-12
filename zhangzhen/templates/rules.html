@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-intro"><div><h2>银行风控规则</h2><p>20条预置规则使用JSON条件树，所有变更均写操作审计</p></div><button class="btn btn-primary" onclick="openRule()">＋ 新建规则</button></div>
+<div class="toolbar">
+  <select id="rule-category-filter" class="select"><option value="">全部分类</option><option>账户安全</option><option>转账欺诈</option><option>信用卡风险</option><option>信贷风险</option><option>设备风险</option><option>IP与地域风险</option></select>
+  <select id="rule-event-filter" class="select"><option value="">全部事件</option><option>登录</option><option>转账</option><option>信用卡交易</option><option>贷款申请</option><option>通用</option></select>
+  <select id="rule-enabled-filter" class="select"><option value="">全部状态</option><option value="true">已启用</option><option value="false">已停用</option></select>
+  <button class="btn btn-primary" onclick="loadRules(1)">查询</button>
+</div>
+<section class="card"><div class="table-wrap"><table><thead><tr><th>规则ID/名称</th><th>分类</th><th>事件</th><th>等级</th><th>分值</th><th>动作</th><th>状态</th><th>优先级</th><th>操作</th></tr></thead><tbody id="rule-body"><tr><td colspan="9" class="empty">加载中…</td></tr></tbody></table></div><div id="rule-pages" class="pagination"></div></section>
+
+<div id="rule-modal" class="modal-backdrop"><div class="modal"><div class="modal-header"><h3 id="rule-modal-title">新建规则</h3><button class="close" data-close-modal="rule-modal">×</button></div><div class="modal-body">
+  <div class="form-grid form-grid-3">
+    <div class="field"><label>规则ID</label><input id="r-id" class="input" placeholder="例如 B021"></div>
+    <div class="field"><label>规则名称</label><input id="r-name" class="input"></div>
+    <div class="field"><label>分类</label><select id="r-category" class="select"><option>账户安全</option><option>转账欺诈</option><option>信用卡风险</option><option>信贷风险</option><option>设备风险</option><option>IP与地域风险</option></select></div>
+    <div class="field"><label>事件类型</label><select id="r-event" class="select"><option>登录</option><option>转账</option><option>信用卡交易</option><option>贷款申请</option><option>通用</option></select></div>
+    <div class="field"><label>风险等级</label><select id="r-level" class="select"><option>低</option><option>中</option><option selected>高</option><option>极高</option></select></div>
+    <div class="field"><label>风险分值</label><input id="r-score" type="number" min="0" max="100" class="input" value="60"></div>
+    <div class="field"><label>动作</label><select id="r-action" class="select"><option>通过</option><option>标记</option><option selected>人工审核</option><option>拒绝</option></select></div>
+    <div class="field"><label>优先级</label><input id="r-priority" type="number" min="0" max="999" class="input" value="50"></div>
+    <div class="field"><label>状态</label><select id="r-enabled" class="select"><option value="true">启用</option><option value="false">停用</option></select></div>
+    <div class="field full"><label>描述</label><input id="r-description" class="input"></div>
+  </div>
+  <h4>条件表达式（可视化构建器）</h4>
+  <div class="form-grid form-grid-3">
+    <div class="field"><label>组合方式</label><select id="cond-group" class="select"><option value="single">单条件</option><option value="and">AND 分组</option><option value="or">OR 分组</option></select></div>
+    <div class="field"><label>银行特征</label><select id="cond-field" class="select"></select></div>
+    <div class="field"><label>运算符</label><select id="cond-op" class="select"><option>&gt;</option><option>&gt;=</option><option>&lt;</option><option>&lt;=</option><option>==</option><option>!=</option><option value="between">between</option></select></div>
+    <div class="field"><label>阈值</label><input id="cond-value" class="input" value="1"><small class="help">between使用 [10,20]</small></div>
+    <div class="field" style="align-self:end"><button class="btn btn-secondary" onclick="appendCondition()">添加到条件树</button></div>
+    <div class="field full"><label>可视化摘要</label><div id="condition-preview" class="condition-preview">尚未设置条件</div></div>
+    <div class="field full"><label>原始 JSON（可直接编辑）</label><textarea id="r-condition" class="textarea">{"field":"txn_amount","op":">=","value":1000}</textarea></div>
+  </div>
+</div><div class="modal-footer"><button class="btn btn-secondary" data-close-modal="rule-modal">取消</button><button class="btn btn-primary" onclick="saveRule()">保存</button></div></div></div>
+<div id="rule-json-modal" class="modal-backdrop"><div class="modal modal-sm"><div class="modal-header"><h3>规则 JSON</h3><button class="close" data-close-modal="rule-json-modal">×</button></div><div class="modal-body"><pre id="rule-json" class="json"></pre></div></div></div>
+{% endblock %}
+{% block scripts %}
+<script>
+const ruleFeatures={user_account_age_days:'账户年龄(天)',user_credit_score:'信用分',user_kyc_level:'KYC等级',user_txn_count_30d:'30天交易笔数',user_txn_amount_30d:'30天交易金额',user_avg_txn_amount_30d:'30天平均交易额',user_failed_login_count_24h:'24小时失败登录',txn_amount:'本次交易金额',txn_amount_vs_avg_ratio:'金额/个人均值',txn_count_1h:'1小时交易笔数',txn_amount_24h:'24小时累计金额',txn_is_night:'是否夜间',txn_is_new_beneficiary:'是否陌生收款人',txn_cross_city:'是否跨城市',txn_beneficiary_payer_count_1h:'收款人1小时付款人数',device_age_days:'设备年龄',device_user_count_30d:'设备关联用户数',device_is_new:'是否新设备',ip_is_proxy:'是否代理IP',ip_is_tor:'是否Tor',login_geo_jump_km:'登录地理跳跃公里',loan_amount:'贷款金额',loan_debt_ratio:'贷款负债率',loan_institution_count_30d:'30天借贷机构数',card_utilization_rate:'信用卡额度使用率'};
+document.getElementById('cond-field').innerHTML=Object.entries(ruleFeatures).map(([k,v])=>`<option value="${k}">${v}（${k}）</option>`).join('');
+let rulePage=1, editingRule=null, ruleCache=new Map(); const rulePageSize=20;
+function describeCondition(c){if(c.and)return '同时满足：'+c.and.map(describeCondition).join('；');if(c.or)return '满足任一：'+c.or.map(describeCondition).join('；');return `${ruleFeatures[c.field]||c.field} ${c.op} ${JSON.stringify(c.value)}`}
+function refreshPreview(){try{document.getElementById('condition-preview').textContent=describeCondition(JSON.parse(document.getElementById('r-condition').value))}catch{document.getElementById('condition-preview').textContent='JSON格式有误'}}
+document.getElementById('r-condition').addEventListener('input',refreshPreview);
+function parseThreshold(raw){try{return JSON.parse(raw)}catch{return raw}}
+function appendCondition(){let tree;try{tree=JSON.parse(document.getElementById('r-condition').value)}catch{tree=null}const item={field:document.getElementById('cond-field').value,op:document.getElementById('cond-op').value,value:parseThreshold(document.getElementById('cond-value').value)};const group=document.getElementById('cond-group').value;if(group==='single'||!tree)tree=item;else if(tree[group])tree[group].push(item);else tree={[group]:[tree,item]};document.getElementById('r-condition').value=App.pretty(tree);refreshPreview()}
+async function loadRules(page=1){rulePage=page;try{const qs=App.query({category:document.getElementById('rule-category-filter').value,event_type:document.getElementById('rule-event-filter').value,enabled:document.getElementById('rule-enabled-filter').value,page,page_size:rulePageSize});const data=await App.api(`/api/rules?${qs}`);ruleCache=new Map(data.items.map(i=>[i.rule_id,i]));document.getElementById('rule-body').innerHTML=data.items.length?data.items.map(r=>`<tr><td><b>${App.escapeHtml(r.rule_id)}</b><br><small>${App.escapeHtml(r.rule_name)}</small></td><td>${App.escapeHtml(r.rule_category)}</td><td>${App.escapeHtml(r.event_type)}</td><td>${App.badge(r.risk_level)}</td><td><b>${r.risk_score}</b></td><td>${App.badge(r.action)}</td><td>${App.badge(r.is_enabled)}</td><td>${r.priority}</td><td><div class="actions"><button class="btn btn-secondary btn-sm" onclick="viewRuleJson('${r.rule_id}')">JSON</button><button class="btn btn-secondary btn-sm" onclick="openRule('${r.rule_id}')">编辑</button><button class="btn btn-success btn-sm" onclick="toggleRule('${r.rule_id}')">${r.is_enabled?'停用':'启用'}</button><button class="btn btn-danger btn-sm" onclick="deleteRule('${r.rule_id}')">删除</button></div></td></tr>`).join(''):'<tr><td colspan="9" class="empty">没有符合条件的规则</td></tr>';App.pageControls(document.getElementById('rule-pages'),{page:data.page,pageSize:data.page_size,total:data.total,onPage:loadRules})}catch(error){App.toast(error.message,true)}}
+function openRule(id=null){editingRule=id;const r=id?ruleCache.get(id):null;document.getElementById('rule-modal-title').textContent=r?'编辑规则':'新建规则';document.getElementById('r-id').disabled=!!r;document.getElementById('r-id').value=r?.rule_id||'';document.getElementById('r-name').value=r?.rule_name||'';document.getElementById('r-category').value=r?.rule_category||'账户安全';document.getElementById('r-event').value=r?.event_type||'通用';document.getElementById('r-level').value=r?.risk_level||'高';document.getElementById('r-score').value=r?.risk_score??60;document.getElementById('r-action').value=r?.action||'人工审核';document.getElementById('r-priority').value=r?.priority??50;document.getElementById('r-enabled').value=String(r?.is_enabled??true);document.getElementById('r-description').value=r?.description||'';document.getElementById('r-condition').value=App.pretty(r?.rule_condition||{field:'txn_amount',op:'>=',value:1000});refreshPreview();App.openModal('rule-modal')}
+function viewRuleJson(id){document.getElementById('rule-json').textContent=App.pretty(ruleCache.get(id));App.openModal('rule-json-modal')}
+async function saveRule(){try{let condition;try{condition=JSON.parse(document.getElementById('r-condition').value)}catch{throw new Error('规则条件不是合法JSON')}const body={rule_name:document.getElementById('r-name').value.trim(),rule_category:document.getElementById('r-category').value,event_type:document.getElementById('r-event').value,rule_condition:condition,risk_level:document.getElementById('r-level').value,risk_score:Number(document.getElementById('r-score').value),action:document.getElementById('r-action').value,is_enabled:document.getElementById('r-enabled').value==='true',priority:Number(document.getElementById('r-priority').value),description:document.getElementById('r-description').value.trim()||null};if(!editingRule)body.rule_id=document.getElementById('r-id').value.trim();await App.api(editingRule?`/api/rules/${editingRule}`:'/api/rules',{method:editingRule?'PUT':'POST',body:JSON.stringify(body)});App.closeModal('rule-modal');App.toast('规则已保存并写入审计日志');loadRules(rulePage)}catch(error){App.toast(error.message,true)}}
+async function toggleRule(id){try{await App.api(`/api/rules/${id}/toggle`,{method:'PUT'});App.toast('规则状态已更新');loadRules(rulePage)}catch(error){App.toast(error.message,true)}}
+async function deleteRule(id){if(!confirm(`确认软删除规则 ${id}？`))return;try{await App.api(`/api/rules/${id}`,{method:'DELETE'});App.toast('规则已软删除');loadRules(rulePage)}catch(error){App.toast(error.message,true)}}
+loadRules();refreshPreview();
+</script>
+{% endblock %}

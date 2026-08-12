@@ -8,7 +8,7 @@
 
 ## 当前里程碑
 
-第一阶段“业务与数据骨架”和第二阶段“主决策链路”已经完成：
+第一阶段“业务与数据骨架”、第二阶段“主决策链路”和第三阶段“管理闭环与页面”已经完成：
 
 - Python 3.11 + uv 项目配置；
 - FastAPI 应用工厂和 `/health`、`/healthz`、`/readyz`；
@@ -24,9 +24,16 @@
 - `event → feature → assessment → case/profile` 完整审计链；
 - `POST /api/risk/check` 实时风险检查接口；
 - 可重复执行的规则与四类业务演示数据初始化脚本。
+- 规则 CRUD、启停、条件校验和软删除；
+- 案件分页、详情、状态机、人工审核及拒绝时原子加黑；
+- 八类黑名单新增、脱敏列表和软删除；
+- 评估历史、25维特征详情、客户画像和仪表盘聚合 API；
+- 规则、案件和黑名单写操作审计；
+- 仪表盘、规则、案件、评估、风险检查、AI助手和黑名单 7 个管理页面；
+- 前端统一处理 HTTP 状态与 Content-Type，避免把 500 文本强制解析成 JSON。
 
-后续阶段将在此基础上加入案件/黑名单管理闭环、7 个管理页面、模型训练、
-AI 助手和 Docker Compose。
+后续阶段将在此基础上加入批量演示数据、XGBoost 训练、真实 AI Agent 工具、
+告警调度和 Docker Compose。当前 AI 助手页面提供明确的安全占位，不伪造模型结果。
 
 完整需求基线见 [docs/银行内风控项目-任务书.md](docs/银行内风控项目-任务书.md)。
 
@@ -45,6 +52,8 @@ zhangzhen/
 │  ├─ models_business.py   # 8 张银行业务表
 │  ├─ models_risk.py       # 9 张风控核心表
 │  └─ schemas.py           # Pydantic 契约
+├─ templates/              # 7 个 Jinja2 管理页面与公共布局
+├─ static/                 # 公共 CSS 和 JavaScript
 ├─ docs/                   # 任务书和设计文档
 ├─ scripts/
 │  ├─ init_db.py           # 初始化 17 张表
@@ -99,10 +108,32 @@ uv run python scripts/main.py
 
 访问：
 
+- 银行风控仪表盘：<http://127.0.0.1:8000/>
+- 规则管理：<http://127.0.0.1:8000/rules>
+- 案件管理：<http://127.0.0.1:8000/cases>
+- 评估历史：<http://127.0.0.1:8000/assessments>
+- 实时风险检查：<http://127.0.0.1:8000/risk-check>
+- AI 风控助手：<http://127.0.0.1:8000/chat>
+- 黑名单：<http://127.0.0.1:8000/blacklist>
 - API 文档：<http://127.0.0.1:8000/docs>
 - 服务信息：<http://127.0.0.1:8000/health>
 - 存活检查：<http://127.0.0.1:8000/healthz>
 - 数据库就绪检查：<http://127.0.0.1:8000/readyz>
+
+### 与老师电商项目同时运行时的端口
+
+老师项目的 Docker `ai_risk_app` 也会占用主机 `8000` 端口。如果访问银行项目时
+仍看到电商页面，可任选一种方式：
+
+1. 保留共用的 MySQL，只停止老师项目的应用与 Nginx：
+
+   ```powershell
+   docker stop ai_risk_app ai_risk_nginx
+   uv run python scripts/main.py
+   ```
+
+2. 在银行项目 `.env` 中把 `PORT=8000` 改为 `PORT=8010`，然后访问
+   <http://127.0.0.1:8010/>。MySQL 仍使用 `127.0.0.1:3306`。
 
 ### 在 Swagger 中体验一次风险检查
 
@@ -150,7 +181,8 @@ uv run pytest
 ```
 
 测试使用独立的 SQLite 内存数据库，不会修改本地 MySQL 数据。当前测试覆盖表结构、
-实体归属、25 维特征、规则运算符、计分、一票否决、黑名单短路、审计链和 HTTP 接口。
+实体归属、25 维特征、规则运算符、计分、一票否决、黑名单短路、规则软删除、案件
+状态机、黑名单脱敏与软删、操作审计、7 个页面、静态资源和管理 HTTP 接口。
 
 ## 数据模型边界
 

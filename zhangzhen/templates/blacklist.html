@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-intro"><div><h2>银行黑名单</h2><p>支持八类对象、有效期、软删除与完整审计；列表只展示脱敏值</p></div><button class="btn btn-primary" onclick="App.openModal('blacklist-modal')">＋ 新增黑名单</button></div>
+<div class="toolbar"><select id="blacklist-filter" class="select"><option value="">全部类型</option><option>用户</option><option>身份证</option><option>银行账户</option><option>银行卡</option><option>收款账户</option><option>设备指纹</option><option>IP</option><option>手机号</option></select><button class="btn btn-primary" onclick="loadBlacklist(1)">查询</button><span class="help">提示：完整值不会通过列表API返回</span></div>
+<section class="card"><div class="table-wrap"><table><thead><tr><th>ID</th><th>类型</th><th>脱敏值</th><th>原因</th><th>有效期</th><th>创建时间</th><th>操作</th></tr></thead><tbody id="blacklist-body"><tr><td colspan="7" class="empty">加载中…</td></tr></tbody></table></div><div id="blacklist-pages" class="pagination"></div></section>
+<div id="blacklist-modal" class="modal-backdrop"><div class="modal modal-sm"><div class="modal-header"><h3>新增银行黑名单</h3><button class="close" data-close-modal="blacklist-modal">×</button></div><div class="modal-body"><div class="form-grid">
+  <div class="field"><label>黑名单类型</label><select id="bl-type" class="select"><option>用户</option><option>身份证</option><option>银行账户</option><option>银行卡</option><option>收款账户</option><option>设备指纹</option><option>IP</option><option>手机号</option></select></div>
+  <div class="field"><label>操作人</label><input id="bl-operator" class="input" value="admin"></div>
+  <div class="field full"><label>完整匹配值</label><input id="bl-value" class="input" placeholder="对象ID或已经脱敏/哈希后的值"><small class="help">教学项目禁止输入真实身份证、银行卡或手机号</small></div>
+  <div class="field full"><label>原因</label><input id="bl-reason" class="input" placeholder="加入原因"></div>
+  <div class="field full"><label>过期时间（可选）</label><input id="bl-expire" type="datetime-local" class="input"></div>
+</div></div><div class="modal-footer"><button class="btn btn-secondary" data-close-modal="blacklist-modal">取消</button><button class="btn btn-primary" onclick="saveBlacklist()">保存</button></div></div></div>
+{% endblock %}
+{% block scripts %}
+<script>
+let blacklistPage=1;const blacklistPageSize=20;
+async function loadBlacklist(page=1){blacklistPage=page;try{const qs=App.query({blacklist_type:document.getElementById('blacklist-filter').value,page,page_size:blacklistPageSize});const data=await App.api(`/api/blacklist?${qs}`);document.getElementById('blacklist-body').innerHTML=data.items.length?data.items.map(item=>`<tr><td>${item.blacklist_id}</td><td>${App.escapeHtml(item.blacklist_type)}</td><td><code>${App.escapeHtml(item.blacklist_value_masked)}</code></td><td>${App.escapeHtml(item.reason||'-')}</td><td>${item.expire_time?App.formatDate(item.expire_time):'长期有效'}</td><td>${App.formatDate(item.create_time)}</td><td><button class="btn btn-danger btn-sm" onclick="removeBlacklist(${item.blacklist_id})">移除</button></td></tr>`).join(''):'<tr><td colspan="7" class="empty">暂无有效黑名单</td></tr>';App.pageControls(document.getElementById('blacklist-pages'),{page:data.page,pageSize:data.page_size,total:data.total,onPage:loadBlacklist})}catch(error){App.toast(error.message,true)}}
+async function saveBlacklist(){try{const expire=document.getElementById('bl-expire').value;const body={blacklist_type:document.getElementById('bl-type').value,blacklist_value:document.getElementById('bl-value').value.trim(),reason:document.getElementById('bl-reason').value.trim(),expire_time:expire?new Date(expire).toISOString():null,operator:document.getElementById('bl-operator').value.trim()};await App.api('/api/blacklist',{method:'POST',body:JSON.stringify(body)});App.closeModal('blacklist-modal');App.toast('黑名单已保存并记录审计');document.getElementById('bl-value').value='';document.getElementById('bl-reason').value='';loadBlacklist(1)}catch(error){App.toast(error.message,true)}}
+async function removeBlacklist(id){if(!confirm('确认移除这条黑名单？数据库中将做软删除。'))return;try{await App.api(`/api/blacklist/${id}?operator=admin`,{method:'DELETE'});App.toast('黑名单已软删除');loadBlacklist(blacklistPage)}catch(error){App.toast(error.message,true)}}
+loadBlacklist();
+</script>
+{% endblock %}

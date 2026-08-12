@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-intro">
+  <div><h2>银行风险态势总览</h2><p>汇总实时评估、案件积压、风险分布和规则命中情况</p></div>
+  <button class="btn btn-secondary" onclick="loadDashboard()">↻ 刷新</button>
+</div>
+<section class="stats-grid">
+  <div class="card stat-card"><div class="stat-label">今日评估</div><div id="stat-total" class="stat-value blue">-</div><div class="stat-hint">已进入完整决策链路</div></div>
+  <div class="card stat-card"><div class="stat-label">今日高风险</div><div id="stat-risk" class="stat-value red">-</div><div class="stat-hint">高与极高风险评估</div></div>
+  <div class="card stat-card"><div class="stat-label">通过率</div><div id="stat-pass" class="stat-value green">-</div><div class="stat-hint">今日通过数 / 今日评估数</div></div>
+  <div class="card stat-card"><div class="stat-label">待处理案件</div><div id="stat-cases" class="stat-value orange">-</div><div class="stat-hint">待审核与审核中</div></div>
+</section>
+<section class="grid-2">
+  <div class="card">
+    <div class="card-header"><h3>近7天评估趋势</h3><small class="help">蓝色：全部　红色：高风险</small></div>
+    <div class="card-body"><div id="trend-bars" class="bars"></div></div>
+  </div>
+  <div class="card">
+    <div class="card-header"><h3>Top 命中规则</h3></div>
+    <div class="card-body"><div id="top-rules" class="kv-list"><div class="empty">加载中…</div></div></div>
+  </div>
+</section>
+<section class="grid-3">
+  <div class="card"><div class="card-header"><h3>风险等级分布</h3></div><div class="card-body"><div id="risk-dist" class="kv-list"></div></div></div>
+  <div class="card"><div class="card-header"><h3>事件类型分布</h3></div><div class="card-body"><div id="event-dist" class="kv-list"></div></div></div>
+  <div class="card"><div class="card-header"><h3>决策结果分布</h3></div><div class="card-body"><div id="decision-dist" class="kv-list"></div></div></div>
+</section>
+{% endblock %}
+{% block scripts %}
+<script>
+function renderDistribution(id, data) {
+  const el = document.getElementById(id); const entries = Object.entries(data || {});
+  el.innerHTML = entries.length ? entries.map(([name, count]) =>
+    `<div class="kv-row"><span>${App.escapeHtml(name)}</span><strong>${count}</strong></div>`
+  ).join('') : '<div class="empty">暂无数据</div>';
+}
+async function loadDashboard() {
+  try {
+    const data = await App.api('/api/dashboard/overview');
+    document.getElementById('stat-total').textContent = data.today_assessments;
+    document.getElementById('stat-risk').textContent = data.today_high_risk;
+    document.getElementById('stat-pass').textContent = `${data.pass_rate}%`;
+    document.getElementById('stat-cases').textContent = data.pending_cases;
+    const max = Math.max(1, ...data.trend_7d.map(item => item.total));
+    document.getElementById('trend-bars').innerHTML = data.trend_7d.map(item => `
+      <div class="bar-group"><div class="bar-stack">
+        <div class="bar" title="全部 ${item.total}" style="height:${Math.max(2,item.total/max*180)}px"></div>
+        <div class="bar risk" title="高风险 ${item.high_risk}" style="height:${Math.max(2,item.high_risk/max*180)}px"></div>
+      </div><div>${item.date.slice(5)}</div></div>`).join('');
+    document.getElementById('top-rules').innerHTML = data.top_rules.length ? data.top_rules.map(item =>
+      `<div class="kv-row"><span><b>${App.escapeHtml(item.rule_id)}</b> ${App.escapeHtml(item.rule_name)}</span><span class="badge badge-enabled">${item.hit_count}</span></div>`
+    ).join('') : '<div class="empty">尚无规则命中</div>';
+    renderDistribution('risk-dist', data.risk_distribution);
+    renderDistribution('event-dist', data.event_distribution);
+    renderDistribution('decision-dist', data.decision_distribution);
+  } catch (error) { App.toast(error.message, true); }
+}
+loadDashboard();
+</script>
+{% endblock %}
