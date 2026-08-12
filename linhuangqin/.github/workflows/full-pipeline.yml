@@ -1,0 +1,104 @@
+name: Logistics Risk - Full Pipeline
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+    inputs:
+      count:
+        description: '业务数据生成数量'
+        required: false
+        default: '500'
+      risky:
+        description: '高风险用户数量'
+        required: false
+        default: '30'
+      limit:
+        description: '模型训练数据限制'
+        required: false
+        default: '1000'
+
+jobs:
+  full-pipeline:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: risk_logistics
+        ports: [3306:3306]
+        options: >-
+          --health-cmd "mysqladmin ping -h 127.0.0.1 -u root -proot"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: mysql+aiomysql://root:root@localhost:3306/risk_logistics?charset=utf8mb4
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install ruff pytest
+
+      - name: Lint check
+        run: ruff check .
+
+      - name: Run unit tests
+        run: pytest tests/ -v --tb=short -x
+
+      - name: Init database
+        run: python scripts/init_db.py
+
+      - name: Generate business data
+        run: |
+          python scripts/gen_logistics_data.py --count ${{ github.event.inputs.count || '500' }}
+          python scripts/gen_risky_users.py --count ${{ github.event.inputs.risky || '30' }}
+
+      - name: Verify data integrity
+        run: |
+          python -c "
+          import asyncio
+          from app.database import async_engine
+          from sqlalchemy import text
+          async def check():
+              async with async_engine.connect() as conn:
+                  tables = await conn.execute(text('SHOW TABLES'))
+                  events = await conn.execute(text('SELECT COUNT(*) FROM logistics_event_log'))
+                  shippers = await conn.execute(text('SELECT COUNT(*) FROM shipper_info'))
+                  print(f'Tables: {tables.rowcount}')
+                  print(f'Events: {events.scalar()}')
+                  print(f'Shippers: {shippers.scalar()}')
+                  assert tables.rowcount == 21
+                  assert events.scalar() >= 100
+          asyncio.run(check())
+          "
+
+      - name: Train XGBoost model
+        run: python scripts/train_xgb_model.py --limit ${{ github.event.inputs.limit || '1000' }}
+
+      - name: Save model artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: xgb-model
+          path: app/engine/xgb_model.json
+
+      - name: Summary
+        run: |
+          echo "========================================"
+          echo "✓ Logistics Risk Pipeline Complete"
+          echo "  Tables: 21"
+          echo "  Events: generated"
+          echo "  Model:  trained and saved"
+          echo "========================================"

@@ -1,0 +1,79 @@
+# ─────────────────────────────────────────────
+# .gitignore - 忽略不需要提交的文件
+# ─────────────────────────────────────────────
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environment
+.venv/
+venv/
+ENV/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Environment variables (keep .env.example)
+.env
+.env.local
+.env.production
+
+# Database
+*.db
+*.sqlite3
+
+# Logs
+*.log
+logs/
+
+# Test coverage
+htmlcov/
+.coverage
+.coverage.*
+coverage.xml
+*.cover
+
+# Jupyter
+.ipynb_checkpoints
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.temp
+
+# Results (generated, not source)
+0-Results/0-Logistics_Result/*.md
+!0-Results/0-Logistics_Result/.gitkeep
+
+# XGBoost model binary
+app/engine/xgb_model.json
+
+# OS
+Thumbs.db
+.DS_Store

@@ -1,0 +1,458 @@
+{% extends "base.html" %}
+{% block title %}规则管理 - 物流风控系统{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="mb-0">规则管理</h4>
+    <button class="btn btn-primary btn-sm" onclick="showCreateModal()">
+        <i class="bi bi-plus-circle"></i> 新建规则
+    </button>
+</div>
+
+<!-- 筛选 -->
+<div class="mb-3 d-flex gap-2 align-items-center flex-wrap">
+    <select class="form-select form-select-sm w-auto" id="filterCategory" onchange="loadRules(1)">
+        <option value="">全部分类</option>
+        <option value="空包虚假发货">空包虚假发货</option>
+        <option value="物流调包">物流调包</option>
+        <option value="验货质检">验货质检</option>
+        <option value="退回假货">退回假货</option>
+        <option value="恶意退货">恶意退货</option>
+        <option value="轨迹造假">轨迹造假</option>
+        <option value="签收风险">签收风险</option>
+        <option value="刷单刷信誉">刷单刷信誉</option>
+        <option value="寄件信息异常">寄件信息异常</option>
+        <option value="费用争议">费用争议</option>
+    </select>
+    <span class="text-muted small">每页</span>
+    <select class="form-select form-select-sm w-auto" id="pageSize" onchange="onPageSizeChange()">
+        <option value="20">20 条</option>
+        <option value="50">50 条</option>
+        <option value="100">100 条</option>
+    </select>
+    <span class="text-muted small ms-2" id="rulesCount"></span>
+</div>
+
+<!-- 规则列表 -->
+<div class="card stat-card">
+    <div class="table-responsive">
+        <table class="table table-hover mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>规则ID</th><th>名称</th><th>分类</th><th>事件类型</th>
+                    <th>等级</th><th>分值</th><th>动作</th><th>优先级</th>
+                    <th>状态</th><th>操作</th>
+                </tr>
+            </thead>
+            <tbody id="rules-table"></tbody>
+        </table>
+    </div>
+</div>
+
+<nav class="pagination-bottom"><ul class="pagination justify-content-center mb-0" id="pagination"></ul></nav>
+
+<!-- 创建/编辑模态框 -->
+<div class="modal fade" id="ruleModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                    <h5 class="modal-title" id="ruleModalTitle">新建规则</h5>
+                    <button type="button" class="btn-close-risk" data-bs-dismiss="modal" title="关闭" aria-label="Close"><i class="bi bi-x-lg"></i></button>
+                </div>
+            <div class="modal-body">
+                <form id="ruleForm">
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <label class="form-label">规则ID</label>
+                            <input type="text" class="form-control" id="f_rule_id" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">规则名称</label>
+                            <input type="text" class="form-control" id="f_rule_name" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">分类</label>
+                            <select class="form-select" id="f_category" required>
+                                <option value="空包虚假发货">空包虚假发货</option>
+                                <option value="物流调包">物流调包</option>
+                                <option value="验货质检">验货质检</option>
+                                <option value="退回假货">退回假货</option>
+                                <option value="恶意退货">恶意退货</option>
+                                <option value="轨迹造假">轨迹造假</option>
+                                <option value="签收风险">签收风险</option>
+                                <option value="刷单刷信誉">刷单刷信誉</option>
+                                <option value="寄件信息异常">寄件信息异常</option>
+                                <option value="费用争议">费用争议</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-3">
+                            <label class="form-label">事件类型</label>
+                            <select class="form-select" id="f_event_type">
+                                <option value="通用">通用</option>
+                                <option value="卖家下单寄件">卖家下单（创建运单时实名校验）</option>
+                                <option value="揽收入仓">入仓验收（称重/序列号登记）</option>
+                                <option value="验货完成">验货检测（成色/功能鉴定）</option>
+                                <option value="出仓发货">出仓复验（发货前称重比对）</option>
+                                <option value="运输中">运输途中（轨迹异常检测）</option>
+                                <option value="派送中">末端派送（配送时效监控）</option>
+                                <option value="买家签收">买家签收（签收行为检测）</option>
+                                <option value="买家拒收">买家拒收（逆向物流触发）</option>
+                                <option value="买家退回寄件">买家退货（重量/序列号比对）</option>
+                                <option value="退货入仓验货">退货验收（退回物品鉴定）</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">风险等级</label>
+                            <select class="form-select" id="f_risk_level" required>
+                                <option value="低">低</option>
+                                <option value="中">中</option>
+                                <option value="高">高</option>
+                                <option value="极高">极高</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">分值 (0-100)</label>
+                            <input type="number" class="form-control" id="f_score" min="0" max="100" required>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">动作</label>
+                            <select class="form-select" id="f_action" required>
+                                <option value="通过">通过</option>
+                                <option value="标记">标记</option>
+                                <option value="人工审核">人工审核</option>
+                                <option value="拒绝">拒绝</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">条件表达式</label>
+                        <div id="condition-builder">
+                            <div class="condition-row d-flex gap-2 mb-1 align-items-center" data-index="0">
+                                <select class="form-select form-select-sm" style="width:auto;min-width:160px" onchange="updateConditionJson()">
+                                    <option value="">选择字段...</option>
+                                    <option value="cargo_weight">包裹重量 cargo_weight</option>
+                                    <option value="declared_value">声明价值 declared_value</option>
+                                    <option value="insurance_amount">保价金额 insurance_amount</option>
+                                    <option value="is_night_order">夜间下单 is_night_order</option>
+                                    <option value="has_seal">有封条 has_seal</option>
+                                    <option value="cod_amount">代收货款 cod_amount</option>
+                                    <option value="cargo_volume">包裹体积 cargo_volume</option>
+                                    <option value="shipper_empty_pkg_rate">卖家空包率 shipper_empty_pkg_rate</option>
+                                    <option value="shipper_waybills_7d">卖家7天寄件数 shipper_waybills_7d</option>
+                                    <option value="buyer_return_rate">买家退货率 buyer_return_rate</option>
+                                    <option value="return_interval_hours">退货间隔(时) return_interval_hours</option>
+                                    <option value="return_weight_diff">退货重量差 return_weight_diff</option>
+                                    <option value="return_imei_match">退货序列号一致 return_imei_match</option>
+                                    <option value="track_completeness">轨迹完整度 track_completeness</option>
+                                    <option value="grade_diff">成色差异级差 grade_diff</option>
+                                    <option value="inspect_duration_min">验货耗时 inspect_duration_min</option>
+                                </select>
+                                <select class="form-select form-select-sm" style="width:auto;min-width:90px" onchange="updateConditionJson()">
+                                    <option value=">=">>=</option>
+                                    <option value="<="><=</option>
+                                    <option value="==">==</option>
+                                    <option value=">">></option>
+                                    <option value="<"><</option>
+                                    <option value="!=">!=</option>
+                                    <option value="in">in</option>
+                                </select>
+                                <input type="text" class="form-control form-control-sm" style="width:180px" placeholder="值" oninput="updateConditionJson()">
+                                <button class="btn btn-outline-success btn-sm" onclick="addConditionRow()" title="添加条件">+</button>
+                                <button class="btn btn-outline-danger btn-sm d-none" onclick="removeConditionRow(this)" title="删除">×</button>
+                            </div>
+                        </div>
+                        <div class="mt-2">
+                            <small class="text-muted">
+                                <label><input type="checkbox" id="f_use_and" checked onchange="updateConditionJson()"> AND（全部满足）</label>
+                                <label class="ms-3"><input type="checkbox" id="f_use_or" onchange="updateConditionJson()"> OR（满足任一）</label>
+                            </small>
+                        </div>
+                        <div class="mt-1">
+                            <label class="small text-muted">JSON 预览（自动生成，保存时使用）</label>
+                            <textarea class="form-control form-control-sm" id="f_condition" rows="2" readonly></textarea>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-3">
+                            <label class="form-label">优先级</label>
+                            <input type="number" class="form-control" id="f_priority" value="0">
+                        </div>
+                        <div class="col-md-9">
+                            <label class="form-label">描述</label>
+                            <input type="text" class="form-control" id="f_description">
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-primary" onclick="saveRule()">保存</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// 条件生成器: 行 → JSON
+function getConditionRows() {
+    const rows = document.querySelectorAll('.condition-row');
+    const conditions = [];
+    rows.forEach(row => {
+        const field = row.querySelector('select:nth-child(1)').value;
+        const op = row.querySelector('select:nth-child(2)').value;
+        const val = row.querySelector('input[type=text]').value;
+        if (field && op && val) {
+            let parsed = val;
+            if (op === 'in' || op === 'between') {
+                try { parsed = JSON.parse(val); } catch { parsed = val.split(',').map(v => v.trim()); }
+            } else if (!isNaN(Number(val))) {
+                parsed = Number(val);
+            }
+            conditions.push({field, op, value: parsed});
+        }
+    });
+    return conditions;
+}
+function updateConditionJson() {
+    // 互斥: 勾一个自动取消另一个
+    const cbAnd = document.getElementById('f_use_and');
+    const cbOr = document.getElementById('f_use_or');
+    if (document.activeElement === cbOr && cbOr.checked) {
+        cbAnd.checked = false;
+    } else if (document.activeElement === cbAnd && cbAnd.checked) {
+        cbOr.checked = false;
+    }
+    const conditions = getConditionRows();
+    let json;
+    if (conditions.length === 0) {
+        json = {};
+    } else if (conditions.length === 1) {
+        json = conditions[0];
+    } else {
+        json = {[cbOr.checked ? 'or' : 'and']: conditions};
+    }
+    document.getElementById('f_condition').value = JSON.stringify(json, null, 2);
+}
+function addConditionRow() {
+    const builder = document.getElementById('condition-builder');
+    const rows = builder.querySelectorAll('.condition-row');
+    const idx = rows.length;
+    const template = rows[0].cloneNode(true);
+    template.dataset.index = idx;
+    template.querySelectorAll('select')[0].value = '';
+    template.querySelectorAll('select')[1].value = '>=';
+    template.querySelector('input[type=text]').value = '';
+    template.querySelector('.btn-outline-danger').classList.remove('d-none');
+    builder.appendChild(template);
+    updateConditionJson();
+}
+function removeConditionRow(btn) {
+    const row = btn.closest('.condition-row');
+    if (document.querySelectorAll('.condition-row').length <= 1) return;
+    row.remove();
+    updateConditionJson();
+}
+function populateConditionBuilder(json) {
+    if (!json || Object.keys(json).length === 0) return;
+    // 判断是 and/or 组合还是单条件
+    let conditions = [];
+    let isAnd = true;
+    if (json.field) {
+        conditions = [json];
+    } else if (json.and) {
+        conditions = json.and;
+        isAnd = true;
+    } else if (json.or) {
+        conditions = json.or;
+        isAnd = false;
+    }
+    // 清空 builder 保留第一行
+    const builder = document.getElementById('condition-builder');
+    while (builder.querySelectorAll('.condition-row').length > 1) {
+        builder.lastElementChild.remove();
+    }
+    const firstRow = builder.querySelector('.condition-row');
+    // 填充
+    conditions.forEach((c, i) => {
+        let row = i === 0 ? firstRow : addConditionRow_getNewRow(builder, firstRow);
+        row.querySelectorAll('select')[0].value = c.field || '';
+        row.querySelectorAll('select')[1].value = c.op || '>=';
+        row.querySelector('input[type=text]').value = Array.isArray(c.value) ? JSON.stringify(c.value) : String(c.value ?? '');
+    });
+    document.getElementById('f_use_and').checked = isAnd;
+    document.getElementById('f_use_or').checked = !isAnd;
+    updateConditionJson();
+}
+function addConditionRow_getNewRow(builder, template) {
+    const row = template.cloneNode(true);
+    row.querySelectorAll('select')[0].value = '';
+    row.querySelectorAll('select')[1].value = '>=';
+    row.querySelector('input[type=text]').value = '';
+    row.querySelector('.btn-outline-danger').classList.remove('d-none');
+    builder.appendChild(row);
+    return row;
+}
+
+let currentPage = 1;
+let editingRuleId = null;
+const PAGE_SIZE_KEY = 'rules_pageSize';
+
+// 从 localStorage 恢复 pageSize, 默认 20
+(function initPageSize() {
+    const saved = localStorage.getItem(PAGE_SIZE_KEY) || '20';
+    document.getElementById('pageSize').value = saved;
+})();
+
+// 用户切换 pageSize 时保存到 localStorage
+function onPageSizeChange() {
+    localStorage.setItem(PAGE_SIZE_KEY, document.getElementById('pageSize').value);
+    loadRules(1);
+}
+
+function riskBadge(level) {
+    const cls = {'低':'badge-risk-low','中':'badge-risk-mid','高':'badge-risk-high','极高':'badge-risk-critical'}[level] || 'bg-secondary';
+    return `<span class="badge ${cls}">${level}</span>`;
+}
+
+async function loadRules(page) {
+    currentPage = page || 1;
+    const category = document.getElementById('filterCategory').value;
+    const pageSize = document.getElementById('pageSize').value;
+    const params = new URLSearchParams({page: currentPage, page_size: pageSize});
+    if (category) params.set('category', category);
+    const res = await fetch('/api/rules?' + params);
+    const data = await res.json();
+    document.getElementById('rulesCount').textContent =
+        `共 ${data.total} 条, 当前 ${data.items.length} 条/页`;
+    const tbody = document.getElementById('rules-table');
+    if (data.items.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="10" class="text-center text-muted">暂无规则</td></tr>';
+    } else {
+        tbody.innerHTML = data.items.map(r => `
+            <tr>
+                <td><code>${r.rule_id}</code></td>
+                <td>${r.rule_name}</td>
+                <td><span class="badge bg-info">${r.rule_category}</span></td>
+                <td><span title="${r.event_type}">${eventTypeDisplay(r.event_type)}</span></td>
+                <td>${riskBadge(r.risk_level)}</td>
+                <td><strong>${r.risk_score}</strong></td>
+                <td>${r.action}</td>
+                <td>${r.priority}</td>
+                <td>
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" ${r.is_enabled ? 'checked' : ''}
+                            onchange="toggleRule('${r.rule_id}')">
+                    </div>
+                </td>
+                <td>
+                    <button class="btn btn-outline-primary btn-sm" onclick="editRule('${r.rule_id}')">
+                        <i class="bi bi-pencil"></i>
+                    </button>
+                    <button class="btn btn-outline-danger btn-sm" onclick="deleteRule('${r.rule_id}')">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </td>
+            </tr>
+        `).join('');
+    }
+    // 分页 (P4-L4 2026-08-08: 用通用分页组件 app.js::buildPaginationHtml, 与评估/案件一致)
+    // 智能省略号, 总页数 > 7 时显示 ...
+    const totalPages = Math.ceil(data.total / pageSize);
+    document.getElementById('pagination').innerHTML =
+        buildPaginationHtml(currentPage, totalPages, pageSize, 'loadRules');
+}
+
+function showCreateModal() {
+    editingRuleId = null;
+    document.getElementById('ruleModalTitle').textContent = '新建规则';
+    document.getElementById('ruleForm').reset();
+    document.getElementById('f_rule_id').disabled = false;
+    // 重置条件生成器为一行空值
+    const _builder = document.getElementById('condition-builder');
+    while (_builder.querySelectorAll('.condition-row').length > 1) {
+        _builder.lastElementChild.remove();
+    }
+    const _firstRow = _builder.querySelector('.condition-row');
+    _firstRow.querySelectorAll('select')[0].value = '';
+    _firstRow.querySelectorAll('select')[1].value = '>=';
+    _firstRow.querySelector('input[type=text]').value = '';
+    document.getElementById('f_use_and').checked = true;
+    document.getElementById('f_use_or').checked = false;
+    updateConditionJson();
+    new bootstrap.Modal(document.getElementById('ruleModal')).show();
+}
+
+async function editRule(ruleId) {
+    const res = await fetch(`/api/rules/${ruleId}`);
+    const r = await res.json();
+    editingRuleId = ruleId;
+    document.getElementById('ruleModalTitle').textContent = '编辑规则';
+    document.getElementById('f_rule_id').value = r.rule_id;
+    document.getElementById('f_rule_id').disabled = true;
+    document.getElementById('f_rule_name').value = r.rule_name;
+    document.getElementById('f_category').value = r.rule_category;
+    document.getElementById('f_event_type').value = r.event_type;
+    document.getElementById('f_risk_level').value = r.risk_level;
+    document.getElementById('f_score').value = r.risk_score;
+    document.getElementById('f_action').value = r.action;
+    populateConditionBuilder(r.rule_condition);
+    document.getElementById('f_priority').value = r.priority;
+    document.getElementById('f_description').value = r.description || '';
+    new bootstrap.Modal(document.getElementById('ruleModal')).show();
+}
+
+async function saveRule() {
+    let condition;
+    try {
+        condition = JSON.parse(document.getElementById('f_condition').value);
+    } catch (e) {
+        alert('条件表达式JSON格式错误');
+        return;
+    }
+    if (!condition || Object.keys(condition).length === 0) {
+        alert('请至少添加一条条件规则（选择字段、运算符并填入值）');
+        return;
+    }
+    const data = {
+        rule_id: document.getElementById('f_rule_id').value,
+        rule_name: document.getElementById('f_rule_name').value,
+        rule_category: document.getElementById('f_category').value,
+        event_type: document.getElementById('f_event_type').value,
+        rule_condition: condition,
+        risk_level: document.getElementById('f_risk_level').value,
+        risk_score: parseInt(document.getElementById('f_score').value),
+        action: document.getElementById('f_action').value,
+        priority: parseInt(document.getElementById('f_priority').value) || 0,
+        description: document.getElementById('f_description').value,
+    };
+    const url = editingRuleId ? `/api/rules/${editingRuleId}` : '/api/rules';
+    const method = editingRuleId ? 'PUT' : 'POST';
+    const res = await fetch(url, { method, headers: {'Content-Type':'application/json'}, body: JSON.stringify(data) });
+    if (res.ok) {
+        bootstrap.Modal.getInstance(document.getElementById('ruleModal')).hide();
+        loadRules(currentPage);
+    } else {
+        const err = await res.json();
+        alert(err.detail || '保存失败');
+    }
+}
+
+async function toggleRule(ruleId) {
+
+async function toggleRule(ruleId) {
+    await fetch(`/api/rules/${ruleId}/toggle`, { method: 'PUT' });
+}
+
+async function deleteRule(ruleId) {
+    if (!confirm('确定要删除这条规则吗？')) return;
+    await fetch(`/api/rules/${ruleId}`, { method: 'DELETE' });
+    loadRules(currentPage);
+}
+
+loadRules();
+</script>
+{% endblock %}

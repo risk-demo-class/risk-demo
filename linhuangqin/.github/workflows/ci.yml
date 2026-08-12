@@ -1,0 +1,282 @@
+name: Logistics Risk CI
+
+on:
+  push:
+    branches: [main, master, develop]
+  pull_request:
+    branches: [main, master]
+  schedule:
+    # 每日凌晨 2 点自动验证数据库初始化
+    - cron: '0 2 * * *'
+
+permissions:
+  contents: read
+  checks: write
+
+jobs:
+  # ─────────────────────────────────────────────
+  # 1. 依赖安装 & 基础语法检查
+  # ─────────────────────────────────────────────
+  setup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install ruff pytest pytest-asyncio mypy types-aiobotocore
+
+      - name: Check syntax (ruff)
+        run: ruff check .
+
+      - name: Type check core modules
+        run: |
+          mypy app/engine/feature.py app/engine/rule.py app/engine/decision.py \
+                 app/service/event.py app/service/case.py app/service/validator.py \
+                 --ignore-missing-imports --no-error-summary
+
+  # ─────────────────────────────────────────────
+  # 2. 单元测试 (无 DB 依赖)
+  # ─────────────────────────────────────────────
+  unit-test:
+    needs: setup
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install
+        run: pip install -r requirements.txt
+
+      - name: Run unit tests
+        run: pytest tests/ -v --tb=short -x
+
+  # ─────────────────────────────────────────────
+  # 3. 数据库初始化验证 (MySQL 8.0)
+  # ─────────────────────────────────────────────
+  db-init:
+    needs: setup
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: risk_logistics
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd "mysqladmin ping -h 127.0.0.1 -u root -proot"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: mysql+aiomysql://root:root@localhost:3306/risk_logistics?charset=utf8mb4
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install
+        run: pip install -r requirements.txt
+
+      - name: Init DB
+        run: python scripts/init_db.py
+
+      - name: Verify tables
+        run: |
+          python -c "
+          import asyncio
+          from app.database import async_engine
+          from sqlalchemy import text
+          async def check():
+              async with async_engine.connect() as conn:
+                  result = await conn.execute(text(\"SHOW TABLES\"))
+                  tables = [r[0] for r in result.fetchall()]
+                  print(f'Tables: {len(tables)}')
+                  for t in tables:
+                      print(f'  - {t}')
+                  assert len(tables) == 21, f'Expected 21 tables, got {len(tables)}'
+          asyncio.run(check())
+          "
+
+  # ─────────────────────────────────────────────
+  # 4. 数据生成验证
+  # ─────────────────────────────────────────────
+  data-gen:
+    needs: [db-init, unit-test]
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: risk_logistics
+        ports: [3306:3306]
+        options: >-
+          --health-cmd "mysqladmin ping -h 127.0.0.1 -u root -proot"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: mysql+aiomysql://root:root@localhost:3306/risk_logistics?charset=utf8mb4
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install
+        run: pip install -r requirements.txt
+
+      - name: Init DB
+        run: python scripts/init_db.py
+
+      - name: Generate logistics data
+        run: python scripts/gen_logistics_data.py --count 200
+
+      - name: Verify data
+        run: |
+          python -c "
+          import asyncio
+          from app.database import async_engine
+          from sqlalchemy import text
+          async def check():
+              async with async_engine.connect() as conn:
+                  r1 = await conn.execute(text('SELECT COUNT(*) FROM logistics_event_log'))
+                  r2 = await conn.execute(text('SELECT COUNT(*) FROM waybill_info'))
+                  r3 = await conn.execute(text('SELECT COUNT(*) FROM shipper_info'))
+                  print(f'logistics_event_log: {r1.scalar()}')
+                  print(f'waybill_info: {r2.scalar()}')
+                  print(f'shipper_info: {r3.scalar()}')
+                  assert r1.scalar() >= 100, 'Need >= 100 events'
+          asyncio.run(check())
+          "
+
+  # ─────────────────────────────────────────────
+  # 5. 规则引擎验证 (Mock DB)
+  # ─────────────────────────────────────────────
+  rule-test:
+    needs: setup
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install
+        run: pip install -r requirements.txt
+
+      - name: Run rule tests
+        run: pytest tests/test_match_rules.py tests/test_rule_engine.py -v --tb=short
+
+  # ─────────────────────────────────────────────
+  # 6. XGBoost 模型训练 (轻量: 200 条样本)
+  # ─────────────────────────────────────────────
+  ml-train:
+    needs: [data-gen, unit-test]
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: risk_logistics
+        ports: [3306:3306]
+        options: >-
+          --health-cmd "mysqladmin ping -h 127.0.0.1 -u root -proot"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: mysql+aiomysql://root:root@localhost:3306/risk_logistics?charset=utf8mb4
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install
+        run: pip install -r requirements.txt
+
+      - name: Init DB + Generate data
+        run: |
+          python scripts/init_db.py
+          python scripts/gen_logistics_data.py --count 500
+          python scripts/gen_risky_users.py --count 20
+
+      - name: Train XGBoost model (validation subset)
+        run: |
+          python scripts/train_xgb_model.py --limit 500 --output /tmp/xgb_model.json
+          echo "Model trained successfully"
+
+  # ─────────────────────────────────────────────
+  # 7. SQL 语法检查
+  # ─────────────────────────────────────────────
+  sql-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Syntax check SQL files
+        run: |
+          for f in sql/*.sql; do
+            echo "Checking $f ..."
+            # 简单语法检查: 确保没有未闭合的括号和引号
+            python -c "
+            content = open('$f', encoding='utf-8').read()
+            assert content.count('(') == content.count(')'), f'Unbalanced () in $f'
+            assert content.count(\"'\") % 2 == 0, f'Unbalanced quotes in $f'
+            print(f'  OK ({len(content)} bytes)')
+            "
+          done
+
+  # ─────────────────────────────────────────────
+  # 8. 代码质量报告
+  # ─────────────────────────────────────────────
+  quality:
+    needs: setup
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install
+        run: pip install -r requirements.txt ruff
+
+      - name: Ruff report
+        run: ruff check . --output-format=github
+
+      - name: Coverage report
+        run: |
+          pip install pytest-cov
+          pytest tests/ --cov=app --cov-report=xml --cov-report=term-missing
+          echo "Coverage report generated"
