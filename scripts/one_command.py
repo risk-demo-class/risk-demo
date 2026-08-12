@@ -3,18 +3,18 @@
 从零开始, 一键完成所有准备 + 训练, 最后启动 Web 服务.
 
 【工作流 6 步】
-  1. 重置数据库 (init_db.py --reset --yes, 含 30 条规则)
-  2. 造 30 个 RISK 高风险用户 (gen_risky_users.py --count 30)
-  3. 造 1500 条强标注训练数据 (gen_train_dataset.py --reset, ml_score=NULL)
-  4. 训练 XGBoost 模型 (train_xgb_model.py)
+  1. 重置数据库 (init_db.py --reset --yes, 含 30 条规则 R101-R604)
+  2. 造 5000 客户 / 3 万贷款申请业务数据 (gen_10w_data.py, 80/15/5 风险分层, 含逾期/投诉)
+  3. 造 3000 条 PD 强标注训练数据 (gen_train_dataset.py --reset, 标签=客户逾期事实)
+  4. 训练 XGBoost PD 违约概率模型 (train_xgb_model.py)
   5. 回填 ml_score 字段 (backfill_ml_score.py, 用训好的模型推理)
-  6. 造 50 条今日业务数据 (gen_risk_data_with_dates.py --days 1 --per-day 50 --live)
+  6. 打印启动指引 (run_app.py 一键启动, 不自动拉起服务)
 
 【用法】
   python scripts/one_command.py                # 跑全部 6 步
-  python scripts/one_command.py --skip-init     # 跳过 1+2, 假设 DB 和 RISK 用户已就绪
+  python scripts/one_command.py --skip-init     # 跳过 1+2, 假设 DB 和业务数据已就绪
   python scripts/one_command.py --skip-train    # 跳过 3+4+5, 假设训练数据 + 模型已就绪
-  python scripts/one_command.py --only-start    # 只跑第 6 步 + 启动服务
+  python scripts/one_command.py --only-start    # 只打印启动指引
 """
 import argparse
 import asyncio
@@ -34,13 +34,15 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SCRIPTS = os.path.join(ROOT, "scripts")
 
 
-def _run_subprocess(label: str, cmd: list[str], cwd: str = None) -> int:
+def _run_subprocess(label: str, cmd: list[str], cwd: str = None,
+                    env: dict = None) -> int:
     """跑一个子进程, 实时打印 stdout/stderr, 失败抛 RuntimeError.
 
     Args:
         label: 步骤名 (打印用)
         cmd: 命令 list (跟 subprocess.run 一致)
         cwd: 工作目录
+        env: 额外环境变量 (合并到 os.environ)
 
     Returns:
         returncode
@@ -48,7 +50,10 @@ def _run_subprocess(label: str, cmd: list[str], cwd: str = None) -> int:
     print(f"\n{'=' * 70}")
     print(f"[{label}] {' '.join(cmd)}")
     print(f"{'=' * 70}")
-    result = subprocess.run(cmd, cwd=cwd or ROOT)
+    full_env = dict(os.environ)
+    if env:
+        full_env.update(env)
+    result = subprocess.run(cmd, cwd=cwd or ROOT, env=full_env)
     if result.returncode != 0:
         raise RuntimeError(f"[{label}] 失败, returncode={result.returncode}")
     print(f"[{label}] OK")
@@ -63,18 +68,20 @@ def step_1_reset_db() -> None:
     )
 
 
-def step_2_risk_users() -> None:
-    """步骤 2: 造 30 个 RISK 高风险用户 (5 模式 × 6 套)."""
+def step_2_biz_data() -> None:
+    """步骤 2: 造 5000 客户 / 3 万贷款申请业务数据 (80/15/5 风险分层)."""
+    # 中文路径下 import app 需要 PYTHONPATH=项目根目录
     _run_subprocess(
-        "2/6 造 30 个 RISK 用户 (gen_risky_users.py --count 30)",
-        [sys.executable, os.path.join(SCRIPTS, "gen_risky_users.py"), "--count", "30"],
+        "2/6 造业务数据 (gen_10w_data.py: 5000 客户/3 万申请)",
+        [sys.executable, os.path.join(SCRIPTS, "gen_10w_data.py")],
+        env={"PYTHONPATH": ROOT},
     )
 
 
 def step_3_train_dataset() -> None:
-    """步骤 3: 造 1500 条强标注训练数据 (30 RISK + 30 普通 × 25, ml_score=NULL)."""
+    """步骤 3: 造 3000 条 PD 强标注训练数据 (60 逾期 + 60 正常客户 × 25, ml_score=NULL)."""
     _run_subprocess(
-        "3/6 造 1500 条强标注训练数据 (gen_train_dataset.py --reset)",
+        "3/6 造 3000 条 PD 训练数据 (gen_train_dataset.py --reset)",
         [sys.executable, os.path.join(SCRIPTS, "gen_train_dataset.py"), "--reset"],
     )
 
@@ -95,33 +102,35 @@ def step_5_backfill_ml_score() -> None:
     )
 
 
-def step_6_business_today() -> None:
-    """步骤 6: 造 50 条今日业务数据 (仪表盘/案件/评估立刻能看)."""
-    _run_subprocess(
-        "6/6 造 50 条今日业务数据 (gen_risk_data_with_dates.py --live)",
-        [sys.executable, os.path.join(SCRIPTS, "gen_risk_data_with_dates.py"),
-         "--days", "1", "--per-day", "50", "--live"],
-    )
+def step_6_start_hint() -> None:
+    """步骤 6: 打印启动指引 (不自动拉起服务, 避免端口/环境差异)."""
+    print("\n" + "=" * 70)
+    print("[6/6] 启动指引 (请手动执行)")
+    print("=" * 70)
+    print("  python run_app.py                          # 一键启动 (6 步自检 + 输入确认)")
+    print("  DB_PORT=3307 .venv/bin/python scripts/main.py   # 直接启动 (docker 3307 场景, 开发用)")
+    print("  浏览器访问 http://localhost:8000            # 仪表盘/案件/评估/规则/黑名单/风险检查")
+    print("  Swagger 文档: http://localhost:8000/docs")
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="华信银行·信贷风控系统 - 一条龙命令 (6 步: 重置 → 训练数据 → 训练 → 回填 → 启动)",
+        description="华信银行·信贷风控系统 - 一条龙命令 (6 步: 重置 → 业务数据 → PD 训练数据 → 训练 → 回填 → 启动指引)",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 示例:
   python scripts/one_command.py                # 跑完全部 6 步
-  python scripts/one_command.py --skip-init     # 跳过 1+2 (DB + RISK 用户已就绪)
+  python scripts/one_command.py --skip-init     # 跳过 1+2 (DB + 业务数据已就绪)
   python scripts/one_command.py --skip-train   # 跳过 3+4+5 (训练数据 + 模型已就绪)
-  python scripts/one_command.py --only-start   # 只跑步骤 6 (造今日业务数据)
+  python scripts/one_command.py --only-start   # 只打印启动指引
         """,
     )
     parser.add_argument("--skip-init", action="store_true",
-                        help="跳过步骤 1+2 (DB + RISK 用户已就绪)")
+                        help="跳过步骤 1+2 (DB + 业务数据已就绪)")
     parser.add_argument("--skip-train", action="store_true",
                         help="跳过步骤 3+4+5 (训练数据 + 模型已就绪)")
     parser.add_argument("--only-start", action="store_true",
-                        help="只跑步骤 6 (造今日业务数据, 不重置/训练)")
+                        help="只打印启动指引, 不重置/训练")
     args = parser.parse_args()
 
     print("=" * 70)
@@ -133,15 +142,15 @@ def main() -> None:
 
     try:
         if args.only_start:
-            # 只造今日业务数据
-            step_6_business_today()
+            # 只打印启动指引
+            step_6_start_hint()
         else:
-            # 步骤 1+2: 重置 DB + RISK 用户
+            # 步骤 1+2: 重置 DB + 业务数据
             if not args.skip_init:
                 step_1_reset_db()
-                step_2_risk_users()
+                step_2_biz_data()
             else:
-                print("[跳过] 1+2: DB 和 RISK 用户已就绪")
+                print("[跳过] 1+2: DB 和业务数据已就绪")
 
             # 步骤 3+4+5: 训练数据 + 训练 + 回填
             if not args.skip_train:
@@ -151,29 +160,29 @@ def main() -> None:
             else:
                 print("[跳过] 3+4+5: 训练数据 + 模型已就绪")
 
-            # 步骤 6: 今日业务数据
-            step_6_business_today()
+            # 步骤 6: 启动指引
+            step_6_start_hint()
 
     except RuntimeError as e:
         print(f"\n[FAIL] 步骤失败, 中断: {e}")
         print("=" * 70)
         print("排查建议:")
-        print("  1. 检查 MySQL 是否启动 (默认 localhost:3306, root/root)")
-        print("  2. 检查 .env 配置 (DB_HOST/DB_USER/DB_PASSWORD/DB_NAME)")
-        print("  3. 查看 scripts/logs/gen_risk_fail.log 失败日志")
-        print("  4. 分步跑 (--skip-init / --skip-train 跳过已完成的)")
+        print("  1. 检查 MySQL: docker exec -it risk-mysql mysql -uroot -p123321")
+        print("     (或 .env 里 DB_HOST/DB_PORT/DB_USER/DB_PASSWORD/DB_NAME 指向的实例)")
+        print("  2. gen_10w_data.py 需在项目根目录跑 (PYTHONPATH 已自动注入)")
+        print("  3. 分步跑 (--skip-init / --skip-train 跳过已完成的)")
         sys.exit(1)
 
     print("\n" + "=" * 70)
     print("一条龙完成!")
     print("=" * 70)
     print("下一步:")
-    print("  python run_app.py                          # 启动 Web 服务")
+    print("  按上面的启动指引执行 run_app.py 即可启动 Web 服务")
     print("  浏览器访问 http://localhost:8000            # 仪表盘/案件/评估/规则/黑名单/风险检查")
     print()
-    print("造数据脚本:")
-    print("  python scripts/gen_risk_data.py --balance-pos --target-pos-ratio 0.30 --count 200")
-    print("  python scripts/gen_risk_data_with_dates.py --days 1 --per-day 100 --live")
+    print("造数据脚本 (可选):")
+    print("  python scripts/gen_10w_data.py              # 5000 客户 / 3 万贷款申请 (默认)")
+    print("  python scripts/gen_10w_data.py --users 10000 --loans 60000 --batch 5000")
     print("=" * 70)
 
 
