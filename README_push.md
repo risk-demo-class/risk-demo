@@ -1,0 +1,169 @@
+# 📊 Insight Demo 课程演示仓库
+
+本仓库用于课程各小组的**演示成果提交与展示**。每位同学把自己的代码 / 演示成果推送到**对应行业方向的分支**上。
+
+- 仓库地址：https://github.com/wyxaxx02419/insight_demo
+
+---
+
+## 一、分支说明（按行业方向划分）
+
+| 分支名 | 行业方向 | 说明 |
+|---|---|---|
+| `main` | 主分支 | 只读，**禁止直接推送**（已设置保护） |
+| `tourism` | 旅游 | 旅游组同学推送 |
+| `banking` | 银行 | 银行组同学推送 |
+| `education` | 教育 | 教育组同学推送 |
+| `manufacturing` | 制造业 | 制造业组同学推送 |
+| `logistics` | 物流 | 物流组同学推送 |
+| `medical` | 医疗 | 医疗组同学推送 |
+| `telecom` | 电信 | 电信组同学推送 |
+| `sharing-economy` | 共享经济 | 共享经济组同学推送 |
+
+> 分支名统一用英文，是为了兼容各类 Git 工具（Windows 下中文分支名容易出问题），中文含义见上表。
+
+---
+
+## 二、重要规则（务必遵守）
+
+1. ✅ **每位同学只能往自己的分支推送**，分支用自己的名字命名（如 `zhangsan`、`li-xiaoming`）
+2. 🚫 **禁止向 `main` 推送**（已开启分支保护，会直接报错拒绝）
+3. 🚫 **禁止修改、覆盖其他同学的分支**
+4. 📁 建议在分支内先建一个**自己名字的文件夹**，把成果放进去，方便老师和同学查看
+5. ❤️ 尊重他人成果，只提交自己的内容
+
+---
+
+## 三、学生推送步骤（第一次）
+
+### 第 0 步：准备工作
+
+1. **注册 GitHub 账号**：https://github.com/join （已有账号跳过）
+2. **把你的 GitHub 用户名发给老师**——老师把你加为仓库协作者后，你才有推送权限（邀请链接会发到你的 GitHub 通知里，点 Accept 接受即可）
+3. **安装 Git**：https://git-scm.com/download/win 一路 Next 安装
+
+### 第 1 步：克隆仓库到本地
+
+打开命令行（Windows 按 `Win+R` 输入 `cmd` 回车；或右键桌面 →「在终端中打开」），执行：
+
+```bash
+git clone https://github.com/wyxaxx02419/insight_demo.git
+cd insight_demo
+```
+
+### 第 2 步：创建自己的分支（用自己的名字）
+
+```bash
+git checkout -b zhangsan
+```
+
+> 分支名建议：名字拼音全小写，多个字用 `-` 连接，例如 `zhangsan`、`wang-xiaoming`、`chenxi`。**不要用中文和空格**。
+
+### 第 3 步：放入你的成果
+
+把代码 / 演示文件（PPT、图片、视频、代码等）复制到仓库文件夹里，建议建一个自己的文件夹：
+
+```bash
+mkdir zhangsan
+# 然后把你的文件放进 zhangsan 文件夹
+```
+
+### 第 4 步：提交并推送（关键！）
+
+```bash
+git add .
+git commit -m "zhangsan 提交旅游行业演示成果"
+git push -u origin zhangsan
+```
+
+看到 `branch 'zhangsan' set up to track` 和进度条走完，就说明**推送成功**了 🎉
+
+### 第 5 步：确认成果
+
+打开 https://github.com/wyxaxx02419/insight_demo ，点击左上角的 **Branch 下拉框**，选择你的分支名 `zhangsan`，即可看到你的文件。
+
+---
+
+## 四、以后每次更新（重复这三条）
+
+```bash
+git add .
+git commit -m "更新说明，比如：补充了演示视频"
+git push
+```
+
+---
+
+## 五、常见问题（FAQ）
+
+| 问题 | 原因与解决办法 |
+|---|---|
+| `Permission to ... denied` | 老师还没邀请你，或邀请没点接受。把 GitHub 用户名发给老师 |
+| `Updates were rejected` | 你当前不在自己的分支上。先 `git status` 查看，再用 `git checkout 你的分支名` 切回去，最后 `git push` |
+| `master has no upstream branch` | 说明你在 `main` 上，直接用 `git checkout -b 你的名字` 建自己的分支再推 |
+| 推送超时 / 网络错误 | GitHub 网络不稳定，可以开代理，或改用 SSH 方式（见下节） |
+| 忘了自己分支名 | `git branch -a` 查看所有分支（本地+远程） |
+
+### 网络不好？用 SSH 方式（可选）
+
+如果 HTTPS 推送经常超时，可以用 SSH：
+
+1. 生成密钥：`ssh-keygen -t ed25519 -C "你的邮箱"`（一路回车）
+2. 查看公钥：`cat ~/.ssh/id_ed25519.pub`，复制全部内容
+3. 粘贴到 GitHub：https://github.com/settings/keys → New SSH key → 保存
+4. 之后用 SSH 地址克隆：
+
+```bash
+git clone git@github.com:wyxaxx02419/insight_demo.git
+cd insight_demo
+git checkout -b zhangsan
+# ... 后面的提交推送步骤一样
+```
+
+---
+
+## 六、老师（管理员）操作备忘
+
+### 1. 添加学生为协作者（学生有推送权限的前提）
+
+```bash
+gh repo add-collaborator wyxaxx02419/insight_demo <学生GitHub用户名> --permission push
+```
+
+或网页操作：仓库页面 → **Settings → Collaborators → Add people** → 输入学生用户名 → 选择 **Write** 权限 → 发送邀请。
+
+### 2. 严格锁定：每个分支只允许本组同学推送（强烈建议）
+
+默认情况下，协作者可以推送到任意分支。为了真正做到「只能推送自己的分支」，收集齐学生用户名后，对每个分支设置「只允许指定用户推送」：
+
+```bash
+# 先准备好 students.csv，格式：分支名,用户名（一行一个学生）
+# 例如：
+# tourism,zhangsan
+# tourism,lisi
+# banking,wangwu
+
+# 然后运行下面的脚本（bash / git-bash）
+while IFS=, read -r branch user; do
+  gh api -X PUT "repos/wyxaxx02419/insight_demo/branches/$branch/protection" \
+    -H "Accept: application/vnd.github+json" \
+    --input - <<EOF
+{"required_status_checks":null,"enforce_admins":false,
+ "required_pull_request_reviews":null,
+ "restrictions":{"users":["$user"],"teams":[],"apps":[]}}
+EOF
+done < students.csv
+```
+
+> 说明：脚本会给每个分支设置「仅允许指定学生 + 老师推送」。注意一个分支有多个学生时，后执行的行会覆盖前面的 users 列表——如果每组多人，把同分支的所有用户名放进一个数组再设置一次即可（或直接找我帮你配置，把名单给我就行）。
+
+### 3. 查看仓库状态
+
+```bash
+gh api repos/wyxaxx02419/insight_demo/branches --jq '.[].name'   # 列出所有分支
+gh repo view wyxaxx02419/insight_demo                            # 查看仓库信息
+```
+
+---
+
+*本指南由老师统一发布，如有问题请私信老师。祝大家演示顺利！🎓*

@@ -1,0 +1,40 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+.venv/
+env/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# 临时文件 / 垃圾文件 (开发过程输出, 不入版本库)
+_trash_*/
+.trash/
+*.tmp
+*.bak
+
+# IDE
+.idea/
+.vscode/
+*.swp
+.DS_Store
+
+# 日志
+logs/
+*.log
+
+# 模型/数据
+ml_models/
+*.pkl
+*.joblib
+*.json.gz
+
+# 环境配置
+.env
+.env.local
