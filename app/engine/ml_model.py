@@ -24,35 +24,35 @@ logger = logging.getLogger(__name__)
 
 
 # 固定 25 维特征顺序 (训练和推理都用这个顺序, 防 dict 顺序不一致导致特征错位)
-# 改这个列表前必须同步: feature.py::compute_user_features / compute_order_features
-# / compute_address_features / tests/test_xgboost.py::test_feature_columns_align
+# 改这个列表前必须同步: feature.py::compute_user_features / compute_loan_features
+# / compute_device_features / tests/test_bank_features.py::test_bank_feature_names_expected
 # 对不齐会让 XGBoost 训练/推理退化成 0 填充, 业务上相当于模型没工作
 FEATURE_COLUMNS: list[str] = [
-    "user_total_orders",
-    "user_orders_30d",
-    "user_orders_7d",
-    "user_total_amount",
-    "user_avg_order_amount",
-    "user_max_order_amount",
-    "user_refund_count",
-    "user_postsale_count",
-    "user_refund_rate",
-    "user_postsale_rate",
-    "user_refund_amount",
-    "user_cancel_count",
-    "user_complaint_count",
-    "user_address_count",
-    "order_total_amount",
-    "order_item_count",
-    "order_sku_count",
-    "order_discount_amount",
-    "order_discount_rate",
-    "order_pay_interval_sec",
-    "order_is_night",
-    "order_category_count",
-    "addr_total_count",
-    "addr_province_count",
-    "addr_is_new",
+    "cust_total_loans",
+    "cust_loans_30d",
+    "cust_loans_7d",
+    "cust_total_amount",
+    "cust_avg_loan_amount",
+    "cust_max_loan_amount",
+    "cust_overdue_count",
+    "cust_overdue_rate",
+    "cust_overdue_amount",
+    "cust_repay_count",
+    "cust_repay_rate",
+    "cust_reject_count",
+    "cust_complaint_count",
+    "cust_contact_count",
+    "loan_amount",
+    "loan_term_month",
+    "loan_debt_ratio",
+    "loan_apply_interval_sec",
+    "loan_apply_is_night",
+    "loan_to_income",
+    "loan_apply_product_count",
+    "loan_income_debt_ratio",
+    "dev_device_count",
+    "dev_ip_province_count",
+    "dev_is_new",
 ]
 
 assert len(FEATURE_COLUMNS) == 25, f"特征数量必须是 25, 当前 {len(FEATURE_COLUMNS)}"
