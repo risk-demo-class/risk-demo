@@ -39,6 +39,8 @@
 
 | 序号 | 姓名 | 分支名 | 行业 |
 |---|---|---|---|
+| 序号 | 姓名 | 分支名 | 行业 |
+|---|---|---|---|
 | 1 | 华振 | `huazhen` | 制造业 |
 | 2 | 孙帅彦 | `sunshuaiyan` | 银行 |
 | 3 | 林煌钦 | `linhuangqin` | 物流 |
@@ -61,45 +63,46 @@
 | 20 | 刘须宏 | `liuxuhong` | 教育 |
 | 21 | 郭澳 | `guoao` | 物流 |
 | 22 | 余帆 | `yufan` | 教育 |
-| 23 | 杨荣来 | `yangronglai` | 银行 |
-| 24 | 李天意 | `litianyi` | 制造业 |
-| 25 | 章思涵 | `zhangsihan` | 旅游 |
-| 26 | 许杰 | `xujie` | 教育 |
-| 27 | 彭文熠 | `pengwenyi` | 银行 |
-| 28 | 郭志文 | `guozhiwen` | 教育 |
-| 29 | 崔晓静 | `cuixiaojing` | 制造业 |
-| 30 | 雷凡 | `leifan` | 旅游 |
-| 31 | 彭志浩 | `pengzhihao` | 物流 |
-| 32 | 郭玉文 | `guoyuwen` | 银行 |
-| 33 | 龚桀 | `gongjie` | 医疗 |
-| 34 | 张露霜 | `zhanglushuang` | 旅游 |
-| 35 | 何强 | `heqiang` | 银行 |
-| 36 | 韦宏业 | `weihongye` | 银行 |
-| 37 | 钟庆楠 | `zhongqingnan` | 物流 |
-| 38 | 王梦龙 | `wangmenglong` | 电信 |
-| 39 | 陈鹤文 | `chenhewen` | 银行 |
-| 40 | 罗富麟 | `luofulin` | 医疗 |
-| 41 | 蓝小俊 | `lanxiaojun` | 教育 |
-| 42 | 熊喜林 | `xiongxilin` | 旅游 |
-| 43 | 梅佳 | `meijia` | 教育 |
-| 44 | 许新民 | `xuxinmin` | 旅游 |
-| 45 | 丁鑫 | `dingxin` | 旅游 |
-| 46 | 毛洋 | `maoyang` | 旅游 |
-| 47 | 肖石平 | `xiaoshiping` | 制造业 |
-| 48 | 闫馨扬 | `yanxinyang` | 教育 |
-| 49 | 张凯雷 | `zhangkailei` | 旅游 |
-| 50 | 孙飞虎 | `sunfeihu` | 医疗 |
-| 51 | 王锐 | `wangrui` | 银行 |
-| 52 | 董超 | `dongchao` | 银行 |
-| 53 | 贺祺 | `heqi` | 制造业 |
-| 54 | 李志 | `lizhi` | 旅游 |
-| 55 | 莫海强 | `mohaiqiang` | 物流 |
-| 56 | 梁文森 | `liangwensen` | 银行 |
-| 57 | 余乐 | `yule` | 制造业 |
-| 58 | 张振 | `zhangzhen` | 银行 |
-| 59 | 蔡建超 | `caijianchao` | 银行 |
-| 60 | 虞海锋 | `yuhaifeng` | 物流 |
-
+| 23 | 刘子傲 | `liuziao` | 教育 |
+| 24 | 杨荣来 | `yangronglai` | 银行 |
+| 25 | 李天意 | `litianyi` | 制造业 |
+| 26 | 章思涵 | `zhangsihan` | 旅游 |
+| 27 | 许杰 | `xujie` | 教育 |
+| 28 | 彭文熠 | `pengwenyi` | 银行 |
+| 29 | 郭志文 | `guozhiwen` | 教育 |
+| 30 | 崔晓静 | `cuixiaojing` | 制造业 |
+| 31 | 雷凡 | `leifan` | 旅游 |
+| 32 | 彭志浩 | `pengzhihao` | 物流 |
+| 33 | 郭玉文 | `guoyuwen` | 银行 |
+| 34 | 龚桀 | `gongjie` | 医疗 |
+| 35 | 张露霜 | `zhanglushuang` | 旅游 |
+| 36 | 何强 | `heqiang` | 银行 |
+| 37 | 韦宏业 | `weihongye` | 银行 |
+| 38 | 钟庆楠 | `zhongqingnan` | 物流 |
+| 39 | 王梦龙 | `wangmenglong` | 电信 |
+| 40 | 陈鹤文 | `chenhewen` | 银行 |
+| 41 | 罗富麟 | `luofulin` | 医疗 |
+| 42 | 蓝小俊 | `lanxiaojun` | 教育 |
+| 43 | 熊喜林 | `xiongxilin` | 旅游 |
+| 44 | 梅佳 | `meijia` | 教育 |
+| 45 | 许新民 | `xuxinmin` | 旅游 |
+| 46 | 丁鑫 | `dingxin` | 旅游 |
+| 47 | 毛洋 | `maoyang` | 旅游 |
+| 48 | 肖石平 | `xiaoshiping` | 制造业 |
+| 49 | 闫馨扬 | `yanxinyang` | 教育 |
+| 50 | 张凯雷 | `zhangkailei` | 旅游 |
+| 51 | 孙飞虎 | `sunfeihu` | 医疗 |
+| 52 | 王锐 | `wangrui` | 银行 |
+| 53 | 董超 | `dongchao` | 银行 |
+| 54 | 贺祺 | `heqi` | 制造业 |
+| 55 | 李志 | `lizhi` | 旅游 |
+| 56 | 刘懿城 | `liuyicheng` | 银行 |
+| 57 | 莫海强 | `mohaiqiang` | 物流 |
+| 58 | 梁文森 | `liangwensen` | 银行 |
+| 59 | 余乐 | `yule` | 制造业 |
+| 60 | 张振 | `zhangzhen` | 银行 |
+| 61 | 蔡建超 | `caijianchao` | 银行 |
+| 62 | 虞海锋 | `yuhaifeng` | 物流 |
 ---
 
 ## 四、学生推送步骤（第一次）
