@@ -1,10 +1,10 @@
 # 📊 Risk Demo 课程演示仓库
 
-本仓库用于课程各小组的**演示成果提交与展示**。每位同学在**对应行业方向**下建立**自己的名字分支**，把代码 / 演示成果推送到自己的分支上。
+本仓库用于课程各小组的**演示成果提交与展示**。每位同学已分配**自己的专属分支**，把代码 / 演示成果推送到自己的分支上即可。
 
 - 仓库地址：https://github.com/risk-demo-class/risk-demo
 - 所属组织：**risk-demo-class**（GitHub Organization）
-- 仓库为**公开**仓库：任何人都可以查看，但**只有被老师邀请的同学才能推送**。
+- 仓库为**公开**仓库：任何人都可以查看，但**只有被邀请且接受邀请的同学才能推送**。
 
 ---
 
@@ -22,28 +22,92 @@
 | `telecom` | 电信 | 🔒 受保护，仅组织所有者可推送 |
 | `sharing-economy` | 共享经济 | 🔒 受保护，仅组织所有者可推送 |
 
-> 🔒 受保护 = 不能直接推送（会被 GitHub 拒绝）。这保证了行业分支和主分支**保持干净**。
->
-> 同学们**不需要也不应该**直接推送到上面这些分支——你们推送的是**自己名字的分支**（见下文）。
+> 行业分支由老师维护，**同学们不要推送**。你们的成果推送到**自己的个人分支**（见下方对照表）。
 
 ---
 
 ## 二、重要规则（务必遵守）
 
-1. ✅ **每位同学只能往自己的分支推送**，分支用自己的名字命名（如 `zhangsan`、`li-xiaoming`）
-2. ✅ 自己的分支**从对应行业分支派生**（例如旅游组的同学从 `tourism` 派生），保证内容和行业主题一致
-3. 🚫 **禁止向 `main` 和 8 个行业分支直接推送**（已开启保护，推送会被拒绝）
-4. 🚫 **禁止修改、覆盖其他同学的分支**
-5. 📁 建议在自己的分支里先建一个**自己名字的文件夹**放成果，便于查看
+1. ✅ **每位同学只能往自己的分支推送**——你的分支已经建好并**锁定为仅你本人可推送**，别人推不进来，你也推不进去别人的分支
+2. ✅ 推送前请先确认自己在**自己的分支**上（`git status` 可查看）
+3. 🚫 **禁止向 `main` 和 8 个行业分支推送**（受保护，推送会被拒绝）
+4. 📁 建议在自己的分支里建一个**自己名字的文件夹**放成果，便于查看
 
 ---
 
-## 三、学生推送步骤（第一次）
+## 三、姓名-分支对照表（找你的分支）
+
+| 序号 | 姓名 | 分支名 | 行业 |
+|---|---|---|---|
+| 1 | 华振 | `huazhen` | 制造业 |
+| 2 | 孙帅彦 | `sunshuaiyan` | 银行 |
+| 3 | 林煌钦 | `linhuangqin` | 物流 |
+| 4 | 邱家维 | `qiujiawei` | 银行 |
+| 5 | 朱炜杰 | `zhuweijie` | 旅游 |
+| 6 | 谢豪然 | `xiehaoran` | 银行 |
+| 7 | 王梓豪 | `wangzihao` | 制造业 |
+| 8 | 李勇杰 | `liyongjie` | 银行 |
+| 9 | 欧阳志昌 | `ouyangzhichang` | 物流 |
+| 10 | 尼丹阳 | `nidanyang` | 银行 |
+| 11 | 程文辉 | `chengwenhui` | 教育 |
+| 12 | 范宇佳 | `fanyujia` | 银行 |
+| 13 | 胡国印 | `huguoyin` | 教育 |
+| 14 | 杜泽伟 | `duzewei` | 制造业 |
+| 15 | 闫禄瑜 | `yanluyu` | 教育 |
+| 16 | 郭孟豪 | `guomenghao` | 物流 |
+| 17 | 任金阳 | `renjinyang` | 旅游 |
+| 18 | 黄正杰 | `huangzhengjie` | 旅游 |
+| 19 | 姚志博 | `yaozhibo` | 教育 |
+| 20 | 刘须宏 | `liuxuhong` | 教育 |
+| 21 | 郭澳 | `guoao` | 物流 |
+| 22 | 余帆 | `yufan` | 教育 |
+| 23 | 杨荣来 | `yangronglai` | 银行 |
+| 24 | 李天意 | `litianyi` | 制造业 |
+| 25 | 章思涵 | `zhangsihan` | 旅游 |
+| 26 | 许杰 | `xujie` | 教育 |
+| 27 | 彭文熠 | `pengwenyi` | 银行 |
+| 28 | 郭志文 | `guozhiwen` | 教育 |
+| 29 | 崔晓静 | `cuixiaojing` | 制造业 |
+| 30 | 雷凡 | `leifan` | 旅游 |
+| 31 | 彭志浩 | `pengzhihao` | 物流 |
+| 32 | 郭玉文 | `guoyuwen` | 银行 |
+| 33 | 龚桀 | `gongjie` | 医疗 |
+| 34 | 张露霜 | `zhanglushuang` | 旅游 |
+| 35 | 何强 | `heqiang` | 银行 |
+| 36 | 韦宏业 | `weihongye` | 银行 |
+| 37 | 钟庆楠 | `zhongqingnan` | 物流 |
+| 38 | 王梦龙 | `wangmenglong` | 电信 |
+| 39 | 陈鹤文 | `chenhewen` | 银行 |
+| 40 | 罗富麟 | `luofulin` | 医疗 |
+| 41 | 蓝小俊 | `lanxiaojun` | 教育 |
+| 42 | 熊喜林 | `xiongxilin` | 旅游 |
+| 43 | 梅佳 | `meijia` | 教育 |
+| 44 | 许新民 | `xuxinmin` | 旅游 |
+| 45 | 丁鑫 | `dingxin` | 旅游 |
+| 46 | 毛洋 | `maoyang` | 旅游 |
+| 47 | 肖石平 | `xiaoshiping` | 制造业 |
+| 48 | 闫馨扬 | `yanxinyang` | 教育 |
+| 49 | 张凯雷 | `zhangkailei` | 旅游 |
+| 50 | 孙飞虎 | `sunfeihu` | 医疗 |
+| 51 | 王锐 | `wangrui` | 银行 |
+| 52 | 董超 | `dongchao` | 银行 |
+| 53 | 贺祺 | `heqi` | 制造业 |
+| 54 | 李志 | `lizhi` | 旅游 |
+| 55 | 莫海强 | `mohaiqiang` | 物流 |
+| 56 | 梁文森 | `liangwensen` | 银行 |
+| 57 | 余乐 | `yule` | 制造业 |
+| 58 | 张振 | `zhangzhen` | 银行 |
+| 59 | 蔡建超 | `caijianchao` | 银行 |
+| 60 | 虞海锋 | `yuhaifeng` | 物流 |
+
+---
+
+## 四、学生推送步骤（第一次）
 
 ### 第 0 步：准备工作
 
 1. **注册 GitHub 账号**：https://github.com/join （已有账号跳过）
-2. **把你的 GitHub 用户名发给老师**——老师把你加入对应行业团队后，你才有推送权限
+2. **确认已接受组织邀请**：老师已向你发出 **risk-demo-class 组织邀请**，请在 GitHub 通知/邮件里点 **Accept（接受）**——没接受就无法推送
 3. **安装 Git**：https://git-scm.com/download/win 一路 Next 安装
 
 ### 第 1 步：克隆仓库到本地
@@ -55,17 +119,15 @@ git clone https://github.com/risk-demo-class/risk-demo.git
 cd risk-demo
 ```
 
-### 第 2 步：从你的行业分支派生自己的分支（用自己的名字）
+### 第 2 步：切换到你的分支（分支已由老师预建，直接切换）
 
-先确定你属于哪个行业组，然后执行（以**旅游组**、名字 **zhangsan** 为例）：
+在上面的对照表里找到你的分支名，然后执行（以 `zhangsan` 为例）：
 
 ```bash
-git checkout -b zhangsan origin/tourism
+git checkout zhangsan
 ```
 
-> 把 `origin/tourism` 换成你所在组的行业分支：旅游 `tourism`、银行 `banking`、教育 `education`、制造业 `manufacturing`、物流 `logistics`、医疗 `medical`、电信 `telecom`、共享经济 `sharing-economy`。
->
-> 分支名建议：名字拼音全小写，多个字用 `-` 连接（如 `zhangsan`、`wang-xiaoming`）。**不要用中文和空格**。
+> 如果提示 `branch 'zhangsan' set up to track` 说明切换成功。如果提示分支不存在，说明你的信息还没登记完整，请联系老师。
 
 ### 第 3 步：放入你的成果
 
@@ -80,19 +142,19 @@ mkdir zhangsan
 
 ```bash
 git add .
-git commit -m "zhangsan 提交旅游行业演示成果"
-git push -u origin zhangsan
+git commit -m "zhangsan 提交演示成果"
+git push
 ```
 
-看到 `branch 'zhangsan' set up to track` 和进度条走完，就说明**推送成功**了 🎉
+看到进度条走完，就说明**推送成功**了 🎉
 
 ### 第 5 步：确认成果
 
-打开 https://github.com/risk-demo-class/risk-demo ，点击左上角的 **Branch 下拉框**，选择你的分支名 `zhangsan`，即可看到你的文件。
+打开 https://github.com/risk-demo-class/risk-demo ，点击左上角的 **Branch 下拉框**，选择你的分支名，即可看到你的文件。
 
 ---
 
-## 四、以后每次更新（重复这三条）
+## 五、以后每次更新（重复这三条）
 
 ```bash
 git add .
@@ -100,19 +162,17 @@ git commit -m "更新说明，比如：补充了演示视频"
 git push
 ```
 
-> 如果提示 `git pull` 或分支落后，说明有其他同学在**同一个分支**上推过（一般不会发生，因为每人一个分支）。必要时先 `git pull` 再推。
-
 ---
 
-## 五、常见问题（FAQ）
+## 六、常见问题（FAQ）
 
 | 问题 | 原因与解决办法 |
 |---|---|
-| `Permission to ... denied` | 老师还没把你加入团队，或邀请没接受。把 GitHub 用户名发给老师 |
-| `protected branch ... declined` / `Updates were rejected` | 你试图推送到受保护的分支（main 或行业分支）。改用自己名字的分支：`git checkout -b 你的名字 origin/你的行业分支` |
-| `master has no upstream branch` | 说明你在 `main` 上，先执行第 2 步建立自己的分支 |
+| `Permission to ... denied` | 还没接受组织邀请，或推到了别人的分支。先去 GitHub 通知里点 Accept |
+| `protected branch ... declined` / `Updates were rejected` | 推到了受保护分支（main/行业分支）或别人的分支。`git checkout 自己的分支名` 切回去再推 |
+| `master has no upstream branch` | 在 `main` 上，先执行第 2 步切换到自己的分支 |
 | 推送超时 / 网络错误 | GitHub 网络不稳定，可以开代理，或改用 SSH 方式（见下节） |
-| 忘了自己分支名 | `git branch -a` 查看所有分支（本地+远程） |
+| 忘了自己分支名 | 看上面的对照表，或 `git branch -a` 查看所有分支 |
 
 ### 网络不好？用 SSH 方式（可选）
 
@@ -126,60 +186,51 @@ git push
 ```bash
 git clone git@github.com:risk-demo-class/risk-demo.git
 cd risk-demo
-git checkout -b zhangsan origin/tourism
+git checkout zhangsan
 # ... 后面的提交推送步骤一样
 ```
 
 ---
 
-## 六、老师（管理员）操作备忘
+## 七、老师（管理员）操作备忘
 
-组织下已建好 **8 个行业团队**（`tourism-team`、`banking-team`、`education-team`、`manufacturing-team`、`logistics-team`、`medical-team`、`telecom-team`、`sharing-economy-team`），都已对该仓库有 **push 权限**。学生加入团队后即可推送自己的分支。
+已完成：8 个行业团队建好（均有仓库写权限）、60 名学生已发组织邀请、个人分支已预建并锁定（仅本人可推）。
 
-### 1. 把学生加入对应行业团队（推荐方式）
+### 1. 查看学生是否已接受邀请
 
 ```bash
-# 把 zhangsan 加入旅游组
-gh api -X PUT orgs/risk-demo-class/teams/tourism-team/memberships/zhangsan -f role=member
+gh api "orgs/risk-demo-class/invitations" --jq '.[] | .login'   # 待接受的邀请
+gh api "orgs/risk-demo-class/members?role=member" --jq '.[].login'   # 已加入的成员
 ```
 
-或网页操作：组织主页 → **Teams** → 进入 `tourism-team` → **Add member** → 输入学生用户名。
-
-### 2. 严格锁定：每个学生分支只允许本人推送（组织仓库已支持 ✅）
-
-收集齐学生用户名后，对每个学生的分支设置「仅该学生可推送」（这样别人想推也推不上去）：
+### 2. 新增/补录学生
 
 ```bash
-# 示例：锁定 zhangsan 的分支，只允许 zhangsan（和老师）推送
+# 加入行业团队（先让学生提供 GitHub 用户名）
+gh api -X PUT orgs/risk-demo-class/teams/tourism-team/memberships/<用户名> -f role=member
+
+# 预建个人分支（从行业分支派生，如 zhangsan 从 tourism）
+git push origin tourism:refs/heads/zhangsan
+
+# 锁定分支（仅本人可推）
 gh api -X PUT repos/risk-demo-class/risk-demo/branches/zhangsan/protection \
   -H "Accept: application/vnd.github+json" \
   --input - <<'EOF'
 {"required_status_checks":null,"enforce_admins":false,
  "required_pull_request_reviews":null,
- "restrictions":{"users":["zhangsan"],"teams":[],"apps":[]}}
+ "restrictions":{"users":["<用户名>"],"teams":[],"apps":[]}}
 EOF
 ```
 
-> 有多少个学生就执行多少次（分支名、用户名替换一下即可）。也可以把学生名单整理好发给我，我一次性帮你全部配置好。
-
-### 3. 查看各分支的推送情况
+### 3. 合并学生成果到行业分支（可选：汇总演示）
 
 ```bash
-gh api "repos/risk-demo-class/risk-demo/branches?per_page=100" --jq '.[] | select(.name != "main" and .name != "tourism" and .name != "banking" and .name != "education" and .name != "manufacturing" and .name != "logistics" and .name != "medical" and .name != "telecom" and .name != "sharing-economy") | .name'   # 只看学生的个人分支
-```
-
-### 4. 合并学生成果到行业分支（可选：汇总演示）
-
-```bash
-# 本地操作示例：把 zhangsan 的成果合并进 tourism
 git fetch origin
 git checkout tourism
 git pull
 git merge origin/zhangsan
 git push
 ```
-
-或直接在网页上：打开 zhangsan 分支 → **Contribute → Open pull request** → 目标选 `tourism` → 你自己审查并 Merge。
 
 ---
 
