@@ -16,7 +16,12 @@ from app.service.validator import validate_business_entity
 logger = logging.getLogger(__name__)
 
 
-async def process_event(db: AsyncSession, request: RiskCheckRequest) -> RiskCheckResponse:
+async def process_event(
+    db: AsyncSession,
+    request: RiskCheckRequest,
+    *,
+    decision_time: datetime | None = None,
+) -> RiskCheckResponse:
     """校验 → 补全 → 黑名单 → 决策；异常时整体回滚。"""
 
     async with db.begin():
@@ -39,7 +44,6 @@ async def process_event(db: AsyncSession, request: RiskCheckRequest) -> RiskChec
                 decision=Decision.REJECT,
                 message=f"撞黑名单: {blacklist_hit.blacklist_type.value}",
                 blocked_by=blacklist_hit.blacklist_type.value,
-                create_time=datetime.now(UTC).replace(tzinfo=None),
+                create_time=decision_time or datetime.now(UTC).replace(tzinfo=None),
             )
-        return await run_risk_check(db, context)
-
+        return await run_risk_check(db, context, decision_time=decision_time)

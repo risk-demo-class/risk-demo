@@ -35,6 +35,18 @@
   <div class="card-header"><h3>风险检查结果</h3><button class="btn btn-secondary btn-sm" onclick="showRaw()">查看完整 JSON</button></div>
   <div class="card-body">
     <div class="result-hero"><div id="result-score" class="score-circle">0</div><div><h2 id="result-decision" style="margin:0 0 7px">-</h2><div id="result-meta" class="help"></div><p id="result-message"></p></div></div>
+    <div class="score-panel">
+      <div class="score-panel-title"><div><h3>评分分解</h3><span id="score-mode" class="help">等待检查</span></div><span id="model-status" class="badge badge-medium">模型状态未知</span></div>
+      <div class="score-breakdown">
+        <div class="score-metric"><span>规则评分</span><strong id="rule-score">-</strong><small>最高命中分 + 额外规则×3</small></div>
+        <div class="score-metric"><span>模型原始概率</span><strong id="ml-probability">-</strong><small>P(人工审核或拒绝)</small></div>
+        <div class="score-metric"><span>模型换算分</span><strong id="ml-risk-score">-</strong><small>概率经风险曲线映射</small></div>
+        <div class="score-metric"><span>融合权重</span><strong id="score-weights">-</strong><small>规则 / 模型</small></div>
+        <div class="score-metric"><span>融合评分</span><strong id="fusion-score">-</strong><small>执行否决策略之前</small></div>
+        <div class="score-metric"><span>一票否决</span><strong id="veto-status">-</strong><small>极高规则强制拒绝</small></div>
+      </div>
+      <div id="score-formula" class="score-formula">尚未执行评分</div>
+    </div>
     <div class="grid-2">
       <div><h3>命中规则</h3><div id="result-rules"></div></div>
       <div><h3>25维特征</h3><div id="result-features" class="feature-grid"></div></div>
@@ -57,6 +69,24 @@ function useDemo(name) {
   document.getElementById('source-id').value=source; document.getElementById('event-data').value=JSON.stringify({request_id:request});
 }
 function showRaw() { document.getElementById('raw-json').textContent=App.pretty(lastResult); App.openModal('raw-modal'); }
+function renderScoreBreakdown(result) {
+  const blocked=Boolean(result.blocked_by), modelLoaded=result.ml_score!==null && result.ml_score!==undefined;
+  document.getElementById('rule-score').textContent=blocked?'未计算':`${result.rule_score} 分`;
+  document.getElementById('ml-probability').textContent=modelLoaded?`${(Number(result.ml_score)*100).toFixed(2)}%`:'未加载';
+  document.getElementById('ml-risk-score').textContent=modelLoaded?`${result.ml_risk_score} 分`:'未计算';
+  document.getElementById('score-weights').textContent=blocked?'未进入':`${Math.round(Number(result.rule_weight)*100)}% / ${Math.round(Number(result.ml_weight)*100)}%`;
+  document.getElementById('fusion-score').textContent=blocked?'未计算':`${result.fusion_score} 分`;
+  document.getElementById('veto-status').textContent=blocked?'黑名单硬拦截':(result.vetoed?'是':'否');
+  const status=document.getElementById('model-status');
+  status.textContent=blocked?'黑名单短路':modelLoaded?`XGBoost 已参与 · ${result.ml_decision}`:'纯规则降级';
+  status.className=`badge ${blocked||result.vetoed?'badge-extreme':modelLoaded?'badge-low':'badge-medium'}`;
+  document.getElementById('score-mode').textContent=blocked?'黑名单命中后直接拒绝，不执行特征、规则和模型':modelLoaded?'规则评分与 XGBoost 模型评分按有效权重融合':'XGBoost 未加载，本次最终分等于规则分';
+  let formula;
+  if(blocked) formula=`黑名单硬策略 → 最终分 ${result.final_score} → ${result.decision}`;
+  else if(modelLoaded) formula=`规则 ${result.rule_score} × ${(Number(result.rule_weight)*100).toFixed(0)}% + 模型 ${result.ml_risk_score} × ${(Number(result.ml_weight)*100).toFixed(0)}% = 融合 ${result.fusion_score}${result.vetoed?'；命中极高规则，执行一票否决':''} → 最终 ${result.final_score}`;
+  else formula=`规则 ${result.rule_score} × 100% + 模型未加载 = 最终 ${result.final_score}`;
+  document.getElementById('score-formula').textContent=formula;
+}
 async function submitCheck() {
   const button=document.getElementById('submit-check'); button.disabled=true; button.textContent='检查中…';
   try {
@@ -70,6 +100,7 @@ async function submitCheck() {
     document.getElementById('result-decision').innerHTML=`${App.badge(lastResult.risk_level)}　${App.badge(lastResult.decision)}`;
     document.getElementById('result-meta').textContent=`事件 ${lastResult.event_id || '-'}　评估 ${lastResult.assessment_id || '-'}　命中 ${lastResult.rule_count} 条规则`;
     document.getElementById('result-message').textContent=lastResult.blocked_by?`黑名单前置拦截：${lastResult.blocked_by}`:(lastResult.message||'规则与模型融合决策完成');
+    renderScoreBreakdown(lastResult);
     document.getElementById('result-rules').innerHTML=lastResult.triggered_rules.length?lastResult.triggered_rules.map(rule=>`<div class="rule-hit"><strong><span>${App.escapeHtml(rule.rule_id)} ${App.escapeHtml(rule.rule_name)}</span><span>${rule.risk_score}分</span></strong><div class="help">实际值：${App.escapeHtml(JSON.stringify(rule.actual_values))}</div></div>`).join(''):'<div class="empty">未命中规则</div>';
     const features=Object.entries(lastResult.features||{}); document.getElementById('result-features').innerHTML=features.length?features.map(([key,val])=>`<div class="feature"><span>${App.escapeHtml(key)}</span><b>${Number(val).toFixed(Number.isInteger(val)?0:4)}</b></div>`).join(''):'<div class="empty">黑名单短路，未计算特征</div>';
     document.getElementById('result-card').scrollIntoView({behavior:'smooth'});

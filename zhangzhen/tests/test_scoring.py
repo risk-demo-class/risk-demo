@@ -24,6 +24,11 @@ def test_rule_score_uses_max_plus_three_for_each_extra_hit() -> None:
 def test_missing_model_uses_pure_rule_score() -> None:
     result = make_decision([_rule("A", 70, RiskLevel.HIGH)], None)
 
+    assert result.rule_score == 70
+    assert result.ml_risk_score is None
+    assert result.rule_weight == 1.0
+    assert result.ml_weight == 0.0
+    assert result.fusion_score == 70
     assert result.final_score == 70
     assert result.decision is Decision.MANUAL_REVIEW
     assert result.ml_decision is None
@@ -38,8 +43,25 @@ def test_extreme_rule_veto_cannot_be_lowered_by_model() -> None:
     assert result.vetoed
 
 
+def test_score_breakdown_matches_the_actual_fusion_formula() -> None:
+    rules = [
+        _rule("A", 90, RiskLevel.EXTREME),
+        _rule("B", 75, RiskLevel.HIGH),
+        _rule("C", 70, RiskLevel.HIGH),
+        _rule("D", 50, RiskLevel.MEDIUM),
+    ]
+    result = make_decision(rules, 0.9765215516090393)
+
+    assert result.rule_score == 99
+    assert result.ml_risk_score == 95
+    assert result.rule_weight == 0.5
+    assert result.ml_weight == 0.5
+    assert result.fusion_score == 97
+    assert result.final_score == 97
+    assert result.vetoed is True
+
+
 def test_ml_sigmoid_like_mapping_is_bounded() -> None:
     assert ml_probability_to_risk_score(0) == 0
     assert 0 < ml_probability_to_risk_score(0.5) < 100
     assert ml_probability_to_risk_score(1) <= 100
-

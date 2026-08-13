@@ -4,6 +4,7 @@ from sqlalchemy import func, select
 from app.api import app
 from app.database import get_db_async
 from app.engine.feature import FEATURE_COLUMNS, compute_features
+from app.engine.ml_model import ml_model
 from app.models import Decision, EventType, RiskLevel
 from app.models_risk import RiskAssessment, RiskCase, RiskEvent, RiskFeature, RiskUserProfile
 from app.schemas import RiskCheckRequest
@@ -79,6 +80,27 @@ async def test_extreme_transfer_is_vetoed_and_creates_rejected_case(session_fact
     assert case.reviewer == "system"
 
 
+async def test_risk_response_exposes_auditable_rule_and_model_scores(
+    session_factory, monkeypatch
+) -> None:
+    await _seed(session_factory)
+    monkeypatch.setattr(ml_model, "predict", lambda _features: 0.9765215516090393)
+    async with session_factory() as db:
+        response = await process_event(
+            db,
+            RiskCheckRequest(event_type=EventType.TRANSFER, source_id="T90001", user_id="U90001"),
+        )
+
+    assert response.rule_score == 99
+    assert response.ml_score == 0.9765215516090393
+    assert response.ml_risk_score == 95
+    assert response.rule_weight == 0.5
+    assert response.ml_weight == 0.5
+    assert response.fusion_score == 97
+    assert response.final_score == 97
+    assert response.vetoed is True
+
+
 async def test_blacklist_short_circuit_does_not_write_event_or_assessment(session_factory) -> None:
     await _seed(session_factory)
     async with session_factory() as db:
@@ -137,4 +159,3 @@ async def test_risk_check_http_endpoint_is_exposed(session_factory) -> None:
     assert payload["decision"] == "拒绝"
     assert payload["features"]["loan_debt_ratio"] == 0.8
     assert len(payload["features"]) == 25
-

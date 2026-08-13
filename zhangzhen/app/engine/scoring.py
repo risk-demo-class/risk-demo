@@ -10,6 +10,10 @@ from app.schemas import TriggeredRule
 @dataclass(frozen=True, slots=True)
 class DecisionResult:
     rule_score: int
+    ml_risk_score: int | None
+    rule_weight: float
+    ml_weight: float
+    fusion_score: int
     final_score: int
     risk_level: RiskLevel
     decision: Decision
@@ -51,18 +55,29 @@ def make_decision(
     vetoed = any(rule.risk_level is RiskLevel.EXTREME for rule in triggered_rules)
 
     ml_decision: Decision | None = None
+    ml_risk_score: int | None = None
     if ml_probability is None:
-        final_score = rule_score
+        effective_rule_weight = 1.0
+        effective_ml_weight = 0.0
+        fusion_score = rule_score
     else:
         ml_risk_score = ml_probability_to_risk_score(ml_probability)
         _, ml_decision = score_to_outcome(ml_risk_score)
-        final_score = round(rule_weight * rule_score + ml_weight * ml_risk_score)
-        final_score = min(max(final_score, 0), 100)
+        effective_rule_weight = rule_weight
+        effective_ml_weight = ml_weight
+        fusion_score = round(rule_weight * rule_score + ml_weight * ml_risk_score)
+        fusion_score = min(max(fusion_score, 0), 100)
+
+    final_score = fusion_score
 
     if vetoed:
         final_score = max(final_score, 90)
         return DecisionResult(
             rule_score=rule_score,
+            ml_risk_score=ml_risk_score,
+            rule_weight=effective_rule_weight,
+            ml_weight=effective_ml_weight,
+            fusion_score=fusion_score,
             final_score=final_score,
             risk_level=RiskLevel.EXTREME,
             decision=Decision.REJECT,
@@ -74,6 +89,10 @@ def make_decision(
     risk_level, decision = score_to_outcome(final_score)
     return DecisionResult(
         rule_score=rule_score,
+        ml_risk_score=ml_risk_score,
+        rule_weight=effective_rule_weight,
+        ml_weight=effective_ml_weight,
+        fusion_score=fusion_score,
         final_score=final_score,
         risk_level=risk_level,
         decision=decision,
@@ -81,4 +100,3 @@ def make_decision(
         ml_decision=ml_decision,
         vetoed=False,
     )
-

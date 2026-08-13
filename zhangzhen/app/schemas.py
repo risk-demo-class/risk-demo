@@ -60,6 +60,11 @@ class RiskCheckResponse(ApiModel):
     assessment_id: str | None = None
     event_id: str | None = None
     user_id: str
+    rule_score: int = Field(default=0, ge=0, le=100)
+    ml_risk_score: int | None = Field(default=None, ge=0, le=100)
+    rule_weight: float = Field(default=0.0, ge=0, le=1)
+    ml_weight: float = Field(default=0.0, ge=0, le=1)
+    fusion_score: int = Field(default=0, ge=0, le=100)
     final_score: int = Field(ge=0, le=100)
     risk_level: RiskLevel
     decision: Decision
@@ -68,6 +73,7 @@ class RiskCheckResponse(ApiModel):
     features: dict[str, float] = Field(default_factory=dict)
     ml_score: float | None = Field(default=None, ge=0, le=1)
     ml_decision: Decision | None = None
+    vetoed: bool = False
     message: str | None = None
     blocked_by: str | None = None
     create_time: datetime
@@ -269,8 +275,10 @@ class DashboardOverview(ApiModel):
 
 class AgentChatRequest(ApiModel):
     message: str = Field(min_length=1, max_length=2000)
+    session_id: str | None = Field(default=None, min_length=1, max_length=100)
 
 
 class AgentChatResponse(ApiModel):
     reply: str
+    session_id: str
     model_available: bool

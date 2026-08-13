@@ -199,10 +199,17 @@ async def _upsert_profile(
     profile.update_time = decision_time
 
 
-async def run_risk_check(db: AsyncSession, context: RiskContext) -> RiskCheckResponse:
+async def run_risk_check(
+    db: AsyncSession,
+    context: RiskContext,
+    *,
+    decision_time: datetime | None = None,
+) -> RiskCheckResponse:
     """执行七步流水线；调用方负责包裹同一个数据库事务。"""
 
-    decision_time = _now_utc_naive()
+    # 实时请求使用当前时间；历史数据回放显式传入业务事件时间。
+    # 该参数只供内部批处理使用，不暴露给 HTTP 调用方，避免伪造审计时间。
+    decision_time = decision_time or _now_utc_naive()
 
     # 1-2. 构造上下文后写入事件快照。
     event_id = _new_id("evt")
@@ -269,6 +276,11 @@ async def run_risk_check(db: AsyncSession, context: RiskContext) -> RiskCheckRes
         assessment_id=assessment_id,
         event_id=event_id,
         user_id=context.request.user_id,
+        rule_score=result.rule_score,
+        ml_risk_score=result.ml_risk_score,
+        rule_weight=result.rule_weight,
+        ml_weight=result.ml_weight,
+        fusion_score=result.fusion_score,
         final_score=result.final_score,
         risk_level=result.risk_level,
         decision=result.decision,
@@ -277,7 +289,7 @@ async def run_risk_check(db: AsyncSession, context: RiskContext) -> RiskCheckRes
         features=features,
         ml_score=result.ml_probability,
         ml_decision=result.ml_decision,
+        vetoed=result.vetoed,
         message=(None if result.ml_probability is not None else "XGBoost未加载，本次使用纯规则决策"),
         create_time=decision_time,
     )
-

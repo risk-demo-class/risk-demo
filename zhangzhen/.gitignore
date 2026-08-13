@@ -3,11 +3,13 @@ __pycache__/
 *.py[cod]
 *.egg-info/
 .pytest_cache/
+.test-tmp-*/
 .coverage
 htmlcov/
 
 # Virtual environments and local configuration
 .venv/
+.uv-cache/
 .env
 .env.*
 !.env.example
@@ -22,4 +24,7 @@ Thumbs.db
 logs/
 *.log
 app/engine/xgb_model.json
+app/engine/xgb_model.metrics.json
+data/bank_generation_manifest.json
+data/training_dataset.csv
 

@@ -1,16 +1,19 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="page-intro"><div><h2>AI 风控助手</h2><p>默认只读；核心风控决策不依赖大模型</p></div><span class="badge badge-medium">第四阶段接入模型</span></div>
+<div class="page-intro"><div><h2>AI 风控助手</h2><p>默认只读；核心风控决策不依赖大模型</p></div><span id="model-status" class="badge badge-medium">等待首次对话</span></div>
 <section class="card">
-  <div id="chat-box" class="chat-box"><div class="message bot">你好，我是银行风控助手页面。目前主决策、仪表盘、规则、案件、评估和黑名单已经可用。
+  <div id="chat-box" class="chat-box"><div class="message bot">你好，我是银行风控分析助手。我可以调用 8 个受控工具查询统计、案件、画像、趋势、规则效果和脱敏银行数据。
 
-真实 Agent 工具将在第四阶段接入。在此之前，我不会伪造模型回答，也不会直接执行规则变更、案件审核或黑名单写操作。</div></div>
-  <div class="chat-input"><input id="chat-message" class="input" placeholder="例如：帮我查看今天的风险趋势" onkeydown="if(event.key==='Enter')sendMessage()"><button class="btn btn-primary" onclick="sendMessage()">发送</button></div>
+黑名单增删、案件审核、规则修改必须去对应页面人工确认；实时风险检查会写评估记录，我会在调用前提醒你。</div></div>
+  <div class="chat-input"><input id="chat-message" class="input" placeholder="例如：帮我查看今天的风险趋势" onkeydown="if(event.key==='Enter')sendMessage()"><button id="send-button" class="btn btn-primary" onclick="sendMessage()">发送</button><button class="btn btn-secondary" onclick="clearChat()">清除会话</button></div>
 </section>
 <div class="toolbar" style="margin-top:15px"><span class="help">快捷入口：</span><a class="btn btn-secondary btn-sm" href="/">今日统计</a><a class="btn btn-secondary btn-sm" href="/cases">待审案件</a><a class="btn btn-secondary btn-sm" href="/assessments">评估历史</a><a class="btn btn-secondary btn-sm" href="/rules">规则效果</a></div>
 {% endblock %}
 {% block scripts %}
 <script>
-async function sendMessage(){const input=document.getElementById('chat-message'),message=input.value.trim();if(!message)return;const box=document.getElementById('chat-box');box.insertAdjacentHTML('beforeend',`<div class="message user">${App.escapeHtml(message)}</div>`);input.value='';try{const data=await App.api('/api/agent/chat',{method:'POST',body:JSON.stringify({message})});box.insertAdjacentHTML('beforeend',`<div class="message bot">${App.escapeHtml(data.reply)}</div>`)}catch(e){box.insertAdjacentHTML('beforeend',`<div class="message bot">请求失败：${App.escapeHtml(e.message)}</div>`)}box.scrollTop=box.scrollHeight}
+let agentSessionId=sessionStorage.getItem('bank-risk-agent-session')||null;
+function appendMessage(role,text){const box=document.getElementById('chat-box');box.insertAdjacentHTML('beforeend',`<div class="message ${role}">${App.escapeHtml(text)}</div>`);box.scrollTop=box.scrollHeight}
+async function sendMessage(){const input=document.getElementById('chat-message'),button=document.getElementById('send-button'),message=input.value.trim();if(!message||button.disabled)return;appendMessage('user',message);input.value='';button.disabled=true;button.textContent='分析中…';try{const data=await App.api('/api/agent/chat',{method:'POST',body:JSON.stringify({message,session_id:agentSessionId})});agentSessionId=data.session_id;sessionStorage.setItem('bank-risk-agent-session',agentSessionId);document.getElementById('model-status').textContent=data.model_available?'模型已连接':'模型未连接/本次降级';appendMessage('bot',data.reply)}catch(e){appendMessage('bot',`请求失败：${e.message}`)}finally{button.disabled=false;button.textContent='发送';input.focus()}}
+async function clearChat(){if(agentSessionId){try{await App.api(`/api/agent/clear?session_id=${encodeURIComponent(agentSessionId)}`,{method:'POST'})}catch(e){appendMessage('bot',`清除失败：${e.message}`);return}}agentSessionId=null;sessionStorage.removeItem('bank-risk-agent-session');document.getElementById('chat-box').innerHTML='<div class="message bot">会话已清除。新的提问将创建新会话。</div>'}
 </script>
 {% endblock %}

@@ -30,6 +30,7 @@ class Settings(BaseSettings):
     LLM_API_KEY: str = ""
     LLM_BASE_URL: str = "https://dashscope.aliyuncs.com/compatible-mode/v1"
     LLM_MODEL_NAME: str = "qwen-plus"
+    AI_AGENT_TIMEOUT_SECONDS: int = 60
 
     XGB_ENABLED: bool = True
     CASE_TIMEOUT_HOURS: int = 24
@@ -70,4 +71,3 @@ def get_settings() -> Settings:
 
 
 settings = get_settings()
-

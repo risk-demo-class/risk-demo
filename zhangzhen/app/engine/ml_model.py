@@ -23,6 +23,17 @@ class XGBoostRiskModel:
     def is_loaded(self) -> bool:
         return self._booster is not None
 
+    def reset(self) -> None:
+        """清空进程内模型缓存，供训练完成或规则纯回放后重新加载。"""
+
+        self._booster = None
+        self._xgb = None
+        self._load_attempted = False
+
+    def reload(self) -> bool:
+        self.reset()
+        return self.load()
+
     def load(self) -> bool:
         if self._load_attempted:
             return self.is_loaded
@@ -34,6 +45,12 @@ class XGBoostRiskModel:
 
             booster = xgb.Booster()
             booster.load_model(self.model_path)
+            if booster.num_features() != len(FEATURE_COLUMNS):
+                raise ValueError(
+                    f"模型特征数 {booster.num_features()} 与契约 {len(FEATURE_COLUMNS)} 不一致"
+                )
+            if booster.feature_names and tuple(booster.feature_names) != FEATURE_COLUMNS:
+                raise ValueError("模型特征名称或顺序与 FEATURE_COLUMNS 不一致")
             self._xgb = xgb
             self._booster = booster
             return True
@@ -56,4 +73,3 @@ class XGBoostRiskModel:
 
 
 ml_model = XGBoostRiskModel()
-
