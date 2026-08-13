@@ -1,0 +1,200 @@
+{% extends "base.html" %}
+{% block title %}风险检查 - 银行风险运营工作台{% endblock %}
+{% block content %}
+<header class="page-header">
+    <div>
+        <span class="page-eyebrow">Decision Pipeline</span>
+        <h1>银行事件风险检查</h1>
+        <p>根据来源主键读取可信业务记录，依次执行黑名单、特征计算、规则匹配、XGBoost 融合与决策。调用方不需要提交内部兼容字段。</p>
+    </div>
+</header>
+
+<div class="row g-3 align-items-start">
+    <div class="col-xl-5">
+        <section class="panel-card">
+            <div class="panel-heading">
+                <div><h2>检查参数</h2><p><span class="text-danger">*</span> 为必填项，业务主键必须真实存在</p></div>
+            </div>
+            <form id="checkForm" novalidate>
+                <div class="mb-3">
+                    <label class="form-label" for="ck_event_type">事件类型 <span class="text-danger">*</span></label>
+                    <select class="form-select" id="ck_event_type" required>
+                        <option value="登录">登录</option>
+                        <option value="转账">转账</option>
+                        <option value="贷款申请">贷款申请</option>
+                        <option value="绑卡">绑卡</option>
+                    </select>
+                </div>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label" for="ck_user_id">银行用户 ID <span class="text-danger">*</span></label>
+                        <input class="form-control" id="ck_user_id" autocomplete="off" placeholder="例如 DEMO_USR_006" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label" for="ck_source_id">事件来源 ID <span class="text-danger">*</span></label>
+                        <input class="form-control" id="ck_source_id" autocomplete="off" placeholder="例如 DEMO_LOGIN_006" required>
+                    </div>
+                </div>
+                <div class="form-text mt-2" id="source-hint">登录事件使用 login_id；系统会校验记录归属用户。</div>
+                <div class="mt-3">
+                    <label class="form-label" for="ck_event_data">补充上下文（可选 JSON）</label>
+                    <textarea class="form-control font-monospace" id="ck_event_data" rows="3" spellcheck="false" placeholder='例如 {"channel":"手机银行"}'></textarea>
+                    <div class="form-text">仅用于审计快照，不能覆盖数据库中的金额、设备、IP、卡号或申请信息。</div>
+                </div>
+                <div class="mt-3">
+                    <span class="form-label d-block">虚构数据快速样例</span>
+                    <div class="demo-chip-row" aria-label="风险检查样例">
+                        <button type="button" class="demo-chip" data-event="登录" data-user="DEMO_USR_006" data-source="DEMO_LOGIN_006">正常登录</button>
+                        <button type="button" class="demo-chip" data-event="转账" data-user="DEMO_USR_002" data-source="DEMO_TXN_001">异地大额</button>
+                        <button type="button" class="demo-chip" data-event="贷款申请" data-user="DEMO_USR_010" data-source="DEMO_LOAN_003">多头申请</button>
+                        <button type="button" class="demo-chip" data-event="绑卡" data-user="DEMO_USR_003" data-source="DEMO_CARD_003">绑卡检查</button>
+                        <button type="button" class="demo-chip" data-event="转账" data-user="DEMO_USR_009" data-source="DEMO_TXN_017">黑卡短路</button>
+                    </div>
+                </div>
+                <div id="form-error" class="alert alert-danger mt-3 mb-0" role="alert" hidden></div>
+                <button class="btn btn-primary w-100 mt-4" type="submit" id="checkBtn">
+                    <i class="bi bi-shield-check me-1"></i>执行风险检查
+                </button>
+            </form>
+        </section>
+    </div>
+
+    <div class="col-xl-7">
+        <section class="panel-card" id="resultPanel" aria-live="polite">
+            <div class="panel-heading"><div><h2>决策结果</h2><p>统一阈值：30 标记 / 60 人工审核 / 85 拒绝</p></div></div>
+            <div id="resultContent">
+                <div class="feedback-state">
+                    <i class="bi bi-shield-lock"></i>
+                    <strong>等待风险事件</strong>
+                    <span>提交左侧参数后，这里将展示真实决策、规则命中和 25 项特征。</span>
+                </div>
+            </div>
+        </section>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const sourceHints = {
+    '登录': '登录事件使用 login_id；系统会校验记录归属用户。',
+    '转账': '转账事件使用 txn_id；金额、收付款卡、设备与 IP 从交易记录读取。',
+    '贷款申请': '贷款申请使用 loan_id；若申请本身没有设备环境，则关联事发前最近一次成功登录。',
+    '绑卡': '绑卡事件使用 card_id；若绑卡记录没有设备环境，则关联事发前最近一次成功登录。'
+};
+const decisionClass = {'通过': 'decision-pass', '标记': 'decision-mark', '人工审核': 'decision-review', '拒绝': 'decision-reject'};
+const riskClass = {'低': 'badge-risk-low', '中': 'badge-risk-mid', '高': 'badge-risk-high', '极高': 'badge-risk-critical'};
+const blockedLabels = {'用户': '用户黑名单', '设备指纹': '设备指纹黑名单', 'IP': 'IP 黑名单', '银行卡号': '银行卡号黑名单', '身份证号': '身份证号黑名单'};
+
+function escapeHtml(value) {
+    return String(value ?? '').replace(/[&<>'"]/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[char]));
+}
+
+function updateSourceHint() {
+    document.getElementById('source-hint').textContent = sourceHints[document.getElementById('ck_event_type').value];
+}
+
+function renderRules(rules) {
+    if (!rules.length) return '<div class="feedback-state py-3"><i class="bi bi-check-circle"></i><strong>未命中银行规则</strong><span>本次事件未触发已启用规则。</span></div>';
+    return `<div class="table-responsive"><table class="table table-sm"><thead><tr><th>规则</th><th>类别</th><th>等级</th><th>分值</th><th>动作</th></tr></thead><tbody>${rules.map(rule => `
+        <tr><td><strong>${escapeHtml(rule.rule_name)}</strong><br><code>${escapeHtml(rule.rule_id)}</code></td><td>${escapeHtml(rule.rule_category)}</td><td><span class="badge ${riskClass[rule.risk_level] || 'text-bg-secondary'}">${escapeHtml(rule.risk_level)}</span></td><td>${escapeHtml(rule.risk_score)}</td><td>${escapeHtml(rule.action)}</td></tr>`).join('')}</tbody></table></div>`;
+}
+
+function renderFeatures(features) {
+    const entries = Object.entries(features || {});
+    if (!entries.length) return '<div class="alert alert-light border mb-0">黑名单短路不会执行特征计算，因此没有特征明细。</div>';
+    return `<div class="feature-grid">${entries.map(([key, value]) => `<div class="feature-item" title="${escapeHtml(key)}"><span>${escapeHtml(FEATURE_LABELS[key] || key)}</span><strong>${escapeHtml(typeof value === 'number' ? Number(value.toFixed(4)) : value)}</strong></div>`).join('')}</div>`;
+}
+
+function renderResult(result) {
+    const blocked = Boolean(result.blocked_by) || result.assessment_id === 'blacklist_reject';
+    const mlText = result.ml_score == null ? (blocked ? '黑名单短路，未调用模型' : '模型未加载') : `${(result.ml_score * 100).toFixed(2)}%（${escapeHtml(result.ml_decision || '已融合')}）`;
+    const mlSection = result.ml_score != null
+        ? renderMLScoreBlock(result.ml_score, result.ml_decision)
+        : `<span class="text-muted">${blocked ? '黑名单短路，未调用模型' : '模型未加载'}</span>`;
+    const reason = blocked
+        ? `命中${escapeHtml(blockedLabels[result.blocked_by] || result.blocked_by || '银行')}，在写入评估和计算特征之前直接拒绝。`
+        : escapeHtml(result.message || '已完成七步风险决策流水线。');
+    document.getElementById('resultContent').innerHTML = `
+        <div class="card ${decisionClass[result.decision] || ''} result-enter shadow-none mb-3"><div class="card-body">
+            <div class="d-flex flex-wrap align-items-start justify-content-between gap-3">
+                <div><span class="text-muted small">最终决策</span><div class="fs-4 fw-bold mt-1">${escapeHtml(result.decision)}</div></div>
+                <div class="text-end"><span class="badge ${riskClass[result.risk_level] || 'text-bg-secondary'}">${escapeHtml(result.risk_level)}风险</span><div class="fs-3 fw-bold mt-1">${escapeHtml(result.final_score)}<small class="fs-6 text-muted"> / 100</small></div></div>
+            </div>
+            <p class="mb-0 mt-3 text-secondary">${reason}</p>
+        </div></div>
+        <div class="row g-2 mb-3">
+            <div class="col-sm-6"><div class="border rounded p-3 h-100"><span class="text-muted small">评估 ID</span><div class="mt-1 text-break"><code>${escapeHtml(result.assessment_id)}</code></div></div></div>
+            <div class="col-sm-6"><div class="border rounded p-3 h-100"><span class="text-muted small">XGBoost</span><div class="mt-1 fw-semibold">${mlText}</div></div></div>
+        </div>
+        <div class="d-flex align-items-center justify-content-between mb-2"><h3 class="h6 mb-0">命中规则</h3><span class="badge text-bg-light border">${escapeHtml(result.rule_count)} 条</span></div>
+        ${renderRules(result.triggered_rules || [])}
+        <div class="d-flex align-items-center justify-content-between mt-4 mb-2"><h3 class="h6 mb-0">ML 评分</h3><span class="text-muted small">P(拒绝) 与 sigmoid 校准风险分</span></div>
+        <div class="border rounded bg-light p-3">${mlSection}</div>
+        <div class="d-flex align-items-center justify-content-between mt-4 mb-2"><h3 class="h6 mb-0">特征详情（25 项银行特征）</h3><span class="text-muted small">历史窗口严格截止于事件时间</span></div>
+        ${renderFeatures(result.features)}`;
+}
+
+document.getElementById('ck_event_type').addEventListener('change', updateSourceHint);
+document.querySelectorAll('.demo-chip').forEach(button => button.addEventListener('click', () => {
+    document.getElementById('ck_event_type').value = button.dataset.event;
+    document.getElementById('ck_user_id').value = button.dataset.user;
+    document.getElementById('ck_source_id').value = button.dataset.source;
+    updateSourceHint();
+}));
+
+(function prefillFromCase() {
+    const raw = sessionStorage.getItem('risk_check_prefill');
+    if (!raw) return;
+    try {
+        const data = JSON.parse(raw);
+        if (data.event_type) document.getElementById('ck_event_type').value = data.event_type;
+        if (data.user_id) document.getElementById('ck_user_id').value = data.user_id;
+        if (data.source_id) document.getElementById('ck_source_id').value = data.source_id;
+        updateSourceHint();
+    } finally {
+        sessionStorage.removeItem('risk_check_prefill');
+    }
+})();
+
+document.getElementById('checkForm').addEventListener('submit', async event => {
+    event.preventDefault();
+    const button = document.getElementById('checkBtn');
+    const errorBox = document.getElementById('form-error');
+    const userId = document.getElementById('ck_user_id').value.trim();
+    const sourceId = document.getElementById('ck_source_id').value.trim();
+    let eventData;
+    errorBox.hidden = true;
+    if (!userId || !sourceId) {
+        errorBox.textContent = '请填写银行用户 ID 和事件来源 ID。';
+        errorBox.hidden = false;
+        return;
+    }
+    const rawContext = document.getElementById('ck_event_data').value.trim();
+    if (rawContext) {
+        try {
+            eventData = JSON.parse(rawContext);
+            if (!eventData || Array.isArray(eventData) || typeof eventData !== 'object') throw new Error('必须是 JSON 对象');
+        } catch (error) {
+            errorBox.textContent = `补充上下文格式错误：${error.message}`;
+            errorBox.hidden = false;
+            return;
+        }
+    }
+    button.disabled = true;
+    button.innerHTML = '<span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>决策流水线执行中…';
+    document.getElementById('resultContent').innerHTML = '<div class="feedback-state"><span class="spinner-border text-primary" aria-hidden="true"></span><strong class="mt-3">正在读取可信业务记录</strong><span>随后将执行黑名单、特征、规则与模型融合。</span></div>';
+    try {
+        const response = await fetch('/api/risk/check', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({event_type: document.getElementById('ck_event_type').value, user_id: userId, source_id: sourceId, event_data: eventData})});
+        const result = await response.json();
+        if (!response.ok) throw new Error(typeof result.detail === 'string' ? result.detail : JSON.stringify(result.detail || '风险检查失败'));
+        renderResult(result);
+    } catch (error) {
+        document.getElementById('resultContent').innerHTML = `<div class="feedback-state feedback-error"><i class="bi bi-exclamation-triangle"></i><strong>风险检查未完成</strong><span>${escapeHtml(error.message)}</span></div>`;
+    } finally {
+        button.disabled = false;
+        button.innerHTML = '<i class="bi bi-shield-check me-1"></i>执行风险检查';
+    }
+});
+</script>
+{% endblock %}

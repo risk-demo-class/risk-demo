@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#0B1F3A">
+    <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+    <title>{% block title %}银行风险运营工作台{% endblock %}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.2/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="/static/app.css?v=20260812v4" rel="stylesheet">
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+<a class="skip-link" href="#main-content">跳到主要内容</a>
+
+<aside class="app-sidebar" id="app-sidebar" aria-label="主导航">
+    <div class="sidebar-brand">
+        <span class="brand-mark" aria-hidden="true"><i class="bi bi-bank2"></i></span>
+        <span>
+            <strong>银行风险运营工作台</strong>
+            <small>教学 · 虚构数据</small>
+        </span>
+    </div>
+    <nav class="app-nav">
+        <p class="nav-section">风险运营</p>
+        <a class="nav-link {% if request.url.path == '/' %}active{% endif %}" href="/">
+            <i class="bi bi-grid-1x2"></i><span>运营总览</span>
+        </a>
+        <a class="nav-link {% if request.url.path == '/risk-check' %}active{% endif %}" href="/risk-check">
+            <i class="bi bi-shield-check"></i><span>风险检查</span>
+        </a>
+        <a class="nav-link {% if request.url.path == '/rules' %}active{% endif %}" href="/rules">
+            <i class="bi bi-diagram-3"></i><span>规则管理</span>
+        </a>
+        <a class="nav-link {% if request.url.path == '/blacklist' %}active{% endif %}" href="/blacklist">
+            <i class="bi bi-person-x"></i><span>黑名单</span>
+        </a>
+        <a class="nav-link {% if request.url.path == '/cases' %}active{% endif %}" href="/cases">
+            <i class="bi bi-inbox"></i><span>风险案件</span>
+        </a>
+        <a class="nav-link {% if request.url.path == '/assessments' %}active{% endif %}" href="/assessments">
+            <i class="bi bi-clock-history"></i><span>评估流水</span>
+        </a>
+        <p class="nav-section nav-section-secondary">辅助分析</p>
+        <a class="nav-link {% if request.url.path == '/chat' %}active{% endif %}" href="/chat">
+            <i class="bi bi-chat-square-dots"></i><span>AI 风控助手</span>
+        </a>
+    </nav>
+    <div class="sidebar-footer">
+        <span class="status-dot" aria-hidden="true"></span>
+        <span>银行风控演示环境</span>
+    </div>
+</aside>
+
+<div class="sidebar-backdrop" id="sidebar-backdrop" hidden></div>
+
+<header class="mobile-header">
+    <button class="icon-button" id="menu-button" type="button" aria-controls="app-sidebar" aria-expanded="false" aria-label="打开导航">
+        <i class="bi bi-list"></i>
+    </button>
+    <div>
+        <strong>银行风险运营工作台</strong>
+        <small>教学 · 虚构数据</small>
+    </div>
+</header>
+
+<main class="app-main" id="main-content" tabindex="-1">
+    {% block content %}{% endblock %}
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="/static/app.js?v=20260812v4"></script>
+<script>
+(function setupMobileNavigation() {
+    const sidebar = document.getElementById('app-sidebar');
+    const backdrop = document.getElementById('sidebar-backdrop');
+    const button = document.getElementById('menu-button');
+    if (!sidebar || !backdrop || !button) return;
+
+    function setOpen(open) {
+        sidebar.classList.toggle('is-open', open);
+        backdrop.hidden = !open;
+        button.setAttribute('aria-expanded', String(open));
+        button.setAttribute('aria-label', open ? '关闭导航' : '打开导航');
+        document.body.classList.toggle('nav-open', open);
+        if (!open) button.focus();
+    }
+
+    button.addEventListener('click', () => setOpen(!sidebar.classList.contains('is-open')));
+    backdrop.addEventListener('click', () => setOpen(false));
+    sidebar.querySelectorAll('a').forEach(link => link.addEventListener('click', () => {
+        if (window.matchMedia('(max-width: 991.98px)').matches) setOpen(false);
+    }));
+    document.addEventListener('keydown', event => {
+        if (event.key === 'Escape' && sidebar.classList.contains('is-open')) setOpen(false);
+    });
+})();
+</script>
+{% block extra_js %}{% endblock %}
+</body>
+</html>

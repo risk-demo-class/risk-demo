@@ -1,0 +1,604 @@
+﻿/**
+ * 银行风险运营工作台 - 公共前端工具函数
+ */
+
+// 统一 HTML 转义：所有动态插入 innerHTML 的文本都必须经过这里，防止存储型 XSS。
+// 注意：不要把转义结果再次放进 JS 字符串内联事件（HTML 属性会先解码实体），
+// 内联事件一律改用 data-* 属性 + 事件委托。
+function escapeHtml(value) {
+    return String(value ?? '').replace(/[&<>'"]/g, char => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;',
+    }[char]));
+}
+
+// 风险等级对应的Badge类名
+function getRiskBadgeClass(level) {
+    const map = {
+        '低': 'badge-risk-low',
+        '中': 'badge-risk-mid',
+        '高': 'badge-risk-high',
+        '极高': 'badge-risk-critical',
+    };
+    return map[level] || 'bg-secondary';
+}
+
+// 指标数字滚动: 从 0 滚动到目标值; prefers-reduced-motion 下直接赋值。
+// 只接收 API 返回的真实数值, 不伪造数据; 滚动期间不改变最终 textContent。
+function animateNumber(el, value) {
+    if (!el) return;
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const text = String(value ?? '');
+    const match = text.match(/^([+-]?[\d.]+)(.*)$/);
+    const target = match ? parseFloat(match[1]) : NaN;
+    const suffix = match ? match[2] : '';
+    if (reduced || !Number.isFinite(target)) {
+        el.textContent = text;
+        return;
+    }
+    const decimals = (String(target).split('.')[1] || '').length;
+    const duration = 520;
+    const start = performance.now();
+    function frame(now) {
+        const t = Math.min(1, (now - start) / duration);
+        const eased = 1 - Math.pow(1 - t, 3); // easeOutCubic
+        if (t < 1) {
+            el.textContent = target.toFixed(decimals) + suffix;
+            requestAnimationFrame(frame);
+        } else {
+            el.textContent = text;
+        }
+    }
+    requestAnimationFrame(frame);
+}
+
+// 通用API请求封装
+async function apiRequest(url, options = {}) {
+    const defaultOptions = {
+        headers: { 'Content-Type': 'application/json' },
+    };
+    const res = await fetch(url, { ...defaultOptions, ...options });
+    if (!res.ok) {
+        const err = await res.json().catch(() => ({ detail: '请求失败' }));
+        throw new Error(err.detail || `HTTP ${res.status}`);
+    }
+    return res.json();
+}
+
+/**
+ * ML P(拒绝) → 0-100 风险分 (sigmoid 风格校准, 跟 Python 端 _ml_prob_to_risk_score 一致).
+ *
+ * 【P4-L4 2026-08-08】前端显示统一: 0-100 风险分而不是 0-1 概率, 跟规则分语义一致.
+ * 公式: risk_score = 100 * (1 - exp(-k * prob)), k=3
+ * 校准点: 0.0→0, 0.1→26, 0.3→59, 0.5→78, 0.7→90, 0.9→97, 1.0→100
+ */
+function mlProbToRiskScore(prob, k = 3) {
+    if (prob == null || isNaN(prob)) return null;
+    if (prob <= 0) return 0;
+    if (prob >= 1) return 100;
+    return Math.round(100 * (1 - Math.exp(-k * prob)));
+}
+
+/**
+ * 渲染 ML 评分 HTML 片段 (P(拒绝) + 风险分(sigmoid 校准) + ML 决策).
+ * 用于风险检查/案件详情/评估历史 三个页面的统一展示.
+ */
+function renderMLScoreBlock(mlScore, mlDecision) {
+    if (mlScore == null) {
+        return '<span class="text-muted">未加载模型</span>';
+    }
+    const riskScore = mlProbToRiskScore(mlScore);
+    const pct = (mlScore * 100).toFixed(2);
+    const raw = mlScore.toFixed(4);
+    const decision = mlDecision
+        ? `<span class="badge bg-info">${escapeHtml(mlDecision)}</span>`
+        : '<span class="text-muted">-</span>';
+    return `
+        P(拒绝): <strong>${pct}%</strong> <small class="text-muted">(${raw})</small><br>
+        风险分 (sigmoid 校准): <strong>${riskScore}</strong> <small class="text-muted">/ 100</small><br>
+        ML 决策: ${decision}
+    `;
+}
+
+/**
+ * 通用分页 HTML 生成器 (P4-L4 2026-08-08)
+ *
+ * 设计:
+ *   - 最多同时显示 10 个页码 (含 首页/末页 + 上下页 + 省略号)
+ *   - 中间用 `...` 占位, 点击跳 ±5 页 (避免点击无意义)
+ *   - 末页用 `>>` 单独跳到最后一页 (兼容用户提到的 `>>>` 风格)
+ *   - 兼容 totalPages <= 7: 直接显示所有页码, 不省略
+ *
+ * 参数:
+ *   currentPage: 当前页 (1-based)
+ *   totalPages: 总页数
+ *   pageSize: 每页条数 (用于显示 "X 条/页" 信息)
+ *   loadFnName: 加载函数名字符串 (例如 'loadAssessments' / 'loadCases')
+ *   containerId: 分页 ul 元素的 id (默认 'pagination')
+ *
+ * 返回: HTML 字符串, 直接 innerHTML 到 ul 容器即可
+ */
+function buildPaginationHtml(currentPage, totalPages, pageSize, loadFnName, containerId = 'pagination') {
+    if (totalPages < 1) {
+        // 【P4-L4 2026-08-08v2】无数据也渲染"暂无数据"占位条, 避免底栏空白让用户以为出 bug
+        return '<li class="page-item disabled"><span class="page-link text-muted" style="cursor:default;">暂无数据</span></li>';
+    }
+    // totalPages >= 1 都渲染 (包括 =1, 占位"上一页 1 下一页"让用户看到分页栏在工作, 不显空白)
+
+    const html = [];
+    const addItem = (label, page, opts = {}) => {
+        const { active = false, disabled = false, isEllipsis = false } = opts;
+        if (disabled) {
+            html.push(`<li class="page-item disabled"><span class="page-link">${label}</span></li>`);
+        } else if (isEllipsis) {
+            // 省略号: 点击跳 ±5 页 (避免点无意义)
+            const jumpTo = page;
+            html.push(
+                `<li class="page-item"><a class="page-link" href="#" `
+                + `onclick="${loadFnName}(${jumpTo});return false;" `
+                + `title="跳到第 ${jumpTo} 页" style="cursor:pointer;">...</a></li>`
+            );
+        } else {
+            html.push(
+                `<li class="page-item ${active ? 'active' : ''}">`
+                + `<a class="page-link" href="#" onclick="${loadFnName}(${page});return false;">${label}</a></li>`
+            );
+        }
+    };
+
+    // 上一页 (单字符紧凑版, P4-L4 2026-08-08 第二轮)
+    addItem('«', currentPage - 1, { disabled: currentPage <= 1 });
+
+    // 总页数 <= 7, 直接全显示
+    if (totalPages <= 7) {
+        for (let i = 1; i <= totalPages; i++) {
+            addItem(String(i), i, { active: i === currentPage });
+        }
+    } else {
+        // 总页数 > 7, 用 ... 省略号
+        // 总是显示首页
+        addItem('1', 1, { active: currentPage === 1 });
+
+        // 左边省略号: 当前页 > 4 时显示 (跳到 currentPage-3)
+        if (currentPage > 4) {
+            addItem('...', Math.max(2, currentPage - 3), { isEllipsis: true });
+        }
+
+        // 中间页码: max(2, currentPage-2) ... min(totalPages-1, currentPage+2)
+        const start = Math.max(2, currentPage - 2);
+        const end = Math.min(totalPages - 1, currentPage + 2);
+        for (let i = start; i <= end; i++) {
+            addItem(String(i), i, { active: i === currentPage });
+        }
+
+        // 右边省略号: 当前页 < totalPages-3 时显示 (跳到 currentPage+3)
+        if (currentPage < totalPages - 3) {
+            addItem('...', Math.min(totalPages - 1, currentPage + 3), { isEllipsis: true });
+        }
+
+        // 末页 (总是显示)
+        addItem(String(totalPages), totalPages, { active: currentPage === totalPages });
+    }
+
+    // 下一页 (单字符紧凑版)
+    addItem('»', currentPage + 1, { disabled: currentPage >= totalPages });
+
+    // 末页快捷跳: 只有在 totalPages > 10 才显示 (单字符, 不再双 »»)
+    if (totalPages > 10 && currentPage < totalPages) {
+        html.push(
+            `<li class="page-item">`
+            + `<a class="page-link" href="#" onclick="${loadFnName}(${totalPages});return false;" `
+            + `title="跳到末页 (第 ${totalPages} 页)" style="cursor:pointer;">››</a></li>`
+        );
+    }
+
+    return html.join('');
+}
+
+
+/* ============================================================
+ * 规则条件构建器 (P4-L5 2026-08-10):
+ *   - 25 个银行特征 key ↔ 中文标签映射 (FEATURE_LABELS)
+ *   - 风险等级 ↔ 分数区间 (RISK_LEVEL_SCORE_MAP, 跟后端 config.py 一致)
+ *   - 按 event_type 拆的阈值 (RISK_EVENT_THRESHOLDS)
+ *   - 可视化构建器: buildConditionUI / collectCondition / parseCondition
+ *   - 双向: UI ↔ JSON 互相转换
+ * ============================================================ */
+
+// 1. 25 特征 key↔中文标签 (跟 ml_model.py FEATURE_COLUMNS 顺序完全一致)
+const FEATURE_LABELS = {
+    "user_txn_count_7d":                 "近7天成功转账数",
+    "user_txn_count_30d":                "近30天成功转账数",
+    "user_total_txn_amount":             "历史累计转账金额",
+    "user_avg_txn_amount":               "历史平均转账金额",
+    "user_max_txn_amount":               "历史最大单笔转账",
+    "user_bound_card_count":             "有效绑卡数",
+    "user_failed_login_count_30d":       "近30天失败登录数",
+    "user_device_count":                 "历史关联设备数",
+    "user_loan_apply_count_30d":         "近30天贷款申请数",
+    "user_loan_institution_count_30d":   "近30天贷款机构数",
+    "user_max_debt_ratio":               "近30天最高负债率",
+    "user_night_operation_count_7d":     "近7天凌晨操作数",
+    "user_incoming_card_count_1h":       "近1小时入账来源卡数",
+    "user_account_age_days":             "账户存续天数",
+    "order_event_amount":                "本次事件金额",
+    "order_txn_count_1h":                "本客户1小时转账数",
+    "order_is_night":                    "是否凌晨操作",
+    "order_new_device_days":             "设备已出现天数",
+    "order_device_user_count":           "设备关联客户数",
+    "order_payee_card_count_1h":         "收款卡1小时付款卡数",
+    "order_loan_institution_count_30d":  "本次贷款近30天机构数",
+    "order_debt_ratio":                  "本次贷款负债率",
+    "addr_is_proxy":                     "当前IP是否代理",
+    "addr_is_tor":                       "当前IP是否Tor",
+    "addr_is_unusual":                   "是否偏离常用城市",
+};
+
+// 反向: 中文标签 → key (前端下拉显示中文, 内部存 key)
+const LABEL_TO_FEATURE = Object.fromEntries(
+    Object.entries(FEATURE_LABELS).map(([k, v]) => [v, k])
+);
+
+// 2. 风险等级 ↔ 分数区间 (跟后端 config.py RISK_LEVEL_SCORE_MAP 一致)
+const RISK_LEVEL_SCORE_MAP = {
+    "低":   [0, 29],
+    "中":   [30, 59],
+    "高":   [60, 84],
+    "极高": [85, 100],
+};
+
+// 3. 按 event_type 拆的阈值 (跟后端 config.py RISK_EVENT_THRESHOLDS 一致)
+const RISK_EVENT_THRESHOLDS = {
+    "登录":     {pass: 30, mark: 60, review: 85},
+    "转账":     {pass: 30, mark: 60, review: 85},
+    "贷款申请": {pass: 30, mark: 60, review: 85},
+    "绑卡":     {pass: 30, mark: 60, review: 85},
+    "通用":     {pass: 30, mark: 60, review: 85},
+};
+
+// 4. 支持的运算符
+const OPERATORS = [
+    {value: "",        label: "(任意, 仅作为占位条件)"},
+    {value: ">",       label: "> 大于"},
+    {value: ">=",      label: ">= 大于等于"},
+    {value: "<",       label: "< 小于"},
+    {value: "<=",      label: "<= 小于等于"},
+    {value: "==",      label: "== 等于"},
+    {value: "!=",      label: "!= 不等于"},
+    {value: "in",      label: "in 包含 (数组)"},
+    {value: "not_in",  label: "not_in 不包含 (数组)"},
+    {value: "between", label: "between 区间 [min, max]"},
+];
+
+// 5. 风险等级 (跟后端 risk_level enum 对齐)
+const RISK_LEVELS = ["低", "中", "高", "极高"];
+
+/* === 核心 API === */
+
+// 把 JSON 条件渲染成可视化 UI (递归, 跟 JSON 树一一对应)
+function buildConditionUI(cond, containerId) {
+    const c = document.getElementById(containerId);
+    if (!c) { console.error('buildConditionUI: container not found', containerId); return; }
+    c.innerHTML = '';
+    if (!cond || typeof cond !== 'object') cond = {and: []};
+    // [P4-L5 2026-08-11] 把当前条件树存到 window 全局, 删 leaf/group 时能直接 splice
+    // (不再依赖 collectCondition + 字段匹配, 复杂且不准)
+    window._CURRENT_COND = cond;
+    try {
+        renderCondNode(cond, c, true);
+    } catch (e) {
+        console.error('renderCondNode throw', e, 'cond=', cond);
+        c.innerHTML = '<pre style="color:red;font-size:11px;">' + (e && e.message || e) + '\n\n' + (e && e.stack || '') + '</pre>';
+    }
+}
+
+// 递归渲染 1 个条件节点 (单条件 或 and/or 组合)
+function renderCondNode(cond, parent, isRoot) {
+    if (cond && (cond.and || cond.or)) {
+        // 组合: and/or
+        const op = cond.and ? 'and' : 'or';
+        const wrap = document.createElement('div');
+        wrap.className = 'cond-group mb-2 p-2 border rounded';
+        wrap.style.background = op === 'and' ? '#f0f9ff' : '#fef3c7';
+
+        // 顶部: 组合操作符下拉 + 删除按钮
+        const head = document.createElement('div');
+        head.className = 'd-flex align-items-center mb-2';
+        head.innerHTML = `
+            <select class="form-select form-select-sm w-auto me-2 cond-op-select">
+                <option value="and" ${op === 'and' ? 'selected' : ''}>全部满足 (AND)</option>
+                <option value="or" ${op === 'or' ? 'selected' : ''}>任一满足 (OR)</option>
+            </select>
+            <button type="button" class="btn btn-sm btn-outline-danger ms-auto cond-del-group">删除分组</button>
+        `;
+        // op 切换: and ↔ or
+        head.querySelector('.cond-op-select').addEventListener('change', e => {
+            const newOp = e.target.value;
+            if (newOp === 'and') {
+                cond.or = cond.and; delete cond.and;
+            } else {
+                cond.and = cond.or; delete cond.or;
+            }
+        });
+        // 删分组
+        // [P4-L5 2026-08-11] 根 AND 不允许直接"删分组" (没意义, 整个 modal 重置即可);
+        // 子 group 删时通过 removeCondFromTree 同步从父 children 数组里 splice,
+        // 然后 buildConditionUI 整体重渲, UI/数据 100% 同步.
+        head.querySelector('.cond-del-group').addEventListener('click', () => {
+            if (isRoot) {
+                alert('根 AND 分组不能删除. 关闭 modal 重新打开即可重置');
+                return;
+            }
+            const removed = removeCondFromTree(window._CURRENT_COND, cond);
+            if (removed) {
+                buildConditionUI(window._CURRENT_COND, 'condBuilder');
+            } else {
+                wrap.remove();
+            }
+        });
+        wrap.appendChild(head);
+
+        // 递归渲染子条件
+        const children = op === 'and' ? cond.and : cond.or;
+        const childBox = document.createElement('div');
+        childBox.className = 'cond-children';
+        children.forEach(child => renderCondNode(child, childBox, false));
+        wrap.appendChild(childBox);
+
+        // 底部: +条件 / +分组 按钮
+        // [P4-L5 2026-08-11] + 条件一次加 1 行 (用户偏好, 默认 1 个 + 手动加更干净)
+        // [P4-L5 2026-08-10] + 分组默认带 1 个 AND 子组 (嵌套场景), 用户可继续往里加
+        const footer = document.createElement('div');
+        footer.className = 'mt-2';
+        footer.innerHTML = `
+            <button type="button" class="btn btn-sm btn-outline-primary me-1 cond-add-leaf">+ 条件</button>
+            <button type="button" class="btn btn-sm btn-outline-secondary cond-add-group">+ 分组 (${op === 'and' ? 'AND' : 'OR'})</button>
+        `;
+        footer.querySelector('.cond-add-leaf').addEventListener('click', () => {
+            // [P4-L5 2026-08-11] 一次加 1 行, 不再批量 3 个
+            // [P4-L5 2026-08-11] children 数组 = 当前 cond 的 and/or, push 完整体重渲
+            // 用 window._CURRENT_COND (根) 重渲, parent.id 在子级是 undefined
+            children.push({field: 'user_txn_count_7d', op: '>=', value: 0});
+            buildConditionUI(window._CURRENT_COND, 'condBuilder');
+        });
+        footer.querySelector('.cond-add-group').addEventListener('click', () => {
+            // [P4-L5 2026-08-10] + 分组默认带 1 个 AND 子组 (嵌套场景), 用户可继续往里加
+            // [P4-L5 2026-08-11] 整体重渲同 leaf
+            children.push({and: [{field: 'user_txn_count_7d', op: '>=', value: 0}]});
+            buildConditionUI(window._CURRENT_COND, 'condBuilder');
+        });
+        wrap.appendChild(footer);
+
+        parent.appendChild(wrap);
+    } else {
+        // [P4-L5 2026-08-10] 单条件改用 CSS Grid 4 列布局, 不再 d-flex, 解决:
+        //   1) 窄 modal 下 op 下拉被压窄 (160px minWidth 在 d-flex 不够稳)
+        //   2) value 框被挤看不到完整 placeholder
+        //   3) 移动端/小屏下 4 个控件挤一行难看
+        // 4 列: 字段(2fr) / op(1fr) / value(2fr) / 操作(60px), value 列宽固定不缩
+        const row = document.createElement('div');
+        row.className = 'cond-leaf mb-2 p-2 border rounded';
+        row.style.background = '#f9fafb';
+        row.style.display = 'grid';
+        row.style.gridTemplateColumns = 'minmax(220px, 2fr) minmax(140px, 1fr) minmax(220px, 2fr) 60px';
+        row.style.gap = '8px';
+        row.style.alignItems = 'center';
+
+        // 字段下拉 (中文标签)
+        const fieldSel = document.createElement('select');
+        fieldSel.className = 'form-select form-select-sm cond-field';
+        Object.entries(FEATURE_LABELS).forEach(([key, label]) => {
+            const opt = document.createElement('option');
+            opt.value = key;
+            opt.textContent = label + ` (${key})`;
+            if (cond.field === key) opt.selected = true;
+            fieldSel.appendChild(opt);
+        });
+        fieldSel.addEventListener('change', e => { cond.field = e.target.value; });
+
+        // 运算符下拉
+        const opSel = document.createElement('select');
+        opSel.className = 'form-select form-select-sm cond-op';
+        OPERATORS.forEach(({value, label}) => {
+            const opt = document.createElement('option');
+            opt.value = value;
+            opt.textContent = label;
+            if (cond.op === value) opt.selected = true;
+            opSel.appendChild(opt);
+        });
+        opSel.addEventListener('change', e => {
+            cond.op = e.target.value;
+            // between 切到 2 个输入框
+            updateValueInput(row, cond);
+        });
+
+        // 值输入 (随 op 联动)
+        const valBox = document.createElement('div');
+        valBox.className = 'cond-val-box';
+        row.appendChild(fieldSel);
+        row.appendChild(opSel);
+        row.appendChild(valBox);
+        updateValueInput(row, cond);
+
+        // 删除
+        const delBtn = document.createElement('button');
+        delBtn.type = 'button';
+        delBtn.className = 'btn btn-sm btn-outline-danger cond-del-leaf';
+        delBtn.textContent = '×';
+        // [P4-L5 2026-08-11] 删 leaf: 从 window._CURRENT_COND 树里递归 splice 这个 cond
+        // 引用一致 (buildConditionUI 存的是同一个 cond 对象), 直接拿父 group 的 children 数组
+        delBtn.addEventListener('click', () => {
+            const root = document.getElementById('condBuilder');
+            if (!root) { row.remove(); return; }
+            const removed = removeCondFromTree(window._CURRENT_COND, cond);
+            if (removed) {
+                buildConditionUI(window._CURRENT_COND, 'condBuilder');
+            } else {
+                row.remove();
+            }
+        });
+        row.appendChild(delBtn);
+
+        parent.appendChild(row);
+    }
+}
+
+// [P4-L5 2026-08-11] 在 JSON 树里按对象引用找到并移除 cond (删 leaf/group 都用)
+function removeCondFromTree(node, target) {
+    if (!node || typeof node !== 'object') return false;
+    if (node.and) {
+        const idx = node.and.indexOf(target);
+        if (idx >= 0) { node.and.splice(idx, 1); return true; }
+        for (const c of node.and) if (removeCondFromTree(c, target)) return true;
+    }
+    if (node.or) {
+        const idx = node.or.indexOf(target);
+        if (idx >= 0) { node.or.splice(idx, 1); return true; }
+        for (const c of node.or) if (removeCondFromTree(c, target)) return true;
+    }
+    return false;
+}
+
+// 值输入框随 op 联动 (in/not_in 数组, between 区间, 其他单值)
+function updateValueInput(row, cond) {
+    const box = row.querySelector('.cond-val-box');
+    if (!box) return;
+    box.innerHTML = '';
+    const op = cond.op;
+
+    if (op === 'between') {
+        // [min, max] 2 个输入框
+        let arr = Array.isArray(cond.value) ? cond.value : [0, 100];
+        const wrap = document.createElement('div');
+        wrap.className = 'd-flex align-items-center';
+        wrap.innerHTML = `
+            <input type="number" step="any" class="form-control form-control-sm me-1 cond-v-between-low" style="width:80px" value="${arr[0]}">
+            <span class="me-1">~</span>
+            <input type="number" step="any" class="form-control form-control-sm cond-v-between-high" style="width:80px" value="${arr[1]}">
+        `;
+        wrap.querySelector('.cond-v-between-low').addEventListener('input', e => {
+            if (!Array.isArray(cond.value)) cond.value = [0, 100];
+            cond.value[0] = parseFloat(e.target.value) || 0;
+        });
+        wrap.querySelector('.cond-v-between-high').addEventListener('input', e => {
+            if (!Array.isArray(cond.value)) cond.value = [0, 100];
+            cond.value[1] = parseFloat(e.target.value) || 100;
+        });
+        box.appendChild(wrap);
+    } else if (op === 'in' || op === 'not_in') {
+        // 数组, 逗号分隔
+        const arrStr = Array.isArray(cond.value) ? cond.value.join(',') : (cond.value || '');
+        const inp = document.createElement('input');
+        inp.type = 'text';
+        inp.className = 'form-control form-control-sm cond-v-arr';
+        inp.placeholder = '逗号分隔, 如: 1,2,3';
+        inp.value = arrStr;
+        inp.addEventListener('input', e => {
+            cond.value = e.target.value.split(',').map(s => s.trim()).filter(Boolean);
+        });
+        box.appendChild(inp);
+    } else if (op === 'in' || op === 'not_in' || op === '') {
+        // 占位 op 不需要 value
+        box.innerHTML = '<small class="text-muted">无 value</small>';
+    } else {
+        // 单值 (数字或字符串, 默认数字)
+        const inp = document.createElement('input');
+        inp.type = 'number';
+        inp.step = 'any';
+        inp.className = 'form-control form-control-sm cond-v-single';
+        inp.value = cond.value ?? 0;
+        inp.addEventListener('input', e => {
+            cond.value = parseFloat(e.target.value) || 0;
+        });
+        box.appendChild(inp);
+    }
+}
+
+// 从 UI 容器收集当前 JSON 条件
+function collectCondition(container) {
+    // 容器只有一个根节点 (group 或 leaf)
+    const root = container.children[0];
+    if (!root) return {and: []};
+    return extractNode(root);
+}
+
+// [P4-L5 2026-08-10] 递归去掉未填的 leaf (op === '' 表示用户没改这个占位条件),
+// 防止默认 3 个空条件框被原样存进数据库. 保留有内容的 leaf 和 group 结构.
+function stripEmptyLeaves(node) {
+    if (!node || typeof node !== 'object') return node;
+    if (node.and) {
+        const children = (node.and || []).map(stripEmptyLeaves).filter(c => c !== null);
+        return children.length > 0 ? {and: children} : null;
+    }
+    if (node.or) {
+        const children = (node.or || []).map(stripEmptyLeaves).filter(c => c !== null);
+        return children.length > 0 ? {or: children} : null;
+    }
+    // leaf: op === '' 视为未填, 去掉
+    if (node.op === '' || node.op === undefined || node.op === null) {
+        return null;
+    }
+    return node;
+}
+
+function extractNode(node) {
+    if (node.classList.contains('cond-group')) {
+        const op = node.querySelector('.cond-op-select').value;
+        const children = [];
+        node.querySelectorAll('.cond-children > *').forEach(child => {
+            children.push(extractNode(child));
+        });
+        return op === 'and' ? {and: children} : {or: children};
+    } else if (node.classList.contains('cond-leaf')) {
+        const field = node.querySelector('.cond-field').value;
+        const op = node.querySelector('.cond-op').value;
+        // 值: 从不同输入框读
+        const between = node.querySelector('.cond-v-between-low');
+        const arr = node.querySelector('.cond-v-arr');
+        const single = node.querySelector('.cond-v-single');
+        let value = 0;
+        if (between) {
+            value = [
+                parseFloat(node.querySelector('.cond-v-between-low').value) || 0,
+                parseFloat(node.querySelector('.cond-v-between-high').value) || 0,
+            ];
+        } else if (arr) {
+            value = arr.value.split(',').map(s => s.trim()).filter(Boolean);
+        } else if (single) {
+            value = parseFloat(single.value) || 0;
+        }
+        if (op === '') {
+            // 占位条件: 只返 field
+            return {field};
+        }
+        return {field, op, value};
+    }
+    return {and: []};
+}
+
+// 工具: 根据分数反查风险等级 (前端用, 跟后端 settings.get_risk_level_by_score 对齐)
+function getRiskLevelByScore(score) {
+    for (const [level, [low, high]] of Object.entries(RISK_LEVEL_SCORE_MAP)) {
+        if (score >= low && score <= high) return level;
+    }
+    return score > 100 ? '极高' : '低';
+}
+
+// 工具: 根据 event_type 查阈值
+function getEventThresholds(eventType) {
+    return RISK_EVENT_THRESHOLDS[eventType] || RISK_EVENT_THRESHOLDS['通用'];
+}
+
+// 工具: 校验 risk_score 是否在 risk_level 区间内
+function validateScoreLevel(level, score) {
+    if (!RISK_LEVEL_SCORE_MAP[level]) {
+        return {ok: false, msg: `未知风险等级: ${level}`};
+    }
+    if (typeof score !== 'number' || score < 0 || score > 100) {
+        return {ok: false, msg: `risk_score 必须是 0-100 数字, 当前 ${score}`};
+    }
+    const [low, high] = RISK_LEVEL_SCORE_MAP[level];
+    if (score < low || score > high) {
+        return {ok: false, msg: `${level} 等级分数应在 [${low}, ${high}], 当前 ${score} 越界`};
+    }
+    return {ok: true};
+}

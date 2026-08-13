@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+{% block title %}AI 风控助手 - 银行风险运营工作台{% endblock %}
+{% block content %}
+<header class="page-header"><div><span class="page-eyebrow">AI Assistant</span><h1>AI 银行风控助手</h1><p>基于当前风险流水、银行用户画像和案件记录辅助分析，不会代替人工审核决策。</p></div></header>
+
+<div class="card stat-card">
+    <div class="card-body">
+        <!-- 消息区域 -->
+        <div class="chat-messages p-3" id="chatMessages">
+            <div class="d-flex">
+                <div class="chat-bubble ai">
+                    你好，我是银行风控 AI 助手，可以协助分析登录、转账、贷款申请和绑卡风险，查询案件与用户画像，解释规则命中和运营趋势。请问需要查看什么？
+                </div>
+            </div>
+        </div>
+        <!-- 输入区域 -->
+        <div class="border-top p-3">
+            <form id="chatForm" class="d-flex gap-2">
+                <input type="text" class="form-control" id="chatInput" placeholder="输入你的问题..." autocomplete="off">
+                <button type="submit" class="btn btn-primary" id="sendBtn">
+                    <i class="bi bi-send"></i>
+                </button>
+                <button type="button" class="btn btn-outline-secondary" onclick="clearChat()" title="清空对话">
+                    <i class="bi bi-trash"></i>
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- 快捷指令 -->
+<div class="mt-3">
+    <small class="text-muted">快捷指令:</small>
+    <button class="btn btn-outline-secondary btn-sm" onclick="sendQuick('查看今天的风控统计数据')">今日统计</button>
+    <button class="btn btn-outline-secondary btn-sm" onclick="sendQuick('查看所有待审核的案件')">待审案件</button>
+    <button class="btn btn-outline-secondary btn-sm" onclick="sendQuick('分析银行用户 DEMO_USR_003 的风险画像')">用户画像</button>
+    <button class="btn btn-outline-secondary btn-sm" onclick="sendQuick('分析规则命中效果')">规则分析</button>
+    <button class="btn btn-outline-secondary btn-sm" onclick="sendQuick('查看近30天的风控趋势')">趋势分析</button>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let sessionId = null;
+
+function addMessage(content, role) {
+    const container = document.getElementById('chatMessages');
+    const div = document.createElement('div');
+    div.className = 'd-flex' + (role === 'user' ? ' justify-content-end' : '');
+    // 先转义再处理 markdown：用户消息与 AI 回显内容都不可信，防止注入 HTML。
+    let html = escapeHtml(content)
+        .replace(/\n/g, '<br>')
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+        .replace(/`(.*?)`/g, '<code>$1</code>');
+    div.innerHTML = `<div class="chat-bubble ${role}">${html}</div>`;
+    container.appendChild(div);
+    container.scrollTop = container.scrollHeight;
+}
+
+async function sendMessage(message) {
+    if (!message.trim()) return;
+    addMessage(message, 'user');
+    document.getElementById('chatInput').value = '';
+    const btn = document.getElementById('sendBtn');
+    btn.disabled = true;
+
+    // 显示加载指示器
+    const loadingDiv = document.createElement('div');
+    loadingDiv.className = 'd-flex';
+    loadingDiv.id = 'loading';
+    loadingDiv.innerHTML = '<div class="chat-bubble ai"><span class="spinner-border spinner-border-sm"></span> 思考中...</div>';
+    document.getElementById('chatMessages').appendChild(loadingDiv);
+
+    try {
+        const res = await fetch('/api/agent/chat', {
+            method: 'POST',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({ message, session_id: sessionId }),
+        });
+        const data = await res.json();
+        sessionId = data.session_id;
+        document.getElementById('loading')?.remove();
+        addMessage(data.reply, 'ai');
+    } catch(e) {
+        document.getElementById('loading')?.remove();
+        addMessage('请求失败: ' + e.message, 'ai');
+    } finally {
+        btn.disabled = false;
+        document.getElementById('chatInput').focus();
+    }
+}
+
+function sendQuick(msg) {
+    document.getElementById('chatInput').value = msg;
+    sendMessage(msg);
+}
+
+async function clearChat() {
+    if (sessionId) {
+        await fetch(`/api/agent/clear?session_id=${sessionId}`, { method: 'POST' });
+    }
+    sessionId = null;
+    const container = document.getElementById('chatMessages');
+    container.innerHTML = `<div class="d-flex"><div class="chat-bubble ai">对话已清空，请重新开始提问。</div></div>`;
+}
+
+document.getElementById('chatForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    sendMessage(document.getElementById('chatInput').value);
+});
+</script>
+{% endblock %}

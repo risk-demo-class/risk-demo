@@ -1,0 +1,25 @@
+-- 银行风控教学数据库初始化指南
+--
+-- 数据库只允许：bank_risk（开发）或 bank_risk_test（测试）。
+-- 总表数：8 张银行业务表 + 9 张核心风控表 = 17 张。
+-- 四类 source 初始化数据：绑卡/转账/贷款申请/登录各 25 条，共 100 条。
+--
+-- 推荐（默认幂等、不会删库）：
+--   python scripts/init_db.py --db bank_risk
+--   python scripts/init_db.py --db bank_risk_test
+--
+-- 仅在专用虚构测试库需要从空库验收时显式重建：
+--   python scripts/init_db.py --db bank_risk_test --reset --yes
+--
+-- 空库手动执行顺序（密码在交互提示输入，不写入命令或仓库）：
+--   mysql -u root -p --default-character-set=utf8mb4 bank_risk < sql/init_business_tables.sql
+--   mysql -u root -p --default-character-set=utf8mb4 bank_risk < sql/init_risk_tables.sql
+--   mysql -u root -p --default-character-set=utf8mb4 bank_risk < sql/init_business_data.sql
+--   mysql -u root -p --default-character-set=utf8mb4 bank_risk < sql/init_risk_data.sql
+--
+-- init_business_tables.sql 只管理 8 张银行业务表。
+-- init_risk_tables.sql 继续管理 9 张核心风控表；不得由业务 DDL 修改。
+-- init_business_data.sql 和 scripts/gen_business_data.py 均使用幂等写入。
+-- init_risk_data.sql 包含 7 条银行规则、统一阈值语义和教学黑卡，仅用于空规则表
+-- 或显式重建；不要在已有规则/审计历史的数据库中单独执行。默认 init_db.py 会
+-- 检测并跳过它。

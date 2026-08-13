@@ -1,0 +1,80 @@
+{
+  "n_train": 1591,
+  "n_pos": 389,
+  "n_neg": 1202,
+  "pos_ratio": 0.2445,
+  "scale_pos_weight": 3.09,
+  "raw_scale_pos_weight": 3.09,
+  "best_iteration": 50,
+  "accuracy": 0.9981,
+  "precision": 0.9923,
+  "recall": 1.0,
+  "f1": 0.9962,
+  "auc": 1.0,
+  "model_path": "app/engine/xgb_model.json",
+  "baseline_accuracy": 0.7555,
+  "is_fake_convergence": false,
+  "n_val": 406,
+  "val_accuracy": 1.0,
+  "val_f1": 1.0,
+  "val_auc": 1.0,
+  "val_precision": 1.0,
+  "val_recall": 1.0,
+  "val_confusion_matrix": [
+    [
+      308,
+      0
+    ],
+    [
+      0,
+      98
+    ]
+  ],
+  "decision_threshold": 0.5,
+  "seed": 20260812,
+  "database": "bank_risk",
+  "n_dataset": 1997,
+  "n_unique_users": 511,
+  "dataset_positive_ratio": 0.2439,
+  "train_positive_ratio": 0.2445,
+  "val_positive_ratio": 0.2414,
+  "feature_completeness": 1.0,
+  "split_method": "GroupShuffleSplit(user_id)",
+  "train_user_count": 408,
+  "val_user_count": 103,
+  "user_overlap_count": 0,
+  "data_time_min": "2024-06-05T10:00:00",
+  "data_time_max": "2026-08-11T14:00:00",
+  "feature_importance_gain": {
+    "order_is_night": 0.208952,
+    "addr_is_tor": 0.142122,
+    "order_event_amount": 0.132337,
+    "order_new_device_days": 0.097939,
+    "order_loan_institution_count_30d": 0.086803,
+    "user_loan_institution_count_30d": 0.083876,
+    "user_loan_apply_count_30d": 0.081881,
+    "addr_is_proxy": 0.065492,
+    "order_txn_count_1h": 0.047982,
+    "order_payee_card_count_1h": 0.03369,
+    "user_max_debt_ratio": 0.006564,
+    "user_bound_card_count": 0.003739,
+    "order_debt_ratio": 0.002733,
+    "user_account_age_days": 0.002712,
+    "user_device_count": 0.001585,
+    "user_avg_txn_amount": 0.001238,
+    "user_total_txn_amount": 0.000356
+  },
+  "training_params": {
+    "num_boost_round": 200,
+    "early_stopping_rounds": 10,
+    "max_depth": 6,
+    "learning_rate": 0.1,
+    "subsample": 0.8,
+    "colsample_bytree": 0.8
+  },
+  "leakage_checks": {
+    "decision_rule_score_label_features_excluded": true,
+    "train_val_user_overlap": 0,
+    "fixed_validation_threshold": 0.5
+  }
+}

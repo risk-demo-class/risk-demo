@@ -1,0 +1,68 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+.venv/
+env/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# 临时文件 / 垃圾文件 (开发过程输出, 不入版本库)
+_trash_*/
+.trash/
+*.tmp
+*.bak
+
+# IDE
+.idea/
+.vscode/
+*.swp
+.DS_Store
+
+# 本地运行环境 (codex/claude 工作区配置, 含机器相关路径, 不入库)
+.claude/
+
+# 日志
+logs/
+*.log
+
+# 模型/数据
+ml_models/
+*.pkl
+*.joblib
+*.json.gz
+*.db
+*.sqlite
+*.sqlite3
+*.dump
+*.sql.gz
+# Goal 3 验收模型体积受控并需随代码交付；其他模型/数据仍按上方规则忽略。
+
+# 环境配置
+.env
+.env.local
+.env.*.local
+# 任何位置的 .env (不限根目录, 防止子目录里也漏)
+**/.env
+**/.env.local
+**/.env.*.local
+**/.env.*
+!**/.env.example
+
+# 密钥 / 凭证 (防止误传)
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+secrets/
+credentials/
+
+# 其它仓库内容 (独立 git 仓库, 不入本库)
+risk-demo/
